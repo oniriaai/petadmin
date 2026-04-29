@@ -1,0 +1,343 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("owner")
+  businessUnit String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Client {
+  id               String    @id @default(cuid())
+  firstName        String
+  lastName         String
+  idNumber         String?
+  phone            String?
+  whatsapp         String?
+  email            String?
+  address          String?
+  city             String?
+  province         String?
+  language         String    @default("es")
+  birthdate        DateTime?
+  isActive         Boolean   @default(true)
+  notes            String?
+  firstServiceDate DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  pets         Pet[]
+  reservations Reservation[]
+  contracts    Contract[]
+
+  @@map("clients")
+}
+
+model Pet {
+  id          String    @id @default(cuid())
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id])
+  name        String
+  species     String    @default("dog")
+  breed       String?
+  variety     String?
+  color       String?
+  sex         String
+  birthdate   DateTime?
+  weight      Float?
+  height      Float?
+  microchip   String?
+  isNeutered  Boolean   @default(false)
+  allergies   String?
+  notes       String?
+  isActive    Boolean   @default(true)
+  bannerId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  vaccinations    PetVaccination[]
+  documents       PetDocument[]
+  reservationPets ReservationPet[]
+  alerts          Alert[]
+  contracts       Contract[]
+
+  @@map("pets")
+}
+
+model PetVaccination {
+  id      String    @id @default(cuid())
+  petId   String
+  pet     Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  name    String
+  date    DateTime
+  nextDue DateTime?
+  notes   String?
+
+  @@map("pet_vaccinations")
+}
+
+model PetDocument {
+  id         String   @id @default(cuid())
+  petId      String
+  pet        Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  type       String
+  name       String
+  filePath   String?
+  uploadedAt DateTime @default(now())
+
+  @@map("pet_documents")
+}
+
+model Provider {
+  id        String   @id @default(cuid())
+  bannerId  String?
+  name      String
+  idNumber  String?
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  province  String?
+  product   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payables Payable[]
+
+  @@map("providers")
+}
+
+model Veterinarian {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  clinic    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("veterinarians")
+}
+
+model Room {
+  id           String  @id @default(cuid())
+  name         String
+  businessUnit String
+  capacity     Int     @default(1)
+  type         String  @default("daycare")
+  isActive     Boolean @default(true)
+
+  reservations Reservation[]
+
+  @@map("rooms")
+}
+
+model RecurringPlan {
+  id           String   @id @default(cuid())
+  businessUnit String
+  clientId     String
+  startDate    DateTime
+  endDate      DateTime
+  daysOfWeek   String
+  petIds       String
+  service      String   @default("GUARDERIA")
+  roomId       String?
+  notes        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  reservations Reservation[]
+
+  @@map("recurring_plans")
+}
+
+model Reservation {
+  id               String        @id @default(cuid())
+  businessUnit     String
+  clientId         String
+  client           Client        @relation(fields: [clientId], references: [id])
+  roomId           String?
+  room             Room?         @relation(fields: [roomId], references: [id])
+  recurringPlanId  String?
+  recurringPlan    RecurringPlan? @relation(fields: [recurringPlanId], references: [id])
+  service          String
+  status           String        @default("PENDIENTE")
+  checkIn          DateTime?
+  checkOut         DateTime?
+  needsTransport   Boolean       @default(false)
+  transportType    String?
+  transportAddress String?
+  concept          String?
+  notes            String?
+  label            String?
+  paymentMethod    String?
+  discountAmount   Float         @default(0)
+  advanceAmount    Float         @default(0)
+  basePrice        Float         @default(0)
+  vatPercent       Float         @default(15)
+  vatAmount        Float         @default(0)
+  totalAmount      Float         @default(0)
+  pendingAmount    Float         @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  pets    ReservationPet[]
+  incomes Income[]
+
+  @@map("reservations")
+}
+
+model ReservationPet {
+  id            String      @id @default(cuid())
+  reservationId String
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  petId         String
+  pet           Pet         @relation(fields: [petId], references: [id])
+
+  @@unique([reservationId, petId])
+  @@map("reservation_pets")
+}
+
+model Income {
+  id            String       @id @default(cuid())
+  businessUnit  String
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  type          String       @default("RESERVA")
+  concept       String
+  amount        Float
+  vatPercent    Float        @default(0)
+  vatAmount     Float        @default(0)
+  total         Float
+  paymentMethod String       @default("EFECTIVO")
+  invoiceNumber String?
+  invoiceStatus String       @default("PENDIENTE")
+  date          DateTime     @default(now())
+  notes         String?
+  createdAt     DateTime     @default(now())
+
+  @@map("incomes")
+}
+
+model Payable {
+  id           String    @id @default(cuid())
+  businessUnit String
+  providerId   String?
+  provider     Provider? @relation(fields: [providerId], references: [id])
+  type         String
+  category     String
+  description  String
+  invoiceNumber String?
+  invoiceDate  DateTime?
+  subtotal     Float
+  vatPercent   Float     @default(0)
+  vatAmount    Float     @default(0)
+  total        Float
+  paid         Float     @default(0)
+  balance      Float
+  status       String    @default("PENDIENTE")
+  dueDate      DateTime?
+  nextPayment  DateTime?
+  isRecurring  Boolean   @default(false)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  payments Payment[]
+
+  @@map("payables")
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  payableId    String
+  payable      Payable  @relation(fields: [payableId], references: [id], onDelete: Cascade)
+  amount       Float
+  date         DateTime @default(now())
+  method       String   @default("EFECTIVO")
+  reference    String?
+  notes        String?
+  registeredBy String?
+  createdAt    DateTime @default(now())
+
+  @@map("payments")
+}
+
+model InventoryItem {
+  id           String   @id @default(cuid())
+  businessUnit String
+  name         String
+  category     String
+  unit         String   @default("unidad")
+  minStock     Float    @default(0)
+  currentStock Float    @default(0)
+  unitCost     Float    @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  movements InventoryMovement[]
+
+  @@map("inventory_items")
+}
+
+model InventoryMovement {
+  id        String        @id @default(cuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type      String
+  quantity  Float
+  cost      Float?
+  reason    String?
+  date      DateTime      @default(now())
+  createdAt DateTime      @default(now())
+
+  @@map("inventory_movements")
+}
+
+model Alert {
+  id           String    @id @default(cuid())
+  businessUnit String
+  petId        String?
+  pet          Pet?      @relation(fields: [petId], references: [id])
+  type         String
+  severity     String    @default("MEDIA")
+  title        String
+  description  String
+  isResolved   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+
+  @@map("alerts")
+}
+
+model Contract {
+  id           String    @id @default(cuid())
+  businessUnit String
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id])
+  petId        String?
+  pet          Pet?      @relation(fields: [petId], references: [id])
+  name         String
+  status       String    @default("PENDIENTE_FIRMA")
+  startDate    DateTime?
+  endDate      DateTime?
+  notes        String?
+  createdAt    DateTime  @default(now())
+
+  @@map("contracts")
+}
