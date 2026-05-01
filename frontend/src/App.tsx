@@ -16,6 +16,7 @@ import { GuidePage } from "./pages/GuidePage";
 import { RoomsPage } from "./pages/salas/RoomsPage";
 import { RecurringPlansPage } from "./pages/planes/RecurringPlansPage";
 import { FinancialPage } from "./pages/transacciones/FinancialPage";
+import { FinancialDashboard } from "./pages/transacciones/FinancialDashboard";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -52,6 +53,7 @@ export function App() {
                     <Route path="/salas" element={<RoomsPage />} />
                     <Route path="/planes" element={<RecurringPlansPage />} />
                     <Route path="/transacciones" element={<FinancialPage />} />
+                    <Route path="/transacciones/dashboard" element={<FinancialDashboard />} />
                     <Route path="/clientes" element={<ClientesPage />} />
                     <Route path="/animales" element={<AnimalesPage />} />
                     <Route path="/disponibilidad" element={<DisponibilidadPage />} />

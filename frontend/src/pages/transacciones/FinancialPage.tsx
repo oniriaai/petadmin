@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Plus, Edit2, Trash2, RefreshCw, Search, TrendingUp, TrendingDown, ShoppingCart } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, Edit2, Trash2, RefreshCw, Search, TrendingUp, TrendingDown, ShoppingCart, BarChart3 } from "lucide-react";
 import { api } from "../../lib/api";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { IncomeEntryForm } from "./IncomeEntryForm";
@@ -172,17 +173,26 @@ export function FinancialPage() {
           <h1 className="page-title">Gestión Financiera</h1>
           <p className="text-gray-500 text-sm mt-1">Ingresos, gastos y compras</p>
         </div>
-        <button
-          onClick={() => {
-            if (activeTab === "income") setShowIncomeForm(true);
-            else if (activeTab === "expenses") setShowExpenseForm(true);
-            else setShowPurchaseForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-        >
-          <Plus size={20} />
-          Nuevo
-        </button>
+        <div className="flex gap-3">
+          <Link
+            to="/transacciones/dashboard"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            <BarChart3 size={20} />
+            Dashboard
+          </Link>
+          <button
+            onClick={() => {
+              if (activeTab === "income") setShowIncomeForm(true);
+              else if (activeTab === "expenses") setShowExpenseForm(true);
+              else setShowPurchaseForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          >
+            <Plus size={20} />
+            Nuevo
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

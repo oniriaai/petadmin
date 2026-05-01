@@ -49,3 +49,149 @@ dashboardRouter.get("/summary", async (req, res) => {
     })),
   });
 });
+
+// Financial Summary: Income vs Expenses for a date range
+dashboardRouter.get("/financial/summary", async (req, res) => {
+  const bu = req.user!.businessUnit;
+  const { startDate, endDate } = req.query;
+  
+  const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
+  const end = endDate ? new Date(endDate as string) : new Date();
+
+  const [totalIncome, totalExpenses, totalPurchases] = await Promise.all([
+    prisma.income.aggregate({
+      where: { businessUnit: bu, date: { gte: start, lte: end } },
+      _sum: { total: true },
+    }),
+    prisma.expense.aggregate({
+      where: { businessUnit: bu, date: { gte: start, lte: end } },
+      _sum: { amount: true },
+    }),
+    prisma.purchase.aggregate({
+      where: { businessUnit: bu, date: { gte: start, lte: end } },
+      _sum: { totalPrice: true },
+    }),
+  ]);
+
+  const income = totalIncome._sum.total ?? 0;
+  const expenses = totalExpenses._sum.amount ?? 0;
+  const purchases = totalPurchases._sum.totalPrice ?? 0;
+
+  res.json({
+    income,
+    expenses,
+    purchases,
+    totalCosts: expenses + purchases,
+    profit: income - (expenses + purchases),
+    profitMargin: income > 0 ? ((income - (expenses + purchases)) / income) * 100 : 0,
+  });
+});
+
+// Monthly financial data for last 6 months
+dashboardRouter.get("/financial/trends", async (req, res) => {
+  const bu = req.user!.businessUnit;
+  const months = [];
+  const now = new Date();
+
+  for (let i = 5; i >= 0; i--) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const nextDate = new Date(date.getFullYear(), date.getMonth() + 1, 1);
+    
+    const [income, expenses] = await Promise.all([
+      prisma.income.aggregate({
+        where: { businessUnit: bu, date: { gte: date, lt: nextDate } },
+        _sum: { total: true },
+      }),
+      prisma.expense.aggregate({
+        where: { businessUnit: bu, date: { gte: date, lt: nextDate } },
+        _sum: { amount: true },
+      }),
+    ]);
+
+    months.push({
+      month: date.toLocaleDateString("es-CO", { month: "short", year: "2-digit" }),
+      income: income._sum.total ?? 0,
+      expenses: expenses._sum.amount ?? 0,
+    });
+  }
+
+  res.json(months);
+});
+
+// Expense breakdown by category
+dashboardRouter.get("/financial/expense-categories", async (req, res) => {
+  const bu = req.user!.businessUnit;
+  const { startDate, endDate } = req.query;
+  
+  const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
+  const end = endDate ? new Date(endDate as string) : new Date();
+
+  const expenses = await prisma.expense.groupBy({
+    by: ["category"],
+    where: { businessUnit: bu, date: { gte: start, lte: end }, isActive: true },
+    _sum: { amount: true },
+  });
+
+  const data = expenses.map(e => ({
+    category: e.category,
+    amount: e._sum.amount ?? 0,
+  }));
+
+  res.json(data);
+});
+
+// Top clients by revenue
+dashboardRouter.get("/financial/top-clients", async (req, res) => {
+  const bu = req.user!.businessUnit;
+  const { startDate, endDate, limit = "10" } = req.query;
+  
+  const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
+  const end = endDate ? new Date(endDate as string) : new Date();
+
+  const topClients = await prisma.income.groupBy({
+    by: ["concept"],
+    where: { businessUnit: bu, date: { gte: start, lte: end }, isActive: true },
+    _sum: { total: true },
+    orderBy: { _sum: { total: "desc" } },
+    take: parseInt(limit as string),
+  });
+
+  const data = topClients.map(c => ({
+    client: c.concept,
+    revenue: c._sum.total ?? 0,
+  }));
+
+  res.json(data);
+});
+
+// Occupancy analytics
+dashboardRouter.get("/analytics/occupancy", async (req, res) => {
+  const bu = req.user!.businessUnit;
+
+  const [rooms, totalCapacity, activeReservations] = await Promise.all([
+    prisma.room.findMany({ where: { businessUnit: bu, isActive: true } }),
+    prisma.room.aggregate({
+      where: { businessUnit: bu, isActive: true },
+      _sum: { capacity: true },
+    }),
+    prisma.reservation.count({
+      where: { businessUnit: bu, status: "ACTIVA" },
+    }),
+  ]);
+
+  const totalCap = totalCapacity._sum.capacity ?? 0;
+  const occupancyPercent = totalCap > 0 ? (activeReservations / totalCap) * 100 : 0;
+
+  res.json({
+    totalRooms: rooms.length,
+    totalCapacity: totalCap,
+    activeReservations,
+    occupancyPercent: Math.round(occupancyPercent),
+    roomDetails: rooms.map(r => ({
+      id: r.id,
+      name: r.name,
+      capacity: r.capacity,
+      occupancy: 0, // Can be calculated per room if needed
+    })),
+  });
+});
