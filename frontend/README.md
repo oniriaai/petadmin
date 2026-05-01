@@ -1,6 +1,18 @@
 # Frontend Pethijos
 
-Aplicación React moderna para la gestión administrativa.
+Aplicación React moderna para la gestión administrativa de Kinderdog y Pethijos.
+
+## Configuración Inicial
+
+> **IMPORTANTE**: Las credenciales en `.env` no deben ser commiteadas a git.
+
+```bash
+# Copiar variables de entorno
+cp .env.example .env
+
+# Actualizar .env con tus credenciales locales
+# (base de datos, B2, JWT, etc.)
+```
 
 ## Scripts
 
