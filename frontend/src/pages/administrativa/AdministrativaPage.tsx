@@ -8,7 +8,7 @@ import { PageLoader, Spinner } from "../../components/ui/Spinner";
 
 type Tab = "proveedores" | "gastos" | "pagos";
 
-interface Provider { id: string; name: string; idNumber?: string; email?: string; phone?: string; product?: string; city?: string; province?: string; isActive: boolean }
+interface Provider { id: string; name: string; idNumber?: string; email?: string; phone?: string; address?: string; product?: string; city?: string; province?: string; bannerId?: string; isActive: boolean }
 interface Payable { id: string; type: string; category: string; description: string; provider?: { id: string; name: string }; invoiceNumber?: string; invoiceDate?: string; subtotal: number; vatPercent: number; vatAmount: number; total: number; paid: number; balance: number; status: string; dueDate?: string; isRecurring: boolean; notes?: string; payments: Payment[] }
 interface Payment { id: string; amount: number; date: string; method: string; reference?: string; notes?: string }
 
@@ -296,7 +296,7 @@ function ProveedoresTab() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (editProvider) setForm({ name: editProvider.name, idNumber: editProvider.idNumber ?? "", email: editProvider.email ?? "", phone: editProvider.phone ?? "", address: editProvider.address ?? "", city: editProvider.city ?? "", province: editProvider.province ?? "", product: editProvider.product ?? "", bannerId: (editProvider as unknown as { bannerId?: string }).bannerId ?? "" });
+    if (editProvider) setForm({ name: editProvider.name, idNumber: editProvider.idNumber ?? "", email: editProvider.email ?? "", phone: editProvider.phone ?? "", address: editProvider.address ?? "", city: editProvider.city ?? "", province: editProvider.province ?? "", product: editProvider.product ?? "", bannerId: editProvider.bannerId ?? "" });
     else setForm({ name: "", idNumber: "", email: "", phone: "", address: "", city: "", province: "", product: "", bannerId: "" });
   }, [editProvider, showForm]);
 

@@ -10,7 +10,7 @@ import { PetForm } from "../clientes/PetForm";
 interface Pet {
   id: string; name: string; species: string; breed?: string; variety?: string; color?: string; sex: string;
   birthdate?: string; weight?: number; height?: number; microchip?: string; isNeutered: boolean;
-  allergies?: string; notes?: string; bannerId?: string; isActive: boolean;
+  allergies?: string; notes?: string; bannerId?: string; photoUrl?: string; isActive: boolean;
   client: { id: string; firstName: string; lastName: string; phone?: string; email?: string };
   vaccinations: Array<{ id: string; name: string; date: string; nextDue?: string }>;
 }
@@ -77,7 +77,13 @@ export function AnimalesPage() {
                 <tr key={p.id} className="table-tr">
                   <td className="table-td">
                     <div className="flex items-center gap-2">
-                      <span className="text-2xl">{p.species === "dog" ? "🐶" : "🐱"}</span>
+                      {p.photoUrl ? (
+                        <img src={p.photoUrl} alt={p.name} className="w-10 h-10 rounded-full object-cover border border-gray-100" />
+                      ) : (
+                        <span className="text-2xl w-10 h-10 flex items-center justify-center bg-gray-50 rounded-full">
+                          {p.species === "dog" ? "🐶" : "🐱"}
+                        </span>
+                      )}
                       <div>
                         <p className="font-semibold text-gray-900">{p.name}</p>
                         <p className="text-xs text-gray-400">{p.sex === "M" ? "Macho" : "Hembra"}{p.isNeutered ? " · Esterilizado" : ""}</p>
@@ -122,7 +128,13 @@ export function AnimalesPage() {
         {selected && (
           <div className="space-y-5">
             <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-              <span className="text-5xl">{selected.species === "dog" ? "🐶" : "🐱"}</span>
+              {selected.photoUrl ? (
+                <img src={selected.photoUrl} alt={selected.name} className="w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-sm" />
+              ) : (
+                <span className="text-5xl w-20 h-20 flex items-center justify-center bg-white rounded-2xl shadow-sm">
+                  {selected.species === "dog" ? "🐶" : "🐱"}
+                </span>
+              )}
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{selected.name}</h2>
                 <p className="text-gray-500 text-sm">{selected.breed} · {selected.sex === "M" ? "Macho" : "Hembra"}{selected.isNeutered ? " · Esterilizado" : ""}</p>

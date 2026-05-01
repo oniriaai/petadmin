@@ -22,6 +22,7 @@ const petSchema = z.object({
   allergies: z.string().optional(),
   notes: z.string().optional(),
   bannerId: z.string().optional(),
+  photoUrl: z.string().url().optional().or(z.literal("")),
 });
 
 petsRouter.get("/", async (req, res) => {

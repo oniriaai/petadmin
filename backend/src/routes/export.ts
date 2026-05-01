@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Response, Router } from "express";
 import ExcelJS from "exceljs";
 import { requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
@@ -6,10 +6,10 @@ import { prisma } from "../db";
 export const exportRouter = Router();
 exportRouter.use(requireAuth);
 
-async function sendWorkbook(res: Parameters<typeof exportRouter.get>[1] extends (req: unknown, res: infer R) => unknown ? R : never, wb: ExcelJS.Workbook, filename: string) {
+async function sendWorkbook(res: Response, wb: ExcelJS.Workbook, filename: string) {
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  await wb.xlsx.write(res as unknown as NodeJS.WritableStream);
+  await wb.xlsx.write(res);
 }
 
 exportRouter.get("/clients", async (req, res) => {
@@ -25,7 +25,7 @@ exportRouter.get("/clients", async (req, res) => {
   clients.forEach(c => {
     ws.addRow([c.lastName, c.firstName, c.idNumber, c.phone, c.whatsapp, c.email, c.city, c.province, c.isActive ? "Activo" : "Inactivo", c.pets.map(p => p.name).join(", ")]);
   });
-  await sendWorkbook(res as never, wb, "clientes.xlsx");
+  await sendWorkbook(res, wb, "clientes.xlsx");
 });
 
 exportRouter.get("/reservations", async (req, res) => {
@@ -50,7 +50,7 @@ exportRouter.get("/reservations", async (req, res) => {
   reservations.forEach(r => {
     ws.addRow([r.id.slice(-8), `${r.client.lastName}, ${r.client.firstName}`, r.pets.map(p => p.pet.name).join(", "), r.service, r.room?.name, r.checkIn?.toLocaleDateString("es-EC"), r.checkOut?.toLocaleDateString("es-EC"), r.status, r.totalAmount, r.pendingAmount, r.paymentMethod]);
   });
-  await sendWorkbook(res as never, wb, "reservas.xlsx");
+  await sendWorkbook(res, wb, "reservas.xlsx");
 });
 
 exportRouter.get("/incomes", async (req, res) => {
@@ -71,7 +71,7 @@ exportRouter.get("/incomes", async (req, res) => {
   incomes.forEach(i => {
     ws.addRow([i.date.toLocaleDateString("es-EC"), i.type, i.concept, i.amount, i.vatPercent, i.vatAmount, i.total, i.paymentMethod, i.invoiceNumber, i.invoiceStatus]);
   });
-  await sendWorkbook(res as never, wb, "ingresos.xlsx");
+  await sendWorkbook(res, wb, "ingresos.xlsx");
 });
 
 exportRouter.get("/expenses", async (req, res) => {
@@ -89,5 +89,5 @@ exportRouter.get("/expenses", async (req, res) => {
   payables.forEach(p => {
     ws.addRow([p.type, p.category, p.description, p.provider?.name, p.invoiceNumber, p.subtotal, p.vatPercent, p.vatAmount, p.total, p.paid, p.balance, p.status, p.dueDate?.toLocaleDateString("es-EC")]);
   });
-  await sendWorkbook(res as never, wb, "gastos-compras.xlsx");
+  await sendWorkbook(res, wb, "gastos-compras.xlsx");
 });

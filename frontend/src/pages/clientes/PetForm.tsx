@@ -2,19 +2,20 @@ import React, { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
+import { ImageUpload } from "../../components/ui/ImageUpload";
 
 interface Client { id: string; firstName: string; lastName: string }
-interface Pet { id: string; name: string; species: string; breed?: string; variety?: string; color?: string; sex: string; birthdate?: string; weight?: number; height?: number; microchip?: string; isNeutered?: boolean; allergies?: string; notes?: string; bannerId?: string }
+interface Pet { id: string; name: string; species: string; breed?: string; variety?: string; color?: string; sex: string; birthdate?: string; weight?: number; height?: number; microchip?: string; isNeutered?: boolean; allergies?: string; notes?: string; bannerId?: string; photoUrl?: string }
 interface Props { open: boolean; onClose: () => void; onSaved: () => void; client: Client | null; pet?: Pet | null }
 
 export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
-  const [form, setForm] = useState({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "" });
+  const [form, setForm] = useState({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "", photoUrl: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (pet) setForm({ name: pet.name, species: pet.species, breed: pet.breed ?? "", variety: pet.variety ?? "", color: pet.color ?? "", sex: pet.sex, birthdate: pet.birthdate ? pet.birthdate.slice(0, 10) : "", weight: pet.weight?.toString() ?? "", height: pet.height?.toString() ?? "", microchip: pet.microchip ?? "", isNeutered: pet.isNeutered ?? false, allergies: pet.allergies ?? "", notes: pet.notes ?? "", bannerId: pet.bannerId ?? "" });
-    else setForm({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "" });
+    if (pet) setForm({ name: pet.name, species: pet.species, breed: pet.breed ?? "", variety: pet.variety ?? "", color: pet.color ?? "", sex: pet.sex, birthdate: pet.birthdate ? pet.birthdate.slice(0, 10) : "", weight: pet.weight?.toString() ?? "", height: pet.height?.toString() ?? "", microchip: pet.microchip ?? "", isNeutered: pet.isNeutered ?? false, allergies: pet.allergies ?? "", notes: pet.notes ?? "", bannerId: pet.bannerId ?? "", photoUrl: pet.photoUrl ?? "" });
+    else setForm({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "", photoUrl: "" });
     setError("");
   }, [pet, open]);
 
@@ -46,6 +47,14 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
       }>
       <div className="space-y-4">
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        
+        <div className="flex justify-center pb-4">
+          <ImageUpload 
+            value={form.photoUrl} 
+            onChange={(url) => setForm(p => ({ ...p, photoUrl: url }))} 
+          />
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div><label className="label">Nombre *</label><input className="input" value={form.name} onChange={setS("name")} /></div>
           <div>

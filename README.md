@@ -96,6 +96,78 @@ docker compose up --build
 - Frontend: `http://localhost:5174`
 - Backend health: `http://localhost:3001/api/v1/health`
 
+## Configuración de Almacenamiento (Backblaze B2)
+
+Para habilitar la subida de fotos de mascotas, es necesario configurar las siguientes variables en el archivo `.env`:
+
+```env
+B2_KEY_ID=tu_key_id
+B2_APPLICATION_KEY=tu_application_key
+B2_BUCKET_NAME=nombre_del_bucket
+B2_ENDPOINT=s3.us-east-005.backblazeb2.com
+B2_REGION=us-east-005
+```
+
+### Configuración de CORS en Backblaze B2
+
+Para permitir la subida directa desde el navegador, debes configurar las reglas CORS en tu bucket de Backblaze. En el panel de B2, ve a **Bucket Settings** -> **CORS Rules** y agrega la siguiente configuración (JSON):
+
+```json
+[
+  {
+    "corsRuleName": "AllowDirectUpload",
+    "allowedOrigins": [
+      "http://localhost:5174",
+      "https://tu-dominio-de-produccion.com"
+    ],
+    "allowedHeaders": [
+      "content-type",
+      "x-amz-content-sha256",
+      "x-amz-date",
+      "authorization",
+      "x-amz-user-agent"
+    ],
+    "allowedOperations": [
+      "s3_put",
+      "s3_get",
+      "s3_head"
+    ],
+    "exposeHeaders": [
+      "ETag"
+    ],
+    "maxAgeSeconds": 3600
+  }
+]
+```
+
+*Nota: Asegúrate de que `allowedOrigins` incluya la URL exacta desde la que estás accediendo a la aplicación.*
+
+### Solución al error "AccessDenied: not entitled"
+
+Si al subir una imagen recibes el mensaje `not entitled`, significa que tu **Application Key** de Backblaze no tiene los permisos necesarios para realizar subidas S3. Sigue estos pasos:
+
+1. Ve a **App Keys** en el panel de Backblaze.
+2. Crea una **nueva llave** y asegúrate de configurar:
+   - **Allow access to Bucket(s)**: Selecciona tu bucket (`pethijos-kinderdog`) o "All".
+   - **Type of Access**: Debe ser **Read and Write**.
+3. Copia el nuevo `keyId` y `applicationKey`.
+4. Actualiza tu archivo `.env` con estos nuevos valores.
+5. Reinicia el servidor: `docker compose up -d backend`.
+
+El sistema utiliza URLs firmadas (Presigned URLs) para permitir que el frontend suba imágenes directamente al bucket, optimizando el rendimiento y permitiendo el seguimiento del progreso de subida.
+
+## Validacion tecnica en Docker
+
+Para validar compilacion y estado del sistema usar el flujo Docker Compose:
+
+```bash
+docker compose up --build -d postgres backend frontend
+docker compose exec -T backend npm run build
+docker compose exec -T frontend npm run build
+curl http://localhost:3001/api/v1/health
+docker compose down
+```
+
 ## Diseño funcional implementado (primer bloque)
 
 1. Flujo de acceso por unidad de negocio.

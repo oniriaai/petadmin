@@ -6,55 +6,44 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const zod_1 = require("zod");
+const auth_1 = require("./routes/auth");
+const dashboard_1 = require("./routes/dashboard");
+const clients_1 = require("./routes/clients");
+const pets_1 = require("./routes/pets");
+const reservations_1 = require("./routes/reservations");
+const providers_1 = require("./routes/providers");
+const rooms_1 = require("./routes/rooms");
+const payables_1 = require("./routes/payables");
+const incomes_1 = require("./routes/incomes");
+const inventory_1 = require("./routes/inventory");
+const reports_1 = require("./routes/reports");
+const alerts_1 = require("./routes/alerts");
+const contracts_1 = require("./routes/contracts");
+const export_1 = require("./routes/export");
 const app = (0, express_1.default)();
 const port = Number(process.env.BACKEND_PORT ?? 3001);
-const jwtSecret = process.env.JWT_SECRET ?? "change_me";
 app.use((0, cors_1.default)());
-app.use(express_1.default.json());
-const loginSchema = zod_1.z.object({
-    businessUnit: zod_1.z.enum(["KINDERDOG", "PETHIJOS"]),
-    username: zod_1.z.string().min(1),
-    password: zod_1.z.string().min(1),
-});
-const seededUsers = {
-    KINDERDOG: { username: "kinderdog_admin", password: "kinderdog123" },
-    PETHIJOS: { username: "pethijos_admin", password: "pethijos123" },
-};
+app.use(express_1.default.json({ limit: "10mb" }));
 app.get("/api/v1/health", (_req, res) => {
-    res.json({ ok: true, service: "pethijos-backend" });
+    res.json({ ok: true, service: "pethijos-backend", ts: new Date().toISOString() });
 });
-app.post("/api/v1/auth/login", (req, res) => {
-    const parsed = loginSchema.safeParse(req.body);
-    if (!parsed.success) {
-        res.status(400).json({ message: "Payload invalido" });
-        return;
-    }
-    const { businessUnit, username, password } = parsed.data;
-    const user = seededUsers[businessUnit];
-    if (username !== user.username || password !== user.password) {
-        res.status(401).json({ message: "Credenciales incorrectas" });
-        return;
-    }
-    const token = jsonwebtoken_1.default.sign({ businessUnit, username }, jwtSecret, { expiresIn: "12h" });
-    res.json({
-        token,
-        user: { businessUnit, username, role: "owner" },
-    });
-});
-app.get("/api/v1/dashboard/summary", (_req, res) => {
-    res.json({
-        reservasHoy: 0,
-        entradasHoy: 0,
-        salidasHoy: 0,
-        ocupacionPorcentaje: 0,
-        ingresosDelDia: 0,
-        alertas: [],
-    });
-});
-app.get("/api/v1/reservations", (_req, res) => {
-    res.json([]);
+app.use("/api/v1/auth", auth_1.authRouter);
+app.use("/api/v1/dashboard", dashboard_1.dashboardRouter);
+app.use("/api/v1/clients", clients_1.clientsRouter);
+app.use("/api/v1/pets", pets_1.petsRouter);
+app.use("/api/v1/reservations", reservations_1.reservationsRouter);
+app.use("/api/v1/providers", providers_1.providersRouter);
+app.use("/api/v1/rooms", rooms_1.roomsRouter);
+app.use("/api/v1/payables", payables_1.payablesRouter);
+app.use("/api/v1/incomes", incomes_1.incomesRouter);
+app.use("/api/v1/inventory", inventory_1.inventoryRouter);
+app.use("/api/v1/reports", reports_1.reportsRouter);
+app.use("/api/v1/alerts", alerts_1.alertsRouter);
+app.use("/api/v1/contracts", contracts_1.contractsRouter);
+app.use("/api/v1/export", export_1.exportRouter);
+app.use((err, _req, res, _next) => {
+    console.error(err);
+    res.status(500).json({ message: "Error interno del servidor" });
 });
 app.listen(port, () => {
     console.log(`Pethijos backend running on http://localhost:${port}/api/v1`);

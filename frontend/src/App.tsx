@@ -1,134 +1,69 @@
-import { useMemo, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./lib/auth-context";
+import { Sidebar } from "./components/layout/Sidebar";
+import { Login } from "./pages/Login";
+import { Dashboard } from "./pages/Dashboard";
+import { ClientesPage } from "./pages/clientes/ClientesPage";
+import { AnimalesPage } from "./pages/animales/AnimalesPage";
+import { ReservasPage } from "./pages/reservas/ReservasPage";
+import { DisponibilidadPage } from "./pages/disponibilidad/DisponibilidadPage";
+import { TransportePage } from "./pages/transporte/TransportePage";
+import { AdministrativaPage } from "./pages/administrativa/AdministrativaPage";
+import { InformesPage } from "./pages/informes/InformesPage";
+import { HerramientasPage } from "./pages/herramientas/HerramientasPage";
+import { ConfiguracionPage } from "./pages/configuracion/ConfiguracionPage";
+import { GuidePage } from "./pages/GuidePage";
 
-type BusinessUnit = "KINDERDOG" | "PETHIJOS";
+function PrivateRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  if (!user) return <Navigate to="/login" />;
+  return <>{children}</>;
+}
 
-type User = {
-  username: string;
-  businessUnit: BusinessUnit;
-  role: string;
-};
-
-const tabs = [
-  "Nuevo",
-  "Control de Reservas",
-  "Perfil del Cliente",
-  "Animales",
-  "Disponibilidad",
-  "Transporte",
-  "Gestión Administrativa",
-  "Informes y Gráficos",
-  "Herramientas",
-  "Configuración",
-  "Guía de Uso",
-];
+function Layout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
+      <main className="flex-1 min-w-0 overflow-auto">
+        {children}
+      </main>
+    </div>
+  );
+}
 
 export function App() {
-  const [businessUnit, setBusinessUnit] = useState<BusinessUnit | null>(null);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [token, setToken] = useState("");
-  const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState(tabs[0]);
-  const [error, setError] = useState("");
-
-  const title = useMemo(() => {
-    if (!user) return "Sistema Administrativo Pethijos";
-    return user.businessUnit === "KINDERDOG" ? "Kinderdog Dashboard" : "Pethijos Dashboard";
-  }, [user]);
-
-  async function handleLogin(event: React.FormEvent) {
-    event.preventDefault();
-    if (!businessUnit) {
-      setError("Selecciona una unidad de negocio");
-      return;
-    }
-
-    const response = await fetch("http://localhost:3001/api/v1/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ businessUnit, username, password }),
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      setError(payload.message ?? "No se pudo iniciar sesión");
-      return;
-    }
-
-    setError("");
-    setToken(payload.token);
-    setUser(payload.user);
-  }
-
-  if (!user) {
-    return (
-      <main className="screen">
-        <section className="card">
-          <h1>Acceso Administrativo</h1>
-          <p>Flujo solicitado: Login - Logo Kinderdog/Pethijos - Dashboard.</p>
-          <div className="logo-row">
-            <button
-              className={businessUnit === "KINDERDOG" ? "selected" : ""}
-              onClick={() => setBusinessUnit("KINDERDOG")}
-              type="button"
-            >
-              Kinderdog
-            </button>
-            <button
-              className={businessUnit === "PETHIJOS" ? "selected" : ""}
-              onClick={() => setBusinessUnit("PETHIJOS")}
-              type="button"
-            >
-              Pethijos
-            </button>
-          </div>
-          <form onSubmit={handleLogin} className="form">
-            <input
-              placeholder="Usuario"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-            />
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-            <button type="submit">Ingresar</button>
-          </form>
-          {error ? <p className="error">{error}</p> : null}
-          <small>Credenciales semilla: kinderdog_admin/kinderdog123 y pethijos_admin/pethijos123</small>
-        </section>
-      </main>
-    );
-  }
-
   return (
-    <main className="screen">
-      <section className="dashboard">
-        <header>
-          <h1>{title}</h1>
-          <p>Token activo: {token ? "si" : "no"} | Rol: {user.role}</p>
-        </header>
-
-        <nav className="tabs">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={activeTab === tab ? "active" : ""}
-              type="button"
-            >
-              {tab}
-            </button>
-          ))}
-        </nav>
-
-        <section className="panel">
-          <h2>{activeTab}</h2>
-          <p>Modulo inicial implementado. Siguiente bloque: CRUDs y flujos completos por pestaña.</p>
-        </section>
-      </section>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <Layout>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/reservas" element={<ReservasPage />} />
+                    <Route path="/clientes" element={<ClientesPage />} />
+                    <Route path="/animales" element={<AnimalesPage />} />
+                    <Route path="/disponibilidad" element={<DisponibilidadPage />} />
+                    <Route path="/transporte" element={<TransportePage />} />
+                    <Route path="/administrativa" element={<AdministrativaPage />} />
+                    <Route path="/informes" element={<InformesPage />} />
+                    <Route path="/herramientas" element={<HerramientasPage />} />
+                    <Route path="/configuracion" element={<ConfiguracionPage />} />
+                    <Route path="/guia" element={<GuidePage />} />
+                    {/* Fallback para rutas no encontradas o en desarrollo */}
+                    <Route path="*" element={<div className="p-8"><h1 className="text-2xl font-bold">Próximamente</h1><p>Este módulo está en desarrollo.</p></div>} />
+                  </Routes>
+                </Layout>
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

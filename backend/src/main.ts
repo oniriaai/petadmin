@@ -17,6 +17,8 @@ import { alertsRouter } from "./routes/alerts";
 import { contractsRouter } from "./routes/contracts";
 import { exportRouter } from "./routes/export";
 
+import { storageRouter } from "./routes/storage";
+
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? 3001);
 
@@ -31,6 +33,7 @@ app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/clients", clientsRouter);
 app.use("/api/v1/pets", petsRouter);
+app.use("/api/v1/storage", storageRouter);
 app.use("/api/v1/reservations", reservationsRouter);
 app.use("/api/v1/providers", providersRouter);
 app.use("/api/v1/rooms", roomsRouter);
