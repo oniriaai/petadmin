@@ -8,10 +8,13 @@ interface Props {
   value?: string;
   onChange: (url: string) => void;
   folder?: string;
+  onDelete?: (url: string) => Promise<void>;
+  petId?: string;
 }
 
-export function ImageUpload({ value, onChange }: Props) {
+export function ImageUpload({ value, onChange, onDelete, petId }: Props) {
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [preview, setPreview] = useState<string | null>(value || null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,6 +40,7 @@ export function ImageUpload({ value, onChange }: Props) {
       const { uploadUrl, publicUrl } = await api.post<any>("/storage/upload-url", {
         fileName: file.name,
         contentType: file.type,
+        petId: petId || "temp",
       });
 
       // 2. Upload to B2 directly
@@ -69,11 +73,26 @@ export function ImageUpload({ value, onChange }: Props) {
     }
   };
 
-  const removeImage = (e: React.MouseEvent) => {
+  const removeImage = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setPreview(null);
-    onChange("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    
+    try {
+      setDeleting(true);
+      
+      // Call delete callback if provided
+      if (value && onDelete) {
+        await onDelete(value);
+      }
+      
+      setPreview(null);
+      onChange("");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (error: any) {
+      console.error("Error deleting image:", error);
+      alert("Error al eliminar la imagen. Por favor intente de nuevo.");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -87,7 +106,7 @@ export function ImageUpload({ value, onChange }: Props) {
         {preview ? (
           <>
             <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-            {!uploading && (
+            {!uploading && !deleting && (
               <button 
                 onClick={removeImage}
                 className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"

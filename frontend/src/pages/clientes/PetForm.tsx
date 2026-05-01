@@ -12,21 +12,41 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
   const [form, setForm] = useState({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "", photoUrl: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string>("");
 
   useEffect(() => {
-    if (pet) setForm({ name: pet.name, species: pet.species, breed: pet.breed ?? "", variety: pet.variety ?? "", color: pet.color ?? "", sex: pet.sex, birthdate: pet.birthdate ? pet.birthdate.slice(0, 10) : "", weight: pet.weight?.toString() ?? "", height: pet.height?.toString() ?? "", microchip: pet.microchip ?? "", isNeutered: pet.isNeutered ?? false, allergies: pet.allergies ?? "", notes: pet.notes ?? "", bannerId: pet.bannerId ?? "", photoUrl: pet.photoUrl ?? "" });
-    else setForm({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "", photoUrl: "" });
+    if (pet) {
+      setForm({ name: pet.name, species: pet.species, breed: pet.breed ?? "", variety: pet.variety ?? "", color: pet.color ?? "", sex: pet.sex, birthdate: pet.birthdate ? pet.birthdate.slice(0, 10) : "", weight: pet.weight?.toString() ?? "", height: pet.height?.toString() ?? "", microchip: pet.microchip ?? "", isNeutered: pet.isNeutered ?? false, allergies: pet.allergies ?? "", notes: pet.notes ?? "", bannerId: pet.bannerId ?? "", photoUrl: pet.photoUrl ?? "" });
+      setOriginalPhotoUrl(pet.photoUrl ?? "");
+    } else {
+      setForm({ name: "", species: "dog", breed: "", variety: "", color: "", sex: "M", birthdate: "", weight: "", height: "", microchip: "", isNeutered: false, allergies: "", notes: "", bannerId: "", photoUrl: "" });
+      setOriginalPhotoUrl("");
+    }
     setError("");
   }, [pet, open]);
 
   const setS = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(p => ({ ...p, [k]: e.target.value }));
 
+  const deleteImageFromB2 = async (imageUrl: string) => {
+    try {
+      await api.post("/storage/remove", { key: imageUrl });
+    } catch (error) {
+      console.error("Error removing image from B2:", error);
+      // Don't throw - allow form to continue even if B2 deletion fails
+    }
+  };
+
   async function save() {
     if (!form.name) { setError("El nombre es obligatorio"); return; }
     if (!client && !pet) { setError("No hay cliente asociado"); return; }
     setSaving(true); setError("");
     try {
+      // If image was replaced, delete the old one from B2
+      if (originalPhotoUrl && form.photoUrl && originalPhotoUrl !== form.photoUrl) {
+        await deleteImageFromB2(originalPhotoUrl);
+      }
+      
       const body = { ...form, weight: form.weight ? +form.weight : undefined, height: form.height ? +form.height : undefined, birthdate: form.birthdate || undefined, clientId: client?.id };
       if (pet) await api.put(`/pets/${pet.id}`, body);
       else await api.post("/pets", body);
@@ -34,6 +54,8 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
     } catch (e) { setError(e instanceof Error ? e.message : "Error al guardar"); }
     finally { setSaving(false); }
   }
+
+  const petId = pet?.id || "new";
 
   return (
     <Modal open={open} onClose={onClose} title={`${pet ? "Editar" : "Nueva"} Mascota${client ? ` — ${client.firstName} ${client.lastName}` : ""}`} size="lg"
@@ -51,7 +73,9 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
         <div className="flex justify-center pb-4">
           <ImageUpload 
             value={form.photoUrl} 
-            onChange={(url) => setForm(p => ({ ...p, photoUrl: url }))} 
+            onChange={(url) => setForm(p => ({ ...p, photoUrl: url }))}
+            onDelete={deleteImageFromB2}
+            petId={petId}
           />
         </div>
 
