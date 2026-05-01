@@ -76,6 +76,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
             onChange={(url) => setForm(p => ({ ...p, photoUrl: url }))}
             onDelete={deleteImageFromB2}
             petName={form.name}
+            ownerName={client?.firstName + " " + client?.lastName}
           />
         </div>
 

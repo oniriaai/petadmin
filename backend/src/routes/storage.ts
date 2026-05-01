@@ -11,8 +11,8 @@ storageRouter.use(requireAuth);
 const uploadUrlSchema = z.object({
   fileName: z.string().min(1),
   contentType: z.string().min(1),
-  petId: z.string().min(1),
   petName: z.string().min(1),
+  ownerName: z.string().min(1),
 });
 
 const removeFileSchema = z.object({
@@ -30,12 +30,13 @@ storageRouter.post("/upload-url", async (req, res) => {
       return res.status(400).json({ message: "Storage configuration incomplete" });
     }
 
-    const { fileName, contentType, petName } = parsed.data;
+    const { fileName, contentType, petName, ownerName } = parsed.data;
     
-    // Naming convention: pets/{petName}/{timestamp}-{sanitizedFileName}
+    // Naming convention: pets/{petName}_{ownerName}/{timestamp}-{sanitizedFileName}
     const timestamp = Date.now();
     const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const key = `pets/${petName}/${timestamp}-${cleanFileName}`;
+    const sanitizedOwner = ownerName.replace(/[^a-zA-Z0-9-]/g, "_");
+    const key = `pets/${petName}_${sanitizedOwner}/${timestamp}-${cleanFileName}`;
     
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
