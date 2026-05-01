@@ -105,7 +105,7 @@ export function ImageUpload({ value, onChange }: Props) {
 
         {uploading && (
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
-            <Spinner size={24} className="mb-2" />
+            <div className="mb-2"><Spinner size={24} /></div>
             <span className="text-xs font-bold">{progress}%</span>
             <div className="w-24 h-1.5 bg-gray-700 rounded-full mt-2 overflow-hidden">
               <div 

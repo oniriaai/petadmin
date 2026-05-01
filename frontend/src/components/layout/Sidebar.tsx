@@ -2,7 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Plus, CalendarDays, Users, PawPrint, Grid3X3,
-  Truck, Briefcase, BarChart3, Wrench, Settings, BookOpen, LogOut,
+  Truck, Briefcase, BarChart3, Wrench, Settings, BookOpen, LogOut, Home, Repeat, DollarSign,
 } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";
@@ -11,6 +11,9 @@ const navItems = [
   { to: "/",              label: "Dashboard",           icon: LayoutDashboard },
   { to: "/nuevo",         label: "+ Nuevo",             icon: Plus },
   { to: "/reservas",      label: "Control de Reservas", icon: CalendarDays },
+  { to: "/salas",         label: "Salas",               icon: Home },
+  { to: "/planes",        label: "Planes Recurrentes",  icon: Repeat },
+  { to: "/transacciones", label: "Gestión Financiera",  icon: DollarSign },
   { to: "/clientes",      label: "Perfil del Cliente",  icon: Users },
   { to: "/animales",      label: "Animales",            icon: PawPrint },
   { to: "/disponibilidad",label: "Disponibilidad",      icon: Grid3X3 },

@@ -76,7 +76,53 @@ reservationsRouter.post("/", async (req, res) => {
   const parsed = reservationSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() }); return; }
   const bu = req.user!.businessUnit;
-  const { petIds, checkIn, checkOut, vatPercent = 15, basePrice = 0, discountAmount = 0, advanceAmount = 0, ...rest } = parsed.data;
+  const { petIds, checkIn, checkOut, roomId, clientId, vatPercent = 15, basePrice = 0, discountAmount = 0, advanceAmount = 0, ...rest } = parsed.data;
+
+  // Validate all pets belong to the client
+  const pets = await prisma.pet.findMany({
+    where: { id: { in: petIds }, clientId },
+  });
+  if (pets.length !== petIds.length) {
+    res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
+    return;
+  }
+
+  // Validate room capacity and conflicts if room is specified
+  if (roomId && checkIn && checkOut) {
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
+
+    const checkInDate = new Date(checkIn);
+    const checkOutDate = new Date(checkOut);
+
+    // Check for conflicts (overlapping reservations)
+    const conflicts = await prisma.reservation.count({
+      where: {
+        roomId,
+        status: { not: "CANCELADA" },
+        checkIn: { lt: checkOutDate },
+        checkOut: { gt: checkInDate },
+      },
+    });
+    if (conflicts > 0) {
+      res.status(400).json({ message: "Conflicto de horario: la sala está ocupada en esas fechas" });
+      return;
+    }
+
+    // Check capacity at check-in time (count active reservations at that moment)
+    const occupancy = await prisma.reservation.count({
+      where: {
+        roomId,
+        status: "ACTIVA",
+        checkIn: { lte: checkInDate },
+        checkOut: { gte: checkInDate },
+      },
+    });
+    if (occupancy >= room.capacity) {
+      res.status(400).json({ message: `Capacidad de la sala excedida. Disponible: ${room.capacity - occupancy}/${room.capacity}` });
+      return;
+    }
+  }
 
   const vatAmount = (basePrice - discountAmount) * (vatPercent / 100);
   const totalAmount = basePrice - discountAmount + vatAmount;
@@ -86,6 +132,8 @@ reservationsRouter.post("/", async (req, res) => {
     data: {
       ...rest,
       businessUnit: bu,
+      clientId,
+      roomId: roomId || null,
       checkIn: checkIn ? new Date(checkIn) : null,
       checkOut: checkOut ? new Date(checkOut) : null,
       vatPercent,
@@ -105,10 +153,54 @@ reservationsRouter.post("/", async (req, res) => {
 reservationsRouter.put("/:id", async (req, res) => {
   const parsed = reservationSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
-  const { petIds, checkIn, checkOut, basePrice, vatPercent, discountAmount, advanceAmount, ...rest } = parsed.data;
+  const { petIds, checkIn, checkOut, roomId, clientId, basePrice, vatPercent, discountAmount, advanceAmount, ...rest } = parsed.data;
 
   const current = await prisma.reservation.findUnique({ where: { id: req.params.id } });
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+
+  // Validate pets belong to client if changing
+  if (petIds && clientId) {
+    const pets = await prisma.pet.findMany({
+      where: { id: { in: petIds }, clientId },
+    });
+    if (pets.length !== petIds.length) {
+      res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
+      return;
+    }
+  } else if (petIds && !clientId) {
+    const pets = await prisma.pet.findMany({
+      where: { id: { in: petIds }, clientId: current.clientId },
+    });
+    if (pets.length !== petIds.length) {
+      res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
+      return;
+    }
+  }
+
+  // Validate room capacity and conflicts if room is being changed
+  const newRoomId = roomId ?? current.roomId;
+  const newCheckIn = checkIn ? new Date(checkIn) : current.checkIn;
+  const newCheckOut = checkOut ? new Date(checkOut) : current.checkOut;
+
+  if (newRoomId && newCheckIn && newCheckOut) {
+    const room = await prisma.room.findUnique({ where: { id: newRoomId } });
+    if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
+
+    // Check for conflicts with other reservations (exclude current)
+    const conflicts = await prisma.reservation.count({
+      where: {
+        roomId: newRoomId,
+        id: { not: req.params.id },
+        status: { not: "CANCELADA" },
+        checkIn: { lt: newCheckOut },
+        checkOut: { gt: newCheckIn },
+      },
+    });
+    if (conflicts > 0) {
+      res.status(400).json({ message: "Conflicto de horario: la sala está ocupada en esas fechas" });
+      return;
+    }
+  }
 
   const bp = basePrice ?? current.basePrice;
   const vp = vatPercent ?? current.vatPercent;
@@ -122,6 +214,7 @@ reservationsRouter.put("/:id", async (req, res) => {
     ...rest,
     checkIn: checkIn ? new Date(checkIn) : undefined,
     checkOut: checkOut ? new Date(checkOut) : undefined,
+    roomId: roomId !== undefined ? (roomId || null) : undefined,
     basePrice: bp, vatPercent: vp, discountAmount: da, advanceAmount: aa,
     vatAmount, totalAmount, pendingAmount,
   };
@@ -140,9 +233,36 @@ reservationsRouter.put("/:id", async (req, res) => {
 });
 
 reservationsRouter.post("/:id/checkin", async (req, res) => {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: req.params.id },
+    include: { pets: { include: { pet: true } }, room: true },
+  });
+  if (!reservation) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+
+  const checkInTime = req.body.time ? new Date(req.body.time) : new Date();
+
+  // Validate room capacity at check-in time if room is assigned
+  if (reservation.roomId && reservation.room) {
+    const occupancy = await prisma.reservation.count({
+      where: {
+        roomId: reservation.roomId,
+        status: "ACTIVA",
+        checkIn: { lte: checkInTime },
+        checkOut: { gte: checkInTime },
+      },
+    });
+    if (occupancy >= reservation.room.capacity) {
+      res.status(400).json({
+        message: `Capacidad de la sala excedida. La sala está a capacidad máxima (${reservation.room.capacity}/${reservation.room.capacity}).`,
+      });
+      return;
+    }
+  }
+
   const r = await prisma.reservation.update({
     where: { id: req.params.id },
-    data: { status: "ACTIVA", checkIn: req.body.time ? new Date(req.body.time) : new Date() },
+    data: { status: "ACTIVA", checkIn: checkInTime },
+    include: { client: true, room: true, pets: { include: { pet: true } } },
   });
   res.json(r);
 });

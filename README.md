@@ -142,20 +142,6 @@ Para permitir la subida directa desde el navegador, debes configurar las reglas 
 
 *Nota: Asegúrate de que `allowedOrigins` incluya la URL exacta desde la que estás accediendo a la aplicación.*
 
-### Solución al error "AccessDenied: not entitled"
-
-Si al subir una imagen recibes el mensaje `not entitled`, significa que tu **Application Key** de Backblaze no tiene los permisos necesarios para realizar subidas S3. Sigue estos pasos:
-
-1. Ve a **App Keys** en el panel de Backblaze.
-2. Crea una **nueva llave** y asegúrate de configurar:
-   - **Allow access to Bucket(s)**: Selecciona tu bucket (`pethijos-kinderdog`) o "All".
-   - **Type of Access**: Debe ser **Read and Write**.
-3. Copia el nuevo `keyId` y `applicationKey`.
-4. Actualiza tu archivo `.env` con estos nuevos valores.
-5. Reinicia el servidor: `docker compose up -d backend`.
-
-El sistema utiliza URLs firmadas (Presigned URLs) para permitir que el frontend suba imágenes directamente al bucket, optimizando el rendimiento y permitiendo el seguimiento del progreso de subida.
-
 ## Validacion tecnica en Docker
 
 Para validar compilacion y estado del sistema usar el flujo Docker Compose:

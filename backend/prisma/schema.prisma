@@ -42,6 +42,7 @@ model Client {
 
   pets         Pet[]
   reservations Reservation[]
+  recurringPlans RecurringPlan[]
   contracts    Contract[]
 
   @@map("clients")
@@ -144,6 +145,7 @@ model Room {
   isActive     Boolean @default(true)
 
   reservations Reservation[]
+  recurringPlans RecurringPlan[]
 
   @@map("rooms")
 }
@@ -152,12 +154,14 @@ model RecurringPlan {
   id           String   @id @default(cuid())
   businessUnit String
   clientId     String
+  client       Client   @relation(fields: [clientId], references: [id])
   startDate    DateTime
   endDate      DateTime
   daysOfWeek   String
   petIds       String
   service      String   @default("GUARDERIA")
   roomId       String?
+  room         Room?    @relation(fields: [roomId], references: [id])
   notes        String?
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
@@ -221,7 +225,7 @@ model Income {
   reservation   Reservation? @relation(fields: [reservationId], references: [id])
   type          String       @default("RESERVA")
   concept       String
-  amount        Float
+  amount        Float        @default(0)
   vatPercent    Float        @default(0)
   vatAmount     Float        @default(0)
   total         Float
@@ -230,9 +234,41 @@ model Income {
   invoiceStatus String       @default("PENDIENTE")
   date          DateTime     @default(now())
   notes         String?
+  isActive      Boolean      @default(true)
   createdAt     DateTime     @default(now())
 
   @@map("incomes")
+}
+
+model Expense {
+  id           String   @id @default(cuid())
+  businessUnit String
+  category     String
+  description  String
+  amount       Float    @default(0)
+  provider     String
+  date         DateTime @default(now())
+  notes        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@map("expenses")
+}
+
+model Purchase {
+  id           String   @id @default(cuid())
+  businessUnit String
+  description  String
+  quantity     Float    @default(1)
+  unitPrice    Float    @default(0)
+  totalPrice   Float    @default(0)
+  provider     String
+  date         DateTime @default(now())
+  notes        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@map("purchases")
 }
 
 model Payable {
