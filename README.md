@@ -79,19 +79,27 @@ Variables base en [ .env.example ](.env.example).
 
 ## Como ejecutar
 
-1. Copiar variables:
+### 1. Configuración de Variables de Entorno
+
+> **IMPORTANTE**: El archivo `.env` contiene credenciales sensibles y **no** debe ser commiteado. 
+
+Copia las variables de ejemplo y personaliza según tu entorno:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Levantar todo con Docker:
+Edita `.env` con tus credenciales locales (base de datos, B2, JWT, etc.).
+
+**Para CI/CD y producción**: Configura las variables de entorno en tu plataforma de deployment (GitHub Actions, Docker secrets, etc.) sin comprometer `.env` en git.
+
+### 2. Levantar todo con Docker
 
 ```bash
 docker compose up --build
 ```
 
-3. Abrir:
+### 3. Acceder a la Aplicación
 
 - Frontend: `http://localhost:5174`
 - Backend health: `http://localhost:3001/api/v1/health`

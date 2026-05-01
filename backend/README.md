@@ -15,21 +15,28 @@ Comprehensive admin API for managing Kinderdog (daycare) and Pethijos (pet groom
 
 ## Getting Started
 
+### Environment Setup
+
+> **IMPORTANT**: Never commit `.env` to git. It contains sensitive credentials.
+
+1. Copy the example file:
+```bash
+cp .env.example .env
+```
+
+2. Update `.env` with your local credentials:
+   - Database: PostgreSQL connection
+   - B2 Storage: API keys, bucket name, endpoint
+   - JWT: Secret key for token signing
+   - VAT: Default tax percentage for Ecuador
+
+For production, configure environment variables in your deployment platform (GitHub Actions secrets, Docker secrets, Kubernetes env vars, etc.) without committing `.env` to version control.
+
 ### Scripts
 ```bash
 npm run dev      # Start dev server with hot reload
 npm run build    # Build TypeScript
 npm run start    # Start production server
-```
-
-### Environment Setup
-Create `.env` file:
-```env
-DATABASE_URL=postgresql://pethijos:pethijos123@localhost:5433/pethijos
-BACKEND_PORT=3001
-B2_KEY_ID=your_key_id
-B2_APPLICATION_KEY=your_app_key
-B2_BUCKET_NAME=your_bucket
 ```
 
 ### Health Check
