@@ -9,10 +9,10 @@ interface Props {
   onChange: (url: string) => void;
   folder?: string;
   onDelete?: (url: string) => Promise<void>;
-  petId?: string;
+  petName?: string;
 }
 
-export function ImageUpload({ value, onChange, onDelete, petId }: Props) {
+export function ImageUpload({ value, onChange, onDelete, petName }: Props) {
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -40,7 +40,7 @@ export function ImageUpload({ value, onChange, onDelete, petId }: Props) {
       const { uploadUrl, publicUrl } = await api.post<any>("/storage/upload-url", {
         fileName: file.name,
         contentType: file.type,
-        petId: petId || "temp",
+        petName: petName || "unknown",
       });
 
       // 2. Upload to B2 directly

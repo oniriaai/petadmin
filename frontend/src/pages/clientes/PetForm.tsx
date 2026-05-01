@@ -30,7 +30,9 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
 
   const deleteImageFromB2 = async (imageUrl: string) => {
     try {
+      console.log("[PetForm] Deleting image:", imageUrl);
       await api.post("/storage/remove", { key: imageUrl });
+      console.log("[PetForm] Image deleted successfully");
     } catch (error) {
       console.error("Error removing image from B2:", error);
       // Don't throw - allow form to continue even if B2 deletion fails
@@ -55,8 +57,6 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
     finally { setSaving(false); }
   }
 
-  const petId = pet?.id || "new";
-
   return (
     <Modal open={open} onClose={onClose} title={`${pet ? "Editar" : "Nueva"} Mascota${client ? ` — ${client.firstName} ${client.lastName}` : ""}`} size="lg"
       footer={
@@ -75,7 +75,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
             value={form.photoUrl} 
             onChange={(url) => setForm(p => ({ ...p, photoUrl: url }))}
             onDelete={deleteImageFromB2}
-            petId={petId}
+            petName={form.name}
           />
         </div>
 
