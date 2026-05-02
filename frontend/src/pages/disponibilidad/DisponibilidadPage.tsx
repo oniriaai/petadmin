@@ -41,8 +41,8 @@ export function DisponibilidadPage() {
   }
 
   function occupancyPercent(roomId: string, capacity: number) {
-    const count = reservationsForRoom(roomId).length;
-    return Math.min(100, Math.round((count / capacity) * 100));
+    const totalPets = reservationsForRoom(roomId).reduce((sum, r) => sum + r.pets.length, 0);
+    return Math.min(100, Math.round((totalPets / capacity) * 100));
   }
 
   const withoutRoom = reservations.filter(r => !r.room && r.status !== "CANCELADA");
@@ -77,7 +77,7 @@ export function DisponibilidadPage() {
                   </div>
                   <div>
                     <div className="flex justify-between text-xs text-gray-600 mb-1">
-                      <span>{rsvs.length}/{room.capacity} ocupados</span>
+                      <span>{rsvs.reduce((sum, r) => sum + r.pets.length, 0)}/{room.capacity} mascotas</span>
                       <span className="font-medium">{pct}%</span>
                     </div>
                     <div className="h-2 bg-gray-100 rounded-full overflow-hidden">

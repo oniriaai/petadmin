@@ -2,7 +2,7 @@ import React from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Plus, CalendarDays, Users, PawPrint, Grid3X3,
-  Truck, Briefcase, BarChart3, Wrench, Settings, BookOpen, LogOut, Home, Repeat, DollarSign,
+  Truck, Briefcase, BarChart3, Wrench, Settings, BookOpen, LogOut, Home, Repeat, DollarSign, Clock,
 } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";
@@ -10,7 +10,7 @@ import { cls } from "../../lib/utils";
 const navItems = [
   { to: "/",              label: "Dashboard",           icon: LayoutDashboard },
   { to: "/nuevo",         label: "+ Nuevo",             icon: Plus },
-  { to: "/reservas",      label: "Control de Reservas", icon: CalendarDays },
+  { to: "/operaciones",   label: "Operaciones",         icon: CalendarDays },
   { to: "/salas",         label: "Salas",               icon: Home },
   { to: "/planes",        label: "Planes Recurrentes",  icon: Repeat },
   { to: "/transacciones", label: "Gestión Financiera",  icon: DollarSign },
@@ -18,7 +18,6 @@ const navItems = [
   { to: "/animales",      label: "Animales",            icon: PawPrint },
   { to: "/disponibilidad",label: "Disponibilidad",      icon: Grid3X3 },
   { to: "/transporte",    label: "Transporte",          icon: Truck },
-  { to: "/administrativa",label: "Gestión Admin.",      icon: Briefcase },
   { to: "/informes",      label: "Informes y Gráficos", icon: BarChart3 },
   { to: "/herramientas",  label: "Herramientas",        icon: Wrench },
   { to: "/configuracion", label: "Configuración",       icon: Settings },

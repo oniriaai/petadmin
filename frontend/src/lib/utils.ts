@@ -1,10 +1,17 @@
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 
 export function fmt(date: string | Date | null | undefined, pattern = "dd/MM/yyyy") {
   if (!date) return "—";
   const d = typeof date === "string" ? parseISO(date) : date;
   return isValid(d) ? format(d, pattern, { locale: es }) : "—";
+}
+
+export function fmtRelativeTime(date: string | Date | null | undefined) {
+  if (!date) return "";
+  const d = typeof date === "string" ? parseISO(date) : date;
+  if (!isValid(d)) return "";
+  return formatDistanceToNow(d, { locale: es, addSuffix: true });
 }
 
 export function fmtTime(date: string | Date | null | undefined) {

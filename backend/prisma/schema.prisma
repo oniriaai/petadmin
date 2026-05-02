@@ -1,28 +1,29 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
 model User {
-  id           String   @id @default(cuid())
-  username     String   @unique
+  id           String       @id @default(cuid())
+  username     String       @unique
   passwordHash String
   name         String
-  role         String   @default("owner")
+  role         String       @default("owner")
   businessUnit String
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  checkInOuts  CheckInOut[]
 
   @@map("users")
 }
 
 model Client {
-  id               String    @id @default(cuid())
+  id               String          @id @default(cuid())
   firstName        String
   lastName         String
   idNumber         String?
@@ -32,50 +33,50 @@ model Client {
   address          String?
   city             String?
   province         String?
-  language         String    @default("es")
+  language         String          @default("es")
   birthdate        DateTime?
-  isActive         Boolean   @default(true)
+  isActive         Boolean         @default(true)
   notes            String?
   firstServiceDate DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  pets         Pet[]
-  reservations Reservation[]
-  recurringPlans RecurringPlan[]
-  contracts    Contract[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  checkInOuts      CheckInOut[]
+  contracts        Contract[]
+  pets             Pet[]
+  recurringPlans   RecurringPlan[]
+  reservations     Reservation[]
 
   @@map("clients")
 }
 
 model Pet {
-  id          String    @id @default(cuid())
-  clientId    String
-  client      Client    @relation(fields: [clientId], references: [id])
-  name        String
-  species     String    @default("dog")
-  breed       String?
-  variety     String?
-  color       String?
-  sex         String
-  birthdate   DateTime?
-  weight      Float?
-  height      Float?
-  microchip   String?
-  isNeutered  Boolean   @default(false)
-  allergies   String?
-  notes       String?
-  isActive    Boolean   @default(true)
-  bannerId    String?
-  photoUrl    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  vaccinations    PetVaccination[]
-  documents       PetDocument[]
-  reservationPets ReservationPet[]
+  id              String           @id @default(cuid())
+  clientId        String
+  name            String
+  species         String           @default("dog")
+  breed           String?
+  variety         String?
+  color           String?
+  sex             String
+  birthdate       DateTime?
+  weight          Float?
+  height          Float?
+  microchip       String?
+  isNeutered      Boolean          @default(false)
+  allergies       String?
+  notes           String?
+  isActive        Boolean          @default(true)
+  bannerId        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  photoUrl        String?
   alerts          Alert[]
+  checkInOuts     CheckInOut[]
   contracts       Contract[]
+  documents       PetDocument[]
+  vaccinations    PetVaccination[]
+  client          Client           @relation(fields: [clientId], references: [id])
+  reservationPets ReservationPet[]
 
   @@map("pets")
 }
@@ -83,11 +84,11 @@ model Pet {
 model PetVaccination {
   id      String    @id @default(cuid())
   petId   String
-  pet     Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
   name    String
   date    DateTime
   nextDue DateTime?
   notes   String?
+  pet     Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
 
   @@map("pet_vaccinations")
 }
@@ -95,17 +96,17 @@ model PetVaccination {
 model PetDocument {
   id         String   @id @default(cuid())
   petId      String
-  pet        Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
   type       String
   name       String
   filePath   String?
   uploadedAt DateTime @default(now())
+  pet        Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
 
   @@map("pet_documents")
 }
 
 model Provider {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   bannerId  String?
   name      String
   idNumber  String?
@@ -115,11 +116,10 @@ model Provider {
   city      String?
   province  String?
   product   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  payables Payable[]
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  payables  Payable[]
 
   @@map("providers")
 }
@@ -137,72 +137,71 @@ model Veterinarian {
 }
 
 model Room {
-  id           String  @id @default(cuid())
-  name         String
-  businessUnit String
-  capacity     Int     @default(1)
-  type         String  @default("daycare")
-  isActive     Boolean @default(true)
-
-  reservations Reservation[]
+  id             String          @id @default(cuid())
+  name           String
+  businessUnit   String
+  capacity       Int             @default(1)
+  type           String          @default("daycare")
+  isActive       Boolean         @default(true)
+  checkInOuts    CheckInOut[]
   recurringPlans RecurringPlan[]
+  reservations   Reservation[]
 
   @@map("rooms")
 }
 
 model RecurringPlan {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   businessUnit String
   clientId     String
-  client       Client   @relation(fields: [clientId], references: [id])
   startDate    DateTime
   endDate      DateTime
   daysOfWeek   String
   petIds       String
-  service      String   @default("GUARDERIA")
+  service      String        @default("GUARDERIA")
   roomId       String?
-  room         Room?    @relation(fields: [roomId], references: [id])
   notes        String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  client       Client        @relation(fields: [clientId], references: [id])
+  room         Room?         @relation(fields: [roomId], references: [id])
   reservations Reservation[]
 
   @@map("recurring_plans")
 }
 
 model Reservation {
-  id               String        @id @default(cuid())
+  id               String           @id @default(cuid())
   businessUnit     String
   clientId         String
-  client           Client        @relation(fields: [clientId], references: [id])
   roomId           String?
-  room             Room?         @relation(fields: [roomId], references: [id])
   recurringPlanId  String?
-  recurringPlan    RecurringPlan? @relation(fields: [recurringPlanId], references: [id])
   service          String
-  status           String        @default("PENDIENTE")
+  status           String           @default("PENDIENTE")
   checkIn          DateTime?
   checkOut         DateTime?
-  needsTransport   Boolean       @default(false)
+  needsTransport   Boolean          @default(false)
   transportType    String?
   transportAddress String?
   concept          String?
   notes            String?
   label            String?
   paymentMethod    String?
-  discountAmount   Float         @default(0)
-  advanceAmount    Float         @default(0)
-  basePrice        Float         @default(0)
-  vatPercent       Float         @default(15)
-  vatAmount        Float         @default(0)
-  totalAmount      Float         @default(0)
-  pendingAmount    Float         @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  pets    ReservationPet[]
-  incomes Income[]
+  discountAmount   Float            @default(0)
+  advanceAmount    Float            @default(0)
+  basePrice        Float            @default(0)
+  vatPercent       Float            @default(15)
+  vatAmount        Float            @default(0)
+  totalAmount      Float            @default(0)
+  pendingAmount    Float            @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  checkInOuts      CheckInOut[]
+  incomes          Income[]
+  pets             ReservationPet[]
+  client           Client           @relation(fields: [clientId], references: [id])
+  recurringPlan    RecurringPlan?   @relation(fields: [recurringPlanId], references: [id])
+  room             Room?            @relation(fields: [roomId], references: [id])
 
   @@map("reservations")
 }
@@ -210,19 +209,47 @@ model Reservation {
 model ReservationPet {
   id            String      @id @default(cuid())
   reservationId String
-  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   petId         String
   pet           Pet         @relation(fields: [petId], references: [id])
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@unique([reservationId, petId])
   @@map("reservation_pets")
+}
+
+model CheckInOut {
+  id                String       @id @default(cuid())
+  businessUnit      String
+  petId             String
+  clientId          String
+  roomId            String
+  reservationId     String?
+  checkInTime       DateTime?
+  checkOutTime      DateTime?
+  performedByUserId String?
+  notes             String?
+  isActive          Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  client            Client       @relation(fields: [clientId], references: [id])
+  performedByUser   User?        @relation(fields: [performedByUserId], references: [id])
+  pet               Pet          @relation(fields: [petId], references: [id])
+  reservation       Reservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  room              Room         @relation(fields: [roomId], references: [id])
+
+  @@index([reservationId])
+  @@index([petId])
+  @@index([roomId])
+  @@index([businessUnit])
+  @@index([checkInTime])
+  @@index([checkOutTime])
+  @@map("check_in_outs")
 }
 
 model Income {
   id            String       @id @default(cuid())
   businessUnit  String
   reservationId String?
-  reservation   Reservation? @relation(fields: [reservationId], references: [id])
   type          String       @default("RESERVA")
   concept       String
   amount        Float        @default(0)
@@ -234,8 +261,9 @@ model Income {
   invoiceStatus String       @default("PENDIENTE")
   date          DateTime     @default(now())
   notes         String?
-  isActive      Boolean      @default(true)
   createdAt     DateTime     @default(now())
+  isActive      Boolean      @default(true)
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
 
   @@map("incomes")
 }
@@ -272,30 +300,29 @@ model Purchase {
 }
 
 model Payable {
-  id           String    @id @default(cuid())
-  businessUnit String
-  providerId   String?
-  provider     Provider? @relation(fields: [providerId], references: [id])
-  type         String
-  category     String
-  description  String
+  id            String    @id @default(cuid())
+  businessUnit  String
+  providerId    String?
+  type          String
+  category      String
+  description   String
   invoiceNumber String?
-  invoiceDate  DateTime?
-  subtotal     Float
-  vatPercent   Float     @default(0)
-  vatAmount    Float     @default(0)
-  total        Float
-  paid         Float     @default(0)
-  balance      Float
-  status       String    @default("PENDIENTE")
-  dueDate      DateTime?
-  nextPayment  DateTime?
-  isRecurring  Boolean   @default(false)
-  notes        String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  payments Payment[]
+  invoiceDate   DateTime?
+  subtotal      Float
+  vatPercent    Float     @default(0)
+  vatAmount     Float     @default(0)
+  total         Float
+  paid          Float     @default(0)
+  balance       Float
+  status        String    @default("PENDIENTE")
+  dueDate       DateTime?
+  nextPayment   DateTime?
+  isRecurring   Boolean   @default(false)
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  provider      Provider? @relation(fields: [providerId], references: [id])
+  payments      Payment[]
 
   @@map("payables")
 }
@@ -303,7 +330,6 @@ model Payable {
 model Payment {
   id           String   @id @default(cuid())
   payableId    String
-  payable      Payable  @relation(fields: [payableId], references: [id], onDelete: Cascade)
   amount       Float
   date         DateTime @default(now())
   method       String   @default("EFECTIVO")
@@ -311,23 +337,23 @@ model Payment {
   notes        String?
   registeredBy String?
   createdAt    DateTime @default(now())
+  payable      Payable  @relation(fields: [payableId], references: [id], onDelete: Cascade)
 
   @@map("payments")
 }
 
 model InventoryItem {
-  id           String   @id @default(cuid())
+  id           String              @id @default(cuid())
   businessUnit String
   name         String
   category     String
-  unit         String   @default("unidad")
-  minStock     Float    @default(0)
-  currentStock Float    @default(0)
-  unitCost     Float    @default(0)
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-
-  movements InventoryMovement[]
+  unit         String              @default("unidad")
+  minStock     Float               @default(0)
+  currentStock Float               @default(0)
+  unitCost     Float               @default(0)
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  movements    InventoryMovement[]
 
   @@map("inventory_items")
 }
@@ -335,13 +361,13 @@ model InventoryItem {
 model InventoryMovement {
   id        String        @id @default(cuid())
   itemId    String
-  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   type      String
   quantity  Float
   cost      Float?
   reason    String?
   date      DateTime      @default(now())
   createdAt DateTime      @default(now())
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@map("inventory_movements")
 }
@@ -350,7 +376,6 @@ model Alert {
   id           String    @id @default(cuid())
   businessUnit String
   petId        String?
-  pet          Pet?      @relation(fields: [petId], references: [id])
   type         String
   severity     String    @default("MEDIA")
   title        String
@@ -358,6 +383,7 @@ model Alert {
   isResolved   Boolean   @default(false)
   createdAt    DateTime  @default(now())
   resolvedAt   DateTime?
+  pet          Pet?      @relation(fields: [petId], references: [id])
 
   @@map("alerts")
 }
@@ -366,15 +392,15 @@ model Contract {
   id           String    @id @default(cuid())
   businessUnit String
   clientId     String
-  client       Client    @relation(fields: [clientId], references: [id])
   petId        String?
-  pet          Pet?      @relation(fields: [petId], references: [id])
   name         String
   status       String    @default("PENDIENTE_FIRMA")
   startDate    DateTime?
   endDate      DateTime?
   notes        String?
   createdAt    DateTime  @default(now())
+  client       Client    @relation(fields: [clientId], references: [id])
+  pet          Pet?      @relation(fields: [petId], references: [id])
 
   @@map("contracts")
 }

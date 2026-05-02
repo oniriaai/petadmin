@@ -26,22 +26,24 @@ roomsRouter.get("/", async (req, res) => {
     orderBy: { name: "asc" },
   });
 
-  // Calculate current occupancy for each room
+  // Calculate current occupancy for each room (based on number of pets)
   const now = new Date();
   const roomsWithOccupancy = await Promise.all(
     rooms.map(async (room) => {
-      const activeReservations = await prisma.reservation.count({
+      const activeReservations = await prisma.reservation.findMany({
         where: {
           roomId: room.id,
           status: "ACTIVA",
           checkIn: { lte: now },
           checkOut: { gte: now },
         },
+        include: { pets: true },
       });
+      const totalPets = activeReservations.reduce((sum, r) => sum + r.pets.length, 0);
       return {
         ...room,
-        currentOccupancy: activeReservations,
-        availableCapacity: room.capacity - activeReservations,
+        currentOccupancy: totalPets,
+        availableCapacity: room.capacity - totalPets,
       };
     })
   );

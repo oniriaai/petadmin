@@ -18,8 +18,11 @@ import { reportsRouter } from "./routes/reports";
 import { alertsRouter } from "./routes/alerts";
 import { contractsRouter } from "./routes/contracts";
 import { exportRouter } from "./routes/export";
+import { checkInOutRouter } from "./routes/check-in-out";
 
 import { storageRouter } from "./routes/storage";
+
+import { prisma } from "./db";
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? 3001);
@@ -27,8 +30,25 @@ const port = Number(process.env.BACKEND_PORT ?? 3001);
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-app.get("/api/v1/health", (_req, res) => {
-  res.json({ ok: true, service: "pethijos-backend", ts: new Date().toISOString() });
+app.get("/api/v1/health", async (_req, res) => {
+  try {
+    // Ping database
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      ok: true, 
+      db: true,
+      service: "pethijos-backend", 
+      ts: new Date().toISOString() 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      ok: false, 
+      db: false,
+      error: error instanceof Error ? error.message : "Database connection failed",
+      service: "pethijos-backend", 
+      ts: new Date().toISOString() 
+    });
+  }
 });
 
 app.use("/api/v1/auth", authRouter);
@@ -38,6 +58,7 @@ app.use("/api/v1/pets", petsRouter);
 app.use("/api/v1/storage", storageRouter);
 app.use("/api/v1/reservations", reservationsRouter);
 app.use("/api/v1/recurring-plans", recurringPlansRouter);
+app.use("/api/v1/check-in-out", checkInOutRouter);
 app.use("/api/v1/providers", providersRouter);
 app.use("/api/v1/rooms", roomsRouter);
 app.use("/api/v1/payables", payablesRouter);

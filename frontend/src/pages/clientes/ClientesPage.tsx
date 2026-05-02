@@ -11,7 +11,7 @@ import { PetForm } from "./PetForm";
 interface Pet { id: string; name: string; species: string; breed?: string; sex: string; isActive: boolean }
 interface Client {
   id: string; firstName: string; lastName: string; idNumber?: string; phone?: string; whatsapp?: string;
-  email?: string; city?: string; province?: string; isActive: boolean; createdAt: string;
+  email?: string; birthdate?: string; city?: string; province?: string; isActive: boolean; createdAt: string;
   pets: Pet[];
 }
 
@@ -143,6 +143,7 @@ export function ClientesPage() {
               <div><p className="label">Teléfono</p><p>{selectedClient.phone ?? "—"}</p></div>
               <div><p className="label">WhatsApp</p><p>{selectedClient.whatsapp ?? "—"}</p></div>
               <div><p className="label">Email</p><p>{selectedClient.email ?? "—"}</p></div>
+              <div><p className="label">Fecha de nacimiento</p><p>{selectedClient.birthdate ? new Date(selectedClient.birthdate).toLocaleDateString("es-ES") : "—"}</p></div>
               <div><p className="label">Ciudad / Provincia</p><p>{[selectedClient.city, selectedClient.province].filter(Boolean).join(", ") || "—"}</p></div>
               <div><p className="label">Cliente desde</p><p>{fmt(selectedClient.createdAt)}</p></div>
             </div>

@@ -1,38 +1,41 @@
-# Frontend Pethijos
+# Pethijos Frontend
 
-Aplicación React moderna para la gestión administrativa de Kinderdog y Pethijos.
+Modern React application for the administrative management of Kinderdog and Pethijos.
 
-## Configuración Inicial
+## 🚀 Getting Started
 
-> **IMPORTANTE**: Las credenciales en `.env` no deben ser commiteadas a git.
+### Prerequisites
+- Node.js 20+
+- `npm` or `yarn`
 
-```bash
-# Copiar variables de entorno
-cp .env.example .env
+### Setup
+1. Copy `.env.example` to `.env`.
+2. Update `.env` with your backend URL and storage credentials.
 
-# Actualizar .env con tus credenciales locales
-# (base de datos, B2, JWT, etc.)
-```
+### Scripts
+- `npm run dev`: Start Vite development server.
+- `npm run build`: Compile for production.
+- `npm run preview`: Preview production build locally.
 
-## Scripts
+## 📦 Core Modules
 
-- `npm run dev`: Inicia el servidor de desarrollo (Vite).
-- `npm run build`: Compila para producción.
-- `npm run preview`: Previsualiza la compilación de producción.
+- **Operations Dashboard**: Unified center for check-in/out and reservation management (Calendar & List views).
+- **Client & Pet Management**: Detailed records with support for image uploads and medical history.
+- **Financial Module**: Transaction recording and financial dashboard.
+- **Facility Management**: Room and availability tracking.
 
-## Características de UI/UX
+## 🎨 UI/UX Features
 
-- **Gestión de Imágenes**: Incluye un componente `ImageUpload` con:
-  - Previsualización instantánea.
-  - Barra de progreso real (vía Axios).
-  - Subida directa a Backblaze B2 mediante URLs firmadas.
-- **Identidad Visual Dual**: Soporte para Kinderdog (Ambar) y Pethijos (Violeta).
-- **Dashboard Interactivo**: Con pestañas integradas para todos los módulos operativos.
+- **Dual Branding**: Dynamic theme support for Kinderdog (Ambar) and Pethijos (Violeta).
+- **Image Handling**: `ImageUpload` component with real-time progress and direct B2 upload via signed URLs.
+- **Interactive Dashboards**: Real-time filters and quick actions for operational efficiency.
 
-## Tecnologías Principales
+## 🏗 Architecture
 
-- React 18
-- TypeScript
-- Tailwind CSS
-- Lucide React (Iconos)
-- Axios (Cliente HTTP con soporte para progreso)
+- **Framework**: React 18 + Vite.
+- **Styling**: Tailwind CSS for responsive and modern UI.
+- **API Client**: Type-safe Axios implementation located in `src/lib/api.ts`.
+- **State Management**: React Hooks and Context API for global state (Auth, etc.).
+
+---
+**Status**: Production Ready

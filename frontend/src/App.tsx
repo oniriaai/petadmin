@@ -8,7 +8,6 @@ import { AnimalesPage } from "./pages/animales/AnimalesPage";
 import { ReservasPage } from "./pages/reservas/ReservasPage";
 import { DisponibilidadPage } from "./pages/disponibilidad/DisponibilidadPage";
 import { TransportePage } from "./pages/transporte/TransportePage";
-import { AdministrativaPage } from "./pages/administrativa/AdministrativaPage";
 import { InformesPage } from "./pages/informes/InformesPage";
 import { HerramientasPage } from "./pages/herramientas/HerramientasPage";
 import { ConfiguracionPage } from "./pages/configuracion/ConfiguracionPage";
@@ -17,6 +16,7 @@ import { RoomsPage } from "./pages/salas/RoomsPage";
 import { RecurringPlansPage } from "./pages/planes/RecurringPlansPage";
 import { FinancialPage } from "./pages/transacciones/FinancialPage";
 import { FinancialDashboard } from "./pages/transacciones/FinancialDashboard";
+import { OperacionesPage } from "./pages/operaciones/OperacionesPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -49,16 +49,17 @@ export function App() {
                 <Layout>
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
+                    <Route path="/clientes" element={<ClientesPage />} />
+                    <Route path="/animales" element={<AnimalesPage />} />
+                    <Route path="/operaciones" element={<OperacionesPage />} />
                     <Route path="/reservas" element={<ReservasPage />} />
                     <Route path="/salas" element={<RoomsPage />} />
                     <Route path="/planes" element={<RecurringPlansPage />} />
-                    <Route path="/transacciones" element={<FinancialPage />} />
-                    <Route path="/transacciones/dashboard" element={<FinancialDashboard />} />
-                    <Route path="/clientes" element={<ClientesPage />} />
-                    <Route path="/animales" element={<AnimalesPage />} />
                     <Route path="/disponibilidad" element={<DisponibilidadPage />} />
                     <Route path="/transporte" element={<TransportePage />} />
-                    <Route path="/administrativa" element={<AdministrativaPage />} />
+                    <Route path="/transacciones" element={<FinancialPage />} />
+                    <Route path="/transacciones/dashboard" element={<FinancialDashboard />} />
+                    <Route path="/administrativa" element={<Navigate to="/transacciones" />} />
                     <Route path="/informes" element={<InformesPage />} />
                     <Route path="/herramientas" element={<HerramientasPage />} />
                     <Route path="/configuracion" element={<ConfiguracionPage />} />

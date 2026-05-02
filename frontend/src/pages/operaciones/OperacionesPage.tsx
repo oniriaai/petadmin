@@ -1,0 +1,277 @@
+import React, { useState, useMemo } from "react";
+import { Calendar, List, Plus, Search, RefreshCw } from "lucide-react";
+import { api, checkInOutApi, reservationsApi } from "../../lib/api";
+import { PageLoader } from "../../components/ui/Spinner";
+import { useOperacionesData, OperationalEvent } from "./useOperacionesData";
+import { UnifiedCalendarView } from "./UnifiedCalendarView";
+import { UnifiedListView } from "./UnifiedListView";
+import { CheckInModal } from "../check-in-out/CheckInModal";
+import { CheckOutModal } from "../check-in-out/CheckOutModal";
+import { CheckInOutForm } from "../check-in-out/CheckInOutForm";
+import { NuevaReservaModal } from "../reservas/NuevaReservaModal";
+import { Modal } from "../../components/ui/Modal";
+
+export function OperacionesPage() {
+  const { events, loading, error, refresh } = useOperacionesData();
+  const [selectedTab, setSelectedTab] = useState<"calendar" | "list">("calendar");
+  const [statusFilter, setStatusFilter] = useState<"all" | "PENDING" | "CHECKED_IN" | "COMPLETED">("all");
+  const [search, setSearch] = useState("");
+  const [checkinTarget, setCheckinTarget] = useState<OperationalEvent | null>(null);
+  const [checkoutTarget, setCheckoutTarget] = useState<OperationalEvent | null>(null);
+  const [showCheckinModal, setShowCheckinModal] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [showNewReserva, setShowNewReserva] = useState(false);
+  const [showAdHocModal, setShowAdHocModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const handleCheckin = async (id: string, checkInTime: string, performedByUserId?: string) => {
+    if (!checkinTarget) return;
+    setActionLoading(true);
+    try {
+      if (checkinTarget.isReservation) {
+        await reservationsApi.checkIn(checkinTarget.originalId, { time: checkInTime });
+      } else {
+        await checkInOutApi.checkIn(checkinTarget.originalId, { checkInTime, performedByUserId });
+      }
+      setShowCheckinModal(false);
+      setCheckinTarget(null);
+      await refresh();
+    } catch (err) {
+      console.error("Error during check-in:", err);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleCheckout = async (
+    id: string, 
+    checkOutTime: string, 
+    performedByUserId?: string, 
+    createIncome?: boolean, 
+    paymentMethod?: string
+  ) => {
+    if (!checkoutTarget) return;
+    setActionLoading(true);
+    try {
+      if (checkoutTarget.isReservation) {
+        await reservationsApi.checkOut(checkoutTarget.originalId, { 
+          time: checkOutTime, 
+          createIncome: createIncome ?? false, 
+          paymentMethod 
+        });
+      } else {
+        await checkInOutApi.checkOut(checkoutTarget.originalId, { checkOutTime, performedByUserId });
+      }
+      setShowCheckoutModal(false);
+      setCheckoutTarget(null);
+      await refresh();
+    } catch (err) {
+      console.error("Error during check-out:", err);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const filteredEvents = useMemo(() => {
+    return events.filter((e) => {
+      // Filter by status
+      if (statusFilter !== "all" && e.status !== statusFilter) return false;
+
+      // Filter by search
+      if (search) {
+        const searchLower = search.toLowerCase();
+        return (
+          e.clientName.toLowerCase().includes(searchLower) ||
+          e.petNames.toLowerCase().includes(searchLower) ||
+          e.roomName.toLowerCase().includes(searchLower)
+        );
+      }
+
+      return true;
+    });
+  }, [events, statusFilter, search]);
+
+  return (
+    <div className="p-6 space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="page-title">Operaciones</h1>
+          <p className="text-gray-500 text-sm mt-1">Gestión Unificada de Reservas y Visitas Ad-hoc</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={refresh} disabled={loading || actionLoading} className="btn-ghost">
+            <RefreshCw size={16} /> Actualizar
+          </button>
+          <button onClick={() => setShowAdHocModal(true)} className="btn-secondary">
+            <Plus size={16} /> Ad-hoc
+          </button>
+          <button onClick={() => setShowNewReserva(true)} className="btn-primary">
+            <Plus size={16} /> Nueva Reserva
+          </button>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="card p-4 flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-48">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            className="input pl-9"
+            placeholder="Buscar por cliente, mascota o sala…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          className="input"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as any)}
+        >
+          <option value="all">Todos los estados</option>
+          <option value="PENDING">Pendiente</option>
+          <option value="CHECKED_IN">Ingresado</option>
+          <option value="COMPLETED">Completado</option>
+        </select>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+          {error}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && <PageLoader />}
+
+      {/* Tab Navigation */}
+      {!loading && (
+        <>
+          <div className="card flex gap-2 p-2 border-b">
+            <button
+              onClick={() => setSelectedTab("calendar")}
+              className={`flex items-center gap-2 px-4 py-2 font-medium transition rounded-t-lg ${
+                selectedTab === "calendar"
+                  ? "bg-blue-100 text-blue-700 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <Calendar size={18} /> Calendario
+            </button>
+            <button
+              onClick={() => setSelectedTab("list")}
+              className={`flex items-center gap-2 px-4 py-2 font-medium transition rounded-t-lg ${
+                selectedTab === "list"
+                  ? "bg-blue-100 text-blue-700 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+            >
+              <List size={18} /> Lista
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          {selectedTab === "calendar" && (
+            <UnifiedCalendarView
+              events={filteredEvents}
+              onCheckin={(id) => {
+                const event = filteredEvents.find((e) => e.id === id);
+                if (event) {
+                  setCheckinTarget(event);
+                  setShowCheckinModal(true);
+                }
+              }}
+              onCheckout={(id) => {
+                const event = filteredEvents.find((e) => e.id === id);
+                if (event) {
+                  setCheckoutTarget(event);
+                  setShowCheckoutModal(true);
+                }
+              }}
+            />
+          )}
+
+          {selectedTab === "list" && (
+            <UnifiedListView
+              events={filteredEvents}
+              onCheckin={(id) => {
+                const event = filteredEvents.find((e) => e.id === id);
+                if (event) {
+                  setCheckinTarget(event);
+                  setShowCheckinModal(true);
+                }
+              }}
+              onCheckout={(id) => {
+                const event = filteredEvents.find((e) => e.id === id);
+                if (event) {
+                  setCheckoutTarget(event);
+                  setShowCheckoutModal(true);
+                }
+              }}
+            />
+          )}
+
+          {/* Check-In Modal */}
+          <CheckInModal
+            open={showCheckinModal}
+            onClose={() => {
+              setShowCheckinModal(false);
+              setCheckinTarget(null);
+            }}
+            record={checkinTarget ? {
+              id: checkinTarget.originalId,
+              petName: checkinTarget.petNames,
+              clientName: checkinTarget.clientName,
+              roomName: checkinTarget.roomName,
+              status: checkinTarget.status,
+            } : null}
+            isReservation={checkinTarget?.isReservation}
+            onConfirm={handleCheckin}
+          />
+
+          {/* Check-Out Modal */}
+          <CheckOutModal
+            open={showCheckoutModal}
+            onClose={() => {
+              setShowCheckoutModal(false);
+              setCheckoutTarget(null);
+            }}
+            record={checkoutTarget ? {
+              id: checkoutTarget.originalId,
+              petName: checkoutTarget.petNames,
+              clientName: checkoutTarget.clientName,
+              roomName: checkoutTarget.roomName,
+              status: checkoutTarget.status,
+            } : null}
+            isReservation={checkoutTarget?.isReservation}
+            onConfirm={handleCheckout}
+          />
+
+          {/* Nueva Reserva Modal */}
+          <NuevaReservaModal
+            open={showNewReserva}
+            onClose={() => setShowNewReserva(false)}
+            onSaved={refresh}
+          />
+
+          {/* Ad-hoc Registration Modal */}
+          <Modal
+            open={showAdHocModal}
+            onClose={() => setShowAdHocModal(false)}
+            title="Nuevo Registro Ad-hoc"
+          >
+            <CheckInOutForm
+              onSuccess={() => {
+                setShowAdHocModal(false);
+                refresh();
+              }}
+            />
+          </Modal>
+        </>
+      )}
+    </div>
+  );
+}

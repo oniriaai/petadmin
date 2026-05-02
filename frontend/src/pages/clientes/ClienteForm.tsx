@@ -3,17 +3,17 @@ import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 
-interface Client { id: string; firstName: string; lastName: string; idNumber?: string; phone?: string; whatsapp?: string; email?: string; address?: string; city?: string; province?: string; language?: string; notes?: string }
+interface Client { id: string; firstName: string; lastName: string; idNumber?: string; phone?: string; whatsapp?: string; email?: string; address?: string; city?: string; province?: string; language?: string; birthdate?: string; notes?: string }
 interface Props { open: boolean; onClose: () => void; onSaved: () => void; client: Client | null }
 
 export function ClienteForm({ open, onClose, onSaved, client }: Props) {
-  const [form, setForm] = useState({ firstName: "", lastName: "", idNumber: "", phone: "", whatsapp: "", email: "", address: "", city: "", province: "", language: "es", notes: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", idNumber: "", phone: "", whatsapp: "", email: "", address: "", city: "", province: "", language: "es", birthdate: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (client) setForm({ firstName: client.firstName, lastName: client.lastName, idNumber: client.idNumber ?? "", phone: client.phone ?? "", whatsapp: client.whatsapp ?? "", email: client.email ?? "", address: client.address ?? "", city: client.city ?? "", province: client.province ?? "", language: client.language ?? "es", notes: client.notes ?? "" });
-    else setForm({ firstName: "", lastName: "", idNumber: "", phone: "", whatsapp: "", email: "", address: "", city: "", province: "", language: "es", notes: "" });
+    if (client) setForm({ firstName: client.firstName, lastName: client.lastName, idNumber: client.idNumber ?? "", phone: client.phone ?? "", whatsapp: client.whatsapp ?? "", email: client.email ?? "", address: client.address ?? "", city: client.city ?? "", province: client.province ?? "", language: client.language ?? "es", birthdate: client.birthdate ?? "", notes: client.notes ?? "" });
+    else setForm({ firstName: "", lastName: "", idNumber: "", phone: "", whatsapp: "", email: "", address: "", city: "", province: "", language: "es", birthdate: "", notes: "" });
     setError("");
   }, [client, open]);
 
@@ -50,6 +50,7 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
           <div><label className="label">Teléfono</label><input className="input" value={form.phone} onChange={set("phone")} /></div>
           <div><label className="label">WhatsApp</label><input className="input" value={form.whatsapp} onChange={set("whatsapp")} /></div>
           <div><label className="label">Email</label><input className="input" type="email" value={form.email} onChange={set("email")} /></div>
+          <div><label className="label">Fecha de nacimiento</label><input className="input" type="date" value={form.birthdate} onChange={set("birthdate")} /></div>
           <div className="col-span-2"><label className="label">Dirección</label><input className="input" value={form.address} onChange={set("address")} /></div>
           <div><label className="label">Ciudad</label><input className="input" value={form.city} onChange={set("city")} /></div>
           <div><label className="label">Provincia</label><input className="input" value={form.province} onChange={set("province")} /></div>

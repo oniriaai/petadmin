@@ -42,7 +42,7 @@ async function main() {
     },
   });
 
-  const client = await prisma.client.create({
+  const client1 = await prisma.client.create({
     data: {
       firstName: "María",
       lastName: "González",
@@ -55,17 +55,47 @@ async function main() {
     },
   });
 
-  const pet = await prisma.pet.create({
+  const client2 = await prisma.client.create({
     data: {
-      clientId: client.id,
+      firstName: "Juan",
+      lastName: "Pérez",
+      phone: "0987654321",
+      email: "juan.perez@email.com",
+      city: "Quito",
+      province: "Pichincha",
+      isActive: true,
+      firstServiceDate: new Date(),
+    },
+  });
+
+  const pet1 = await prisma.pet.create({
+    data: {
+      clientId: client1.id,
       name: "Max",
       species: "dog",
       breed: "Labrador",
       sex: "M",
-      color: "Amarillo",
+      color: "Negro",
       weight: 25,
       isNeutered: true,
       isActive: true,
+      photoUrl: "https://s3.us-east-005.backblazeb2.com/pethijos-kinderdog/pets/Max_Mar_a_Gonz_lez/1777675172163-08143f74-f495-42a9-92c1-e476bbb89adb.jpeg",
+    },
+  });
+
+  const pet2 = await prisma.pet.create({
+    data: {
+      clientId: client2.id,
+      name: "Buddy",
+      species: "dog",
+      breed: "Golden Retriever",
+      sex: "M",
+      color: "Dorado",
+      weight: 28.5,
+      height: 62,
+      isNeutered: true,
+      isActive: true,
+      photoUrl: "https://s3.us-east-005.backblazeb2.com/pethijos-kinderdog/pets/Buddy_Juan_P_rez/1777674775376-cheems_.jpg",
     },
   });
 
@@ -78,10 +108,11 @@ async function main() {
     const checkout = new Date(today);
     checkout.setHours(18, 0, 0, 0);
 
-    const reservation = await prisma.reservation.create({
+    // Reservation for Max
+    const res1 = await prisma.reservation.create({
       data: {
         businessUnit: "KINDERDOG",
-        clientId: client.id,
+        clientId: client1.id,
         roomId: room.id,
         service: "GUARDERIA",
         status: "CONFIRMADA",
@@ -93,12 +124,36 @@ async function main() {
         totalAmount: 28.75,
         pendingAmount: 28.75,
         paymentMethod: "EFECTIVO",
-        concept: "Guardería diaria",
+        concept: "Guardería diaria - Max",
       },
     });
 
     await prisma.reservationPet.create({
-      data: { reservationId: reservation.id, petId: pet.id },
+      data: { reservationId: res1.id, petId: pet1.id },
+    });
+
+    // Reservation for Buddy
+    const res2 = await prisma.reservation.create({
+      data: {
+        businessUnit: "KINDERDOG",
+        clientId: client2.id,
+        roomId: room.id,
+        service: "GUARDERIA",
+        status: "PENDIENTE",
+        checkIn: checkin,
+        checkOut: checkout,
+        basePrice: 25,
+        vatPercent: 15,
+        vatAmount: 3.75,
+        totalAmount: 28.75,
+        pendingAmount: 28.75,
+        paymentMethod: "EFECTIVO",
+        concept: "Guardería diaria - Buddy",
+      },
+    });
+
+    await prisma.reservationPet.create({
+      data: { reservationId: res2.id, petId: pet2.id },
     });
   }
 
