@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, Search, CheckCircle, LogOut, Calendar, Plus } from "lucide-react";
 import { fmt, fmtTime } from "../../lib/utils";
-import { Badge } from "../../components/ui/Badge";
+import { Badge } from "../ui/Badge";
 import type { OperationalEvent, OperationalEventStatus } from "./useOperacionesData";
 
 interface UnifiedListViewProps {
@@ -19,7 +19,7 @@ function getStatusColor(status: OperationalEventStatus) {
   const colors = {
     PENDING: "bg-gray-100 text-gray-700",
     CHECKED_IN: "bg-green-100 text-green-700",
-    COMPLETED: "bg-blue-100 text-blue-700",
+    CHECKED_OUT: "bg-blue-100 text-blue-700",
   };
   return colors[status];
 }
@@ -28,7 +28,7 @@ function getStatusLabel(status: OperationalEventStatus) {
   const labels = {
     PENDING: "Pendiente",
     CHECKED_IN: "Ingresado",
-    COMPLETED: "Egresado",
+    CHECKED_OUT: "Egresado",
   };
   return labels[status];
 }
@@ -185,7 +185,7 @@ export function UnifiedListView({
           <option value="all">Todos los estados</option>
           <option value="PENDING">Pendiente</option>
           <option value="CHECKED_IN">Ingresado</option>
-          <option value="COMPLETED">Egresado</option>
+          <option value="CHECKED_OUT">Egresado</option>
         </select>
       </div>
 

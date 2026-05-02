@@ -73,7 +73,7 @@ export function Dashboard() {
         <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Próximas reservas de hoy</h2>
-            <Link to="/reservas" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+            <Link to="/operaciones" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
               Ver todas <ArrowRight size={14} />
             </Link>
           </div>
@@ -134,10 +134,10 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { to: "/reservas", label: "Nueva Reserva", emoji: "📅", bg: "bg-blue-50 hover:bg-blue-100" },
+          { to: "/operaciones", label: "Nueva Reserva", emoji: "📅", bg: "bg-blue-50 hover:bg-blue-100" },
           { to: "/clientes", label: "Nuevo Cliente", emoji: "👤", bg: "bg-purple-50 hover:bg-purple-100" },
           { to: "/informes", label: "Ver Informes", emoji: "📊", bg: "bg-green-50 hover:bg-green-100" },
-          { to: "/administrativa", label: "Gestión Admin", emoji: "💼", bg: "bg-amber-50 hover:bg-amber-100" },
+          { to: "/transacciones", label: "Gestión Financiera", emoji: "💼", bg: "bg-amber-50 hover:bg-amber-100" },
         ].map(({ to, label, emoji, bg }) => (
           <Link key={to} to={to} className={`card p-4 ${bg} flex items-center gap-3 transition-colors cursor-pointer no-underline`}>
             <span className="text-2xl">{emoji}</span>

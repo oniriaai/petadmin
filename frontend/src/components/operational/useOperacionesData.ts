@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { api, checkInOutApi, CheckInOutRecord } from '../../lib/api';
 
-// Reservation interface (from ReservasPage)
+// Core Reservation interface
 export interface Reservation {
   id: string;
   businessUnit: string;
@@ -35,7 +35,7 @@ export interface ReservationWithCheckInOut extends Reservation {
 }
 
 export type OperationalEventType = 'RESERVATION' | 'ADHOC';
-export type OperationalEventStatus = 'PENDING' | 'CHECKED_IN' | 'COMPLETED';
+export type OperationalEventStatus = 'PENDING' | 'CHECKED_IN' | 'CHECKED_OUT';
 
 export interface OperationalEvent {
   id: string;
@@ -112,7 +112,7 @@ export function useOperacionesData(): UseOperacionesDataReturn {
         const lastCheckInOut = sortedCIOs[0];
 
         let status: OperationalEventStatus = 'PENDING';
-        if (res.status === 'COMPLETADA') status = 'COMPLETED';
+        if (res.status === 'COMPLETADA') status = 'CHECKED_OUT';
         else if (res.status === 'ACTIVA') status = 'CHECKED_IN';
 
         unifiedEvents.push({
@@ -141,7 +141,7 @@ export function useOperacionesData(): UseOperacionesDataReturn {
       // Map Ad-hoc Check-ins to OperationalEvents
       adHoc.forEach((record) => {
         let status: OperationalEventStatus = 'PENDING';
-        if (record.checkOutTime) status = 'COMPLETED';
+        if (record.checkOutTime) status = 'CHECKED_OUT';
         else if (record.checkInTime) status = 'CHECKED_IN';
 
         unifiedEvents.push({

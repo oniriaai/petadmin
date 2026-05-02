@@ -48,7 +48,6 @@ export interface CheckInOutRecord {
   performedByUserId?: string | null;
   businessUnit: string;
   isActive: boolean;
-  createdAt: string;
   updatedAt?: string;
 }
 

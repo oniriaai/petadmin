@@ -1,10 +1,16 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Edit2, Trash2, RefreshCw, Search, TrendingUp, TrendingDown, ShoppingCart, BarChart3 } from "lucide-react";
+import { Plus, Edit2, Trash2, RefreshCw, Search, TrendingUp, TrendingDown, ShoppingCart, BarChart3, CreditCard, Building2, LayoutDashboard } from "lucide-react";
 import { api } from "../../lib/api";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { IncomeEntryForm } from "./IncomeEntryForm";
-import { ExpenseEntryForm } from "./ExpenseEntryForm";
+import { PayableEntryForm } from "./PayableEntryForm";
+import { ProviderForm } from "./ProviderForm";
+import { PayModal } from "./PayModal";
+import { FinancialDashboard } from "./FinancialDashboard";
+import { Modal } from "../../components/ui/Modal";
+import { Badge } from "../../components/ui/Badge";
+import { fmt, fmtCurrency, EXPENSE_CATEGORIES, PAYMENT_METHODS } from "../../lib/utils";
 
 interface IncomeEntry {
   id: string;
@@ -21,116 +27,97 @@ interface IncomeEntry {
   createdAt?: string;
 }
 
-interface ExpenseEntry {
-  id: string;
-  category: string;
-  description: string;
-  amount: number;
-  provider: string;
-  date: string;
-  notes?: string;
-  isActive: boolean;
-  createdAt?: string;
-}
+interface Provider { id: string; name: string; idNumber?: string; email?: string; phone?: string; address?: string; product?: string; city?: string; province?: string; bannerId?: string; isActive: boolean }
+interface Payable { id: string; type: string; category: string; description: string; provider?: { id: string; name: string }; invoiceNumber?: string; invoiceDate?: string; subtotal: number; vatPercent: number; vatAmount: number; total: number; paid: number; balance: number; status: string; dueDate?: string; isRecurring: boolean; notes?: string; payments: Payment[] }
+interface Payment { id: string; amount: number; date: string; method: string; reference?: string; notes?: string }
 
-interface PurchaseEntry {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  provider: string;
-  date: string;
-  notes?: string;
-  isActive: boolean;
-  createdAt?: string;
-}
+const STATUS_COLOR: Record<string, string> = {
+  PENDIENTE: "bg-yellow-100 text-yellow-800",
+  PARCIAL:   "bg-blue-100 text-blue-800",
+  PAGADO:    "bg-green-100 text-green-800",
+};
 
 export function FinancialPage() {
-  const [activeTab, setActiveTab] = useState<"income" | "expenses" | "purchases">("income");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "income" | "egresos" | "providers">("dashboard");
   const [incomes, setIncomes] = useState<IncomeEntry[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseEntry[]>([]);
-  const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
+  const [payables, setPayables] = useState<Payable[]>([]);
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
-
+  const [statusFilter, setStatusFilter] = useState("");
+  
   const [showIncomeForm, setShowIncomeForm] = useState(false);
-  const [showExpenseForm, setShowExpenseForm] = useState(false);
-  const [showPurchaseForm, setShowPurchaseForm] = useState(false);
+  const [showPayableForm, setShowPayableForm] = useState(false);
+  const [showProviderForm, setShowProviderForm] = useState(false);
+  const [showPayModal, setShowPayModal] = useState<Payable | null>(null);
+  
   const [editingIncome, setEditingIncome] = useState<IncomeEntry | null>(null);
-  const [editingExpense, setEditingExpense] = useState<ExpenseEntry | null>(null);
-  const [editingPurchase, setEditingPurchase] = useState<PurchaseEntry | null>(null);
+  const [editingPayable, setEditingPayable] = useState<Payable | null>(null);
+  const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
 
   const loadIncomes = useCallback(async () => {
     try {
-      const data = await api.get<IncomeEntry[]>("/financial/incomes");
+      const data = await api.get<IncomeEntry[]>("/incomes");
       setIncomes(data);
     } catch (e) {
       console.error("Error loading incomes:", e);
     }
   }, []);
 
-  const loadExpenses = useCallback(async () => {
+  const loadPayables = useCallback(async () => {
     try {
-      const data = await api.get<ExpenseEntry[]>("/financial/expenses");
-      setExpenses(data);
+      const params = new URLSearchParams();
+      if (statusFilter) params.set("status", statusFilter);
+      const data = await api.get<Payable[]>(`/payables?${params}`);
+      setPayables(data);
     } catch (e) {
-      console.error("Error loading expenses:", e);
+      console.error("Error loading payables:", e);
     }
-  }, []);
+  }, [statusFilter]);
 
-  const loadPurchases = useCallback(async () => {
+  const loadProviders = useCallback(async () => {
     try {
-      const data = await api.get<PurchaseEntry[]>("/financial/purchases");
-      setPurchases(data);
+      const data = await api.get<Provider[]>("/providers");
+      setProviders(data);
     } catch (e) {
-      console.error("Error loading purchases:", e);
+      console.error("Error loading providers:", e);
     }
   }, []);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([loadIncomes(), loadExpenses(), loadPurchases()]);
+      if (activeTab === "income") await loadIncomes();
+      else if (activeTab === "egresos") await Promise.all([loadPayables(), loadProviders()]);
+      else if (activeTab === "providers") await loadProviders();
     } finally {
       setLoading(false);
     }
-  }, [loadIncomes, loadExpenses, loadPurchases]);
+  }, [activeTab, loadIncomes, loadPayables, loadProviders]);
 
   useEffect(() => {
-    loadAll();
-  }, [loadAll]);
+    if (activeTab !== "dashboard") {
+      loadAll();
+    } else {
+      setLoading(false);
+    }
+  }, [activeTab, loadAll]);
 
   async function deleteIncome(id: string, concept: string) {
     if (!confirm(`¿Eliminar ingreso "${concept}"?`)) return;
     try {
-      await api.del(`/financial/incomes/${id}`);
+      await api.del(`/incomes/${id}`);
       loadIncomes();
     } catch (e) {
       alert("Error al eliminar: " + (e instanceof Error ? e.message : "Unknown error"));
     }
   }
 
-  async function deleteExpense(id: string, description: string) {
-    if (!confirm(`¿Eliminar gasto "${description}"?`)) return;
-    try {
-      await api.del(`/financial/expenses/${id}`);
-      loadExpenses();
-    } catch (e) {
-      alert("Error al eliminar: " + (e instanceof Error ? e.message : "Unknown error"));
-    }
-  }
-
-  async function deletePurchase(id: string, description: string) {
-    if (!confirm(`¿Eliminar compra "${description}"?`)) return;
-    try {
-      await api.del(`/financial/purchases/${id}`);
-      loadPurchases();
-    } catch (e) {
-      alert("Error al eliminar: " + (e instanceof Error ? e.message : "Unknown error"));
-    }
+  async function deletePayable(id: string) {
+    if (!confirm("¿Eliminar este documento?")) return;
+    await api.del(`/payables/${id}`);
+    loadPayables();
   }
 
   const formatDate = (dateStr: string) => {
@@ -145,62 +132,51 @@ export function FinancialPage() {
     return matchSearch && matchDate;
   });
 
-  const filteredExpenses = expenses.filter((expense) => {
-    const matchSearch = expense.description.toLowerCase().includes(search.toLowerCase()) ||
-      expense.provider.toLowerCase().includes(search.toLowerCase());
-    const matchCategory = !categoryFilter || expense.category === categoryFilter;
-    const matchDate = !dateFilter || expense.date.startsWith(dateFilter);
-    return matchSearch && matchCategory && matchDate;
-  });
-
-  const filteredPurchases = purchases.filter((purchase) => {
-    const matchSearch = purchase.description.toLowerCase().includes(search.toLowerCase()) ||
-      purchase.provider.toLowerCase().includes(search.toLowerCase());
-    const matchDate = !dateFilter || purchase.date.startsWith(dateFilter);
-    return matchSearch && matchDate;
+  const filteredPayables = payables.filter((p) => {
+    const matchSearch = p.description.toLowerCase().includes(search.toLowerCase()) ||
+      (p.provider?.name?.toLowerCase().includes(search.toLowerCase()) ?? false);
+    return matchSearch;
   });
 
   const totalIncomes = filteredIncomes.reduce((sum, inc) => sum + (inc.total || inc.amount), 0);
-  const totalExpenses = filteredExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const totalPurchases = filteredPurchases.reduce((sum, pur) => sum + pur.totalPrice, 0);
-
-  if (loading) return <PageLoader />;
+  const totalEgresos = filteredPayables.reduce((sum, p) => sum + p.total, 0);
+  const pendingEgresos = filteredPayables.reduce((sum, p) => sum + p.balance, 0);
 
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Gestión Financiera</h1>
-          <p className="text-gray-500 text-sm mt-1">Ingresos, gastos y compras</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {activeTab === "dashboard" ? "Resumen y analítica" :
+             activeTab === "income" ? "Ingresos y recaudación" : 
+             activeTab === "egresos" ? "Gastos, compras y pagos" : "Directorio de proveedores"}
+          </p>
         </div>
-        <div className="flex gap-3">
-          <Link
-            to="/transacciones/dashboard"
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-          >
-            <BarChart3 size={20} />
-            Dashboard
-          </Link>
-          <button
-            onClick={() => {
-              if (activeTab === "income") setShowIncomeForm(true);
-              else if (activeTab === "expenses") setShowExpenseForm(true);
-              else setShowPurchaseForm(true);
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            <Plus size={20} />
-            Nuevo
-          </button>
-        </div>
+        {activeTab !== "dashboard" && (
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                if (activeTab === "income") { setEditingIncome(null); setShowIncomeForm(true); }
+                else if (activeTab === "egresos") { setEditingPayable(null); setShowPayableForm(true); }
+                else if (activeTab === "providers") { setEditingProvider(null); setShowProviderForm(true); }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              <Plus size={20} />
+              Nuevo {activeTab === "providers" ? "Proveedor" : activeTab === "egresos" ? "Egreso" : "Ingreso"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
         {[
-          { id: "income", label: "Ingresos", icon: TrendingUp },
-          { id: "expenses", label: "Gastos", icon: TrendingDown },
-          { id: "purchases", label: "Compras", icon: ShoppingCart },
+          { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+          { id: "income",    label: "Ingresos",  icon: TrendingUp },
+          { id: "egresos",   label: "Egresos",   icon: TrendingDown },
+          { id: "providers", label: "Proveedores", icon: Building2 },
         ].map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -208,7 +184,7 @@ export function FinancialPage() {
               setActiveTab(id as typeof activeTab);
               setSearch("");
               setDateFilter("");
-              setCategoryFilter("");
+              setStatusFilter("");
             }}
             className={`flex items-center gap-2 px-4 py-3 border-b-2 transition ${
               activeTab === id
@@ -222,64 +198,64 @@ export function FinancialPage() {
         ))}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600">Total Ingresos</div>
-          <div className="text-2xl font-bold text-green-600 mt-1">${totalIncomes.toLocaleString()}</div>
-          <div className="text-xs text-gray-500 mt-2">{filteredIncomes.length} registros</div>
+      {activeTab !== "providers" && activeTab !== "dashboard" && (
+        <div className="grid grid-cols-3 gap-4">
+          {activeTab === "income" ? (
+            <>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="text-sm text-gray-600">Total Ingresos</div>
+                <div className="text-2xl font-bold text-green-600 mt-1">${totalIncomes.toLocaleString()}</div>
+                <div className="text-xs text-gray-500 mt-2">{filteredIncomes.length} registros</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="text-sm text-gray-600">Total Egresos</div>
+                <div className="text-2xl font-bold text-red-600 mt-1">${totalEgresos.toLocaleString()}</div>
+                <div className="text-xs text-gray-500 mt-2">{filteredPayables.length} documentos</div>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="text-sm text-gray-600">Saldo Pendiente</div>
+                <div className="text-2xl font-bold text-orange-600 mt-1">${pendingEgresos.toLocaleString()}</div>
+                <div className="text-xs text-gray-500 mt-2">Cuentas por pagar</div>
+              </div>
+            </>
+          )}
         </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600">Total Gastos</div>
-          <div className="text-2xl font-bold text-red-600 mt-1">${totalExpenses.toLocaleString()}</div>
-          <div className="text-xs text-gray-500 mt-2">{filteredExpenses.length} registros</div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600">Total Compras</div>
-          <div className="text-2xl font-bold text-blue-600 mt-1">${totalPurchases.toLocaleString()}</div>
-          <div className="text-xs text-gray-500 mt-2">{filteredPurchases.length} registros</div>
-        </div>
-      </div>
+      )}
 
       {/* Filters */}
-      <div className="flex gap-3 items-center bg-white border border-gray-200 rounded-lg p-4">
+      {activeTab !== "dashboard" && (
+        <div className="flex gap-3 items-center bg-white border border-gray-200 rounded-lg p-4">
         <Search size={18} className="text-gray-400" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={
-            activeTab === "income"
-              ? "Buscar concepto o método..."
-              : activeTab === "expenses"
-              ? "Buscar descripción o proveedor..."
-              : "Buscar descripción o proveedor..."
-          }
+          placeholder="Buscar..."
           className="flex-1 outline-none text-sm"
         />
 
-        <input
-          type="month"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
-        />
-
-        {activeTab === "expenses" && (
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+        {activeTab === "income" && (
+          <input
+            type="month"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        )}
+
+        {activeTab === "egresos" && (
+          <select
+            className="input w-40"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
           >
-            <option value="">Todas las categorías</option>
-            <option value="SUMINISTROS">Suministros</option>
-            <option value="SERVICIOS">Servicios</option>
-            <option value="PERSONAL">Personal</option>
-            <option value="UTILIDADES">Utilidades</option>
-            <option value="MANTENIMIENTO">Mantenimiento</option>
-            <option value="OTRO">Otro</option>
+            <option value="">Todos los estados</option>
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="PARCIAL">Parcial</option>
+            <option value="PAGADO">Pagado</option>
           </select>
         )}
 
@@ -287,7 +263,7 @@ export function FinancialPage() {
           onClick={() => {
             setSearch("");
             setDateFilter("");
-            setCategoryFilter("");
+            setStatusFilter("");
             loadAll();
           }}
           className="p-2 hover:bg-gray-100 rounded transition"
@@ -296,234 +272,200 @@ export function FinancialPage() {
           <RefreshCw size={18} />
         </button>
       </div>
-
-      {/* Income Tab */}
-      {activeTab === "income" && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          {filteredIncomes.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No hay ingresos registrados</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Concepto</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Monto Base</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">IVA</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Total</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Pago</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Estado</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Fecha</th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIncomes.map((income) => (
-                    <tr key={income.id} className="border-b hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm">{income.concept}</td>
-                      <td className="px-6 py-4 text-sm text-right font-mono">${income.amount.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-right font-mono text-gray-600">
-                        ${((income.vatPercent / 100) * income.amount).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-bold text-green-600">
-                        ${((income.total || income.amount + (income.vatPercent / 100) * income.amount)).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm">{income.paymentMethod}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            income.invoiceStatus === "PAGADO"
-                              ? "bg-green-100 text-green-800"
-                              : income.invoiceStatus === "PENDIENTE"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {income.invoiceStatus}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{formatDate(income.date)}</td>
-                      <td className="px-6 py-4 text-right flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setEditingIncome(income);
-                            setShowIncomeForm(true);
-                          }}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded transition"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => deleteIncome(income.id, income.concept)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       )}
 
-      {/* Expenses Tab */}
-      {activeTab === "expenses" && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          {filteredExpenses.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No hay gastos registrados</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Descripción</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Categoría</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Monto</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Proveedor</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Fecha</th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredExpenses.map((expense) => (
-                    <tr key={expense.id} className="border-b hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm">{expense.description}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-right font-bold text-red-600">
-                        ${expense.amount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{expense.provider}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{formatDate(expense.date)}</td>
-                      <td className="px-6 py-4 text-right flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setEditingExpense(expense);
-                            setShowExpenseForm(true);
-                          }}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded transition"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => deleteExpense(expense.id, expense.description)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Purchases Tab */}
-      {activeTab === "purchases" && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          {filteredPurchases.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">No hay compras registradas</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Descripción</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Cantidad</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Precio Unit.</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Total</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Proveedor</th>
-                    <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Fecha</th>
-                    <th className="px-6 py-3 text-right text-sm font-medium text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPurchases.map((purchase) => (
-                    <tr key={purchase.id} className="border-b hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm">{purchase.description}</td>
-                      <td className="px-6 py-4 text-sm text-center font-mono">{purchase.quantity}</td>
-                      <td className="px-6 py-4 text-sm text-right font-mono">${purchase.unitPrice.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">
-                        ${purchase.totalPrice.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{purchase.provider}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{formatDate(purchase.date)}</td>
-                      <td className="px-6 py-4 text-right flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            setEditingPurchase(purchase);
-                            setShowPurchaseForm(true);
-                          }}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded transition"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => deletePurchase(purchase.id, purchase.description)}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      {loading ? <PageLoader /> : (
+        <>
+          {activeTab === "dashboard" && <FinancialDashboard />}
+          {activeTab === "income" && <IncomesTable incomes={filteredIncomes} onEdit={setEditingIncome} onDelete={deleteIncome} onOpenForm={() => setShowIncomeForm(true)} />}
+          {activeTab === "egresos" && <EgresosTable payables={filteredPayables} onPay={setShowPayModal} onDelete={deletePayable} />}
+          {activeTab === "providers" && <ProvidersTable providers={providers} onEdit={(p: Provider) => { setEditingProvider(p); setShowProviderForm(true); }} load={loadProviders} />}
+        </>
       )}
 
       {/* Modals */}
       <IncomeEntryForm
         open={showIncomeForm}
-        onClose={() => {
-          setShowIncomeForm(false);
-          setEditingIncome(null);
-        }}
+        onClose={() => { setShowIncomeForm(false); setEditingIncome(null); }}
         income={editingIncome}
-        onSaved={() => {
-          loadIncomes();
-          setEditingIncome(null);
-        }}
+        onSaved={() => { loadIncomes(); setEditingIncome(null); }}
       />
 
-      <ExpenseEntryForm
-        open={showExpenseForm}
-        onClose={() => {
-          setShowExpenseForm(false);
-          setEditingExpense(null);
-        }}
-        type="expense"
-        entry={editingExpense}
-        onSaved={() => {
-          loadExpenses();
-          setEditingExpense(null);
-        }}
+      <PayableEntryForm 
+        open={showPayableForm}
+        onClose={() => { setShowPayableForm(false); setEditingPayable(null); }}
+        payable={editingPayable}
+        providers={providers}
+        onSaved={loadPayables}
       />
 
-      <ExpenseEntryForm
-        open={showPurchaseForm}
-        onClose={() => {
-          setShowPurchaseForm(false);
-          setEditingPurchase(null);
-        }}
-        type="purchase"
-        entry={editingPurchase}
-        onSaved={() => {
-          loadPurchases();
-          setEditingPurchase(null);
-        }}
+      <ProviderForm 
+        open={showProviderForm}
+        onClose={() => { setShowProviderForm(false); setEditingProvider(null); }}
+        provider={editingProvider}
+        onSaved={loadProviders}
       />
+
+      <PayModal 
+        payable={showPayModal} 
+        onClose={() => setShowPayModal(null)} 
+        onSaved={loadPayables} 
+      />
+    </div>
+  );
+}
+
+function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {incomes.length === 0 ? (
+        <div className="p-8 text-center text-gray-500">No hay ingresos registrados</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="table-th">Concepto</th>
+                <th className="table-th text-right">Monto Base</th>
+                <th className="table-th text-right">IVA</th>
+                <th className="table-th text-right">Total</th>
+                <th className="table-th">Pago</th>
+                <th className="table-th">Estado</th>
+                <th className="table-th">Fecha</th>
+                <th className="table-th text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {incomes.map((income: any) => (
+                <tr key={income.id} className="table-tr">
+                  <td className="table-td font-medium">{income.concept}</td>
+                  <td className="table-td text-right font-mono">{fmtCurrency(income.amount)}</td>
+                  <td className="table-td text-right font-mono text-gray-600">
+                    {fmtCurrency((income.vatPercent / 100) * income.amount)}
+                  </td>
+                  <td className="table-td text-right font-bold text-green-600">
+                    {fmtCurrency(income.total || income.amount + (income.vatPercent / 100) * income.amount)}
+                  </td>
+                  <td className="table-td text-xs uppercase">{income.paymentMethod}</td>
+                  <td className="table-td">
+                    <Badge color={income.invoiceStatus === "PAGADO" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                      {income.invoiceStatus}
+                    </Badge>
+                  </td>
+                  <td className="table-td text-xs">{fmt(income.date)}</td>
+                  <td className="table-td text-right">
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => { onEdit(income); onOpenForm(); }} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition"><Edit2 size={14} /></button>
+                      <button onClick={() => onDelete(income.id, income.concept)} className="p-1.5 hover:bg-red-50 text-red-600 rounded transition"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EgresosTable({ payables, onPay, onDelete }: any) {
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {payables.length === 0 ? (
+        <p className="text-center text-gray-400 py-12">Sin documentos registrados</p>
+      ) : (
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="table-th">Descripción</th>
+              <th className="table-th">Proveedor</th>
+              <th className="table-th">Categoría</th>
+              <th className="table-th text-right">Total</th>
+              <th className="table-th text-right">Pagado</th>
+              <th className="table-th text-right">Saldo</th>
+              <th className="table-th">Estado</th>
+              <th className="table-th text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {payables.map((p: any) => (
+              <tr key={p.id} className="table-tr">
+                <td className="table-td">
+                  <p className="font-medium text-gray-900 text-sm">{p.description}</p>
+                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">{p.type} · {p.invoiceNumber ?? "Sin factura"}</p>
+                </td>
+                <td className="table-td text-xs font-medium text-indigo-600">{p.provider?.name ?? "—"}</td>
+                <td className="table-td text-xs capitalize">{EXPENSE_CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</td>
+                <td className="table-td text-right font-medium">{fmtCurrency(p.total)}</td>
+                <td className="table-td text-right text-green-600">{fmtCurrency(p.paid)}</td>
+                <td className="table-td text-right font-semibold text-red-600">{fmtCurrency(p.balance)}</td>
+                <td className="table-td"><Badge color={STATUS_COLOR[p.status] ?? "bg-gray-100 text-gray-700"}>{p.status}</Badge></td>
+                <td className="table-td text-right">
+                  <div className="flex gap-1 justify-end">
+                    {p.status !== "PAGADO" && (
+                      <button onClick={() => onPay(p)} className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition" title="Registrar pago"><CreditCard size={14} /></button>
+                    )}
+                    <button onClick={() => onDelete(p.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"><Trash2 size={14} /></button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+function ProvidersTable({ providers, onEdit, load }: any) {
+  async function deactivate(id: string) {
+    if (!confirm("¿Desactivar proveedor?")) return;
+    await api.del(`/providers/${id}`);
+    load();
+  }
+
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      {providers.length === 0 ? (
+        <p className="text-center text-gray-400 py-12">Sin proveedores</p>
+      ) : (
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="table-th">Nombre</th>
+              <th className="table-th">Producto</th>
+              <th className="table-th">Contacto</th>
+              <th className="table-th">Localidad</th>
+              <th className="table-th">Estado</th>
+              <th className="table-th text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {providers.map((p: any) => (
+              <tr key={p.id} className="table-tr">
+                <td className="table-td">
+                  <p className="font-semibold">{p.name}</p>
+                  <p className="text-[10px] text-gray-400">{p.idNumber ?? "—"}</p>
+                </td>
+                <td className="table-td text-xs">{p.product ?? "—"}</td>
+                <td className="table-td text-xs">
+                  {p.phone && <p>{p.phone}</p>}
+                  {p.email && <p className="text-gray-400 truncate max-w-32">{p.email}</p>}
+                </td>
+                <td className="table-td text-xs">{[p.city, p.province].filter(Boolean).join(", ") || "—"}</td>
+                <td className="table-td"><Badge color={p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>{p.isActive ? "Activo" : "Inactivo"}</Badge></td>
+                <td className="table-td text-right">
+                  <div className="flex gap-1 justify-end">
+                    <button onClick={() => onEdit(p)} className="p-1.5 hover:bg-gray-100 rounded transition">✏️</button>
+                    {p.isActive && <button onClick={() => deactivate(p.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"><Trash2 size={13} /></button>}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

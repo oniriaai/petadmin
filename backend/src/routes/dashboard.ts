@@ -58,32 +58,27 @@ dashboardRouter.get("/financial/summary", async (req, res) => {
   const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
   const end = endDate ? new Date(endDate as string) : new Date();
 
-  const [totalIncome, totalExpenses, totalPurchases] = await Promise.all([
+  const [totalIncome, totalPayables] = await Promise.all([
     prisma.income.aggregate({
       where: { businessUnit: bu, date: { gte: start, lte: end } },
       _sum: { total: true },
     }),
-    prisma.expense.aggregate({
-      where: { businessUnit: bu, date: { gte: start, lte: end } },
-      _sum: { amount: true },
-    }),
-    prisma.purchase.aggregate({
-      where: { businessUnit: bu, date: { gte: start, lte: end } },
-      _sum: { totalPrice: true },
+    prisma.payable.aggregate({
+      where: { businessUnit: bu, createdAt: { gte: start, lte: end } },
+      _sum: { total: true },
     }),
   ]);
 
   const income = totalIncome._sum.total ?? 0;
-  const expenses = totalExpenses._sum.amount ?? 0;
-  const purchases = totalPurchases._sum.totalPrice ?? 0;
+  const totalCosts = totalPayables._sum.total ?? 0;
 
   res.json({
     income,
-    expenses,
-    purchases,
-    totalCosts: expenses + purchases,
-    profit: income - (expenses + purchases),
-    profitMargin: income > 0 ? ((income - (expenses + purchases)) / income) * 100 : 0,
+    expenses: totalCosts, // Unified expenses/purchases from payables
+    purchases: 0, // Deprecated separate purchases
+    totalCosts,
+    profit: income - totalCosts,
+    profitMargin: income > 0 ? ((income - totalCosts) / income) * 100 : 0,
   });
 });
 
@@ -97,21 +92,21 @@ dashboardRouter.get("/financial/trends", async (req, res) => {
     const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const nextDate = new Date(date.getFullYear(), date.getMonth() + 1, 1);
     
-    const [income, expenses] = await Promise.all([
+    const [income, payables] = await Promise.all([
       prisma.income.aggregate({
         where: { businessUnit: bu, date: { gte: date, lt: nextDate } },
         _sum: { total: true },
       }),
-      prisma.expense.aggregate({
-        where: { businessUnit: bu, date: { gte: date, lt: nextDate } },
-        _sum: { amount: true },
+      prisma.payable.aggregate({
+        where: { businessUnit: bu, createdAt: { gte: date, lt: nextDate } },
+        _sum: { total: true },
       }),
     ]);
 
     months.push({
       month: date.toLocaleDateString("es-CO", { month: "short", year: "2-digit" }),
       income: income._sum.total ?? 0,
-      expenses: expenses._sum.amount ?? 0,
+      expenses: payables._sum.total ?? 0,
     });
   }
 
@@ -126,15 +121,15 @@ dashboardRouter.get("/financial/expense-categories", async (req, res) => {
   const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
   const end = endDate ? new Date(endDate as string) : new Date();
 
-  const expenses = await prisma.expense.groupBy({
+  const payables = await prisma.payable.groupBy({
     by: ["category"],
-    where: { businessUnit: bu, date: { gte: start, lte: end }, isActive: true },
-    _sum: { amount: true },
+    where: { businessUnit: bu, createdAt: { gte: start, lte: end } },
+    _sum: { total: true },
   });
 
-  const data = expenses.map(e => ({
+  const data = payables.map(e => ({
     category: e.category,
-    amount: e._sum.amount ?? 0,
+    amount: e._sum.total ?? 0,
   }));
 
   res.json(data);

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, CheckCircle, LogOut, Truck, Clock, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { fmt, fmtTime } from "../../lib/utils";
-import { Badge } from "../../components/ui/Badge";
+import { Badge } from "../ui/Badge";
+import { STATUSES } from "../../lib/utils";
 import type { OperationalEvent, OperationalEventStatus } from "./useOperacionesData";
 
 interface UnifiedCalendarViewProps {
@@ -13,19 +14,16 @@ interface UnifiedCalendarViewProps {
 }
 
 function getStatusColor(status: OperationalEventStatus) {
-  const colors = {
-    PENDING: "bg-gray-100 text-gray-700",
-    CHECKED_IN: "bg-green-100 text-green-700",
-    COMPLETED: "bg-blue-100 text-blue-700",
-  };
-  return colors[status];
+  if (status === "CHECKED_IN") return "bg-green-100 text-green-700";
+  if (status === "CHECKED_OUT") return "bg-blue-100 text-blue-700";
+  return "bg-gray-100 text-gray-700";
 }
 
 function getStatusLabel(status: OperationalEventStatus) {
   const labels = {
     PENDING: "Pendiente",
     CHECKED_IN: "Ingresado",
-    COMPLETED: "Egresado",
+    CHECKED_OUT: "Egresado",
   };
   return labels[status];
 }
@@ -145,55 +143,56 @@ export function UnifiedCalendarView({
     
     return (
       <div
-        className={`text-xs bg-white border-l-4 ${unit.color} border-y border-r border-gray-200 rounded-r shadow-sm p-1.5 space-y-1 cursor-pointer hover:shadow-md transition-shadow`}
+        className={`text-[10px] sm:text-xs bg-white border-l-4 ${unit.color} border-y border-r border-gray-200 rounded-r shadow-sm p-1 sm:p-1.5 space-y-0.5 sm:space-y-1 cursor-pointer hover:shadow-md transition-shadow`}
         onClick={() => onViewDetail?.(event)}
+        title={`${event.clientName} - ${event.petNames}`}
       >
         <div className="flex justify-between items-start gap-1">
           <div className="font-bold text-gray-900 truncate">
             {event.clientName}
           </div>
-          <div className="flex gap-1 shrink-0">
-            {event.needsTransport && <Truck size={12} className="text-blue-600" />}
+          <div className="flex gap-0.5 sm:gap-1 shrink-0">
+            {event.needsTransport && <Truck size={10} className="text-blue-600 sm:w-3 sm:h-3" />}
             {event.type === "RESERVATION" ? (
-              <CalendarIcon size={12} className="text-blue-500" />
+              <CalendarIcon size={10} className="text-blue-500 sm:w-3 sm:h-3" />
             ) : (
-              <Plus size={12} className="text-purple-500" />
+              <Plus size={10} className="text-purple-500 sm:w-3 sm:h-3" />
             )}
           </div>
         </div>
         
-        <div className="flex items-center gap-1 text-gray-600 font-medium">
-          <span className="truncate">{event.petNames}</span>
+        <div className="flex items-center gap-1 text-gray-600 font-medium truncate">
+          <span>{event.petNames}</span>
         </div>
 
         {!compact && (
           <div className="flex items-center justify-between gap-1">
-            <span className={`text-[10px] px-1 rounded ${unit.bg} border border-current opacity-70`}>
+            <span className={`text-[8px] sm:text-[10px] px-1 rounded ${unit.bg} border border-current opacity-70`}>
               {unit.label}
             </span>
             <div className="flex items-center gap-0.5 text-gray-400">
-              <Clock size={10} />
+              <Clock size={8} className="sm:w-2.5 sm:h-2.5" />
               <span>{fmtTime(event.scheduledCheckIn)}</span>
             </div>
           </div>
         )}
 
-        <div className="flex items-center justify-between mt-1">
-          <Badge color={statusColor} className="text-[10px] py-0 px-1">
+        <div className="flex items-center justify-between mt-0.5">
+          <Badge color={statusColor} className="text-[8px] sm:text-[10px] py-0 px-1 leading-tight">
             {getStatusLabel(event.status)}
           </Badge>
-          <div className="flex gap-1">
+          <div className="flex gap-0.5 sm:gap-1">
             {event.status === "PENDING" && onCheckin && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onCheckin(event.id);
                 }}
-                className="btn-success h-5 w-5 p-0 flex items-center justify-center rounded"
+                className="btn-success h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center rounded"
                 disabled={loading}
                 title="Check In"
               >
-                <CheckCircle size={12} />
+                <CheckCircle size={10} className="sm:w-3 sm:h-3" />
               </button>
             )}
             {event.status === "CHECKED_IN" && onCheckout && (
@@ -202,11 +201,11 @@ export function UnifiedCalendarView({
                   e.stopPropagation();
                   onCheckout(event.id);
                 }}
-                className="btn-warning h-5 w-5 p-0 flex items-center justify-center rounded"
+                className="btn-warning h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center rounded"
                 disabled={loading}
                 title="Check Out"
               >
-                <LogOut size={12} />
+                <LogOut size={10} className="sm:w-3 sm:h-3" />
               </button>
             )}
           </div>
@@ -229,31 +228,31 @@ export function UnifiedCalendarView({
   return (
     <div className="space-y-4">
       {/* Controls */}
-      <div className="card p-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
               onClick={viewMode === "month" ? handlePrevMonth : handlePrevWeek}
-              className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition"
+              className="p-1 sm:p-1.5 hover:bg-white hover:shadow-sm rounded-md transition"
               title="Anterior"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={handleToday}
-              className="px-3 py-1.5 text-sm font-medium hover:bg-white hover:shadow-sm rounded-md transition"
+              className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium hover:bg-white hover:shadow-sm rounded-md transition"
             >
               Hoy
             </button>
             <button
               onClick={viewMode === "month" ? handleNextMonth : handleNextWeek}
-              className="p-1.5 hover:bg-white hover:shadow-sm rounded-md transition"
+              className="p-1 sm:p-1.5 hover:bg-white hover:shadow-sm rounded-md transition"
               title="Siguiente"
             >
               <ChevronRight size={18} />
             </button>
           </div>
-          <h2 className="font-bold text-lg px-2 min-w-[140px]">
+          <h2 className="font-bold text-sm sm:text-lg px-1 sm:px-2 min-w-[100px] sm:min-w-[140px]">
             {viewMode === "month" ? monthName : weekRange}
           </h2>
         </div>
@@ -262,7 +261,7 @@ export function UnifiedCalendarView({
           <div className="flex bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setViewMode("month")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${
                 viewMode === "month" ? "bg-white shadow-sm text-blue-600" : "text-gray-600"
               }`}
             >
@@ -270,7 +269,7 @@ export function UnifiedCalendarView({
             </button>
             <button
               onClick={() => setViewMode("week")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+              className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${
                 viewMode === "week" ? "bg-white shadow-sm text-blue-600" : "text-gray-600"
               }`}
             >
@@ -286,7 +285,7 @@ export function UnifiedCalendarView({
           {/* Day headers */}
           <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
             {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
-              <div key={day} className="py-2 text-center font-bold text-xs text-gray-500 uppercase tracking-wider">
+              <div key={day} className="py-2 text-center font-bold text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">
                 {day}
               </div>
             ))}
@@ -296,7 +295,7 @@ export function UnifiedCalendarView({
           <div className="grid grid-cols-7 gap-px bg-gray-200">
             {monthDays.map((date, idx) => {
               if (!date) {
-                return <div key={`empty-${idx}`} className="bg-gray-50/50 p-2 h-32" />;
+                return <div key={`empty-${idx}`} className="bg-gray-50/50 p-1 h-24 sm:h-32" />;
               }
 
               const dateStr = formatDateKey(date);
@@ -307,25 +306,25 @@ export function UnifiedCalendarView({
               return (
                 <div
                   key={dateStr}
-                  className={`bg-white p-1 h-32 border-transparent transition-colors ${
+                  className={`bg-white p-1 h-24 sm:h-32 border-transparent transition-colors ${
                     isToday ? "ring-2 ring-inset ring-blue-500 z-10" : ""
                   } ${isWeekend ? "bg-gray-50/30" : ""}`}
                 >
                   <div className="flex justify-between items-center mb-1 px-1">
                     <span
-                      className={`text-xs font-bold ${
-                        isToday ? "bg-blue-600 text-white w-6 h-6 flex items-center justify-center rounded-full" : "text-gray-700"
+                      className={`text-[10px] sm:text-xs font-bold ${
+                        isToday ? "bg-blue-600 text-white w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full" : "text-gray-700"
                       }`}
                     >
                       {date.getDate()}
                     </span>
                     {dayEvents.length > 0 && (
-                      <span className="text-[10px] text-gray-400 font-medium">
+                      <span className="text-[8px] sm:text-[10px] text-gray-400 font-medium">
                         {dayEvents.length} op.
                       </span>
                     )}
                   </div>
-                  <div className="space-y-1 overflow-y-auto max-h-[88px] pr-0.5 custom-scrollbar">
+                  <div className="space-y-0.5 sm:space-y-1 overflow-y-auto max-h-[60px] sm:max-h-[88px] pr-0.5 custom-scrollbar">
                     {dayEvents.map((event) => (
                       <EventCard key={event.id} event={event} compact />
                     ))}
@@ -359,7 +358,7 @@ export function UnifiedCalendarView({
                       <div className="text-[10px] font-bold text-gray-500 uppercase">
                         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][date.getDay()]}
                       </div>
-                      <div className={`text-lg font-bold ${isToday ? "text-blue-600" : "text-gray-900"}`}>
+                      <div className={`text-base sm:text-lg font-bold ${isToday ? "text-blue-600" : "text-gray-900"}`}>
                         {date.getDate()}
                       </div>
                     </div>
@@ -409,49 +408,49 @@ export function UnifiedCalendarView({
       )}
 
       {/* Legend */}
-      <div className="card p-4 flex flex-wrap items-center gap-6">
-        <div className="flex items-center gap-4 border-r border-gray-200 pr-6">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estados:</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-gray-100 rounded border border-gray-200" />
-              <span className="text-xs text-gray-600">Pendiente</span>
+      <div className="card p-3 sm:p-4 flex flex-wrap items-center gap-4 sm:gap-6">
+        <div className="flex items-center gap-3 sm:gap-4 border-r border-gray-200 pr-4 sm:pr-6">
+          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estados:</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-100 rounded border border-gray-200" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Pendiente</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-green-100 rounded border border-green-200" />
-              <span className="text-xs text-gray-600">Ingresado</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-100 rounded border border-green-200" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Ingresado</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-blue-100 rounded border border-blue-200" />
-              <span className="text-xs text-gray-600">Egresado</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-100 rounded border border-blue-200" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Egresado</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-r border-gray-200 pr-6">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipos:</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <CalendarIcon size={14} className="text-blue-500" />
-              <span className="text-xs text-gray-600">Reserva</span>
+        <div className="flex items-center gap-3 sm:gap-4 border-r border-gray-200 pr-4 sm:pr-6">
+          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipos:</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <CalendarIcon size={12} className="text-blue-500 sm:w-3.5 sm:h-3.5" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Reserva</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Plus size={14} className="text-purple-500" />
-              <span className="text-xs text-gray-600">Ad-hoc</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <Plus size={12} className="text-purple-500 sm:w-3.5 sm:h-3.5" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Ad-hoc</span>
             </div>
           </div>
         </div>
         
-        <div className="flex items-center gap-4">
-          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unidades:</span>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 border-l-4 border-amber-500 bg-white" />
-              <span className="text-xs text-gray-600">Guardería (Kinderdog)</span>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unidades:</span>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-l-4 border-amber-500 bg-white" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Guardería (Ambar)</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 border-l-4 border-violet-500 bg-white" />
-              <span className="text-xs text-gray-600">Peluquería (Pethijos)</span>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-l-4 border-violet-500 bg-white" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Peluquería (Violeta)</span>
             </div>
           </div>
         </div>

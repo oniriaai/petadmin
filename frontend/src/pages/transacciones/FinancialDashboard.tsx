@@ -53,7 +53,7 @@ export function FinancialDashboard() {
         api.get<SummaryData>(`/dashboard/financial/summary?${params}`),
         api.get<TrendData[]>("/dashboard/financial/trends"),
         api.get<CategoryData[]>(`/dashboard/financial/expense-categories?${params}`),
-        api.get<OccupancyData>("/analytics/occupancy"),
+        api.get<OccupancyData>("/dashboard/analytics/occupancy"),
       ]);
 
       setSummary(summaryData);
@@ -74,11 +74,10 @@ export function FinancialDashboard() {
   if (loading) return <PageLoader />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">Dashboard Financiero</h1>
-          <p className="text-gray-500 text-sm mt-1">Análisis de ingresos, gastos y rentabilidad</p>
+          <h2 className="text-lg font-semibold text-gray-800">Resumen General</h2>
         </div>
 
         <div className="flex gap-3 items-center">
@@ -116,7 +115,7 @@ export function FinancialDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-gray-600">Ingresos</div>
-                <div className="text-2xl font-bold text-green-600 mt-1">${summary.income.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-green-600 mt-1">${(summary.income ?? 0).toLocaleString()}</div>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <TrendingUp className="text-green-600" size={24} />
@@ -128,7 +127,7 @@ export function FinancialDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-gray-600">Gastos</div>
-                <div className="text-2xl font-bold text-red-600 mt-1">${summary.expenses.toLocaleString()}</div>
+                <div className="text-2xl font-bold text-red-600 mt-1">${(summary.expenses ?? 0).toLocaleString()}</div>
               </div>
               <div className="bg-red-100 p-3 rounded-lg">
                 <TrendingDown className="text-red-600" size={24} />
@@ -140,10 +139,10 @@ export function FinancialDashboard() {
             <div>
               <div className="text-sm text-gray-600">Ganancias</div>
               <div className={`text-2xl font-bold mt-1 ${summary.profit >= 0 ? "text-blue-600" : "text-orange-600"}`}>
-                ${summary.profit.toLocaleString()}
+                ${(summary.profit ?? 0).toLocaleString()}
               </div>
               <div className="text-xs text-gray-500 mt-2">
-                Margen: {summary.profitMargin.toFixed(1)}%
+                Margen: {(summary.profitMargin ?? 0).toFixed(1)}%
               </div>
             </div>
           </div>

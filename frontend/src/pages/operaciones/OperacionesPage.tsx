@@ -1,23 +1,28 @@
 import React, { useState, useMemo } from "react";
 import { Calendar, List, Plus, Search, RefreshCw } from "lucide-react";
-import { api, checkInOutApi, reservationsApi } from "../../lib/api";
+import { api, reservationsApi } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
-import { useOperacionesData, OperationalEvent } from "./useOperacionesData";
-import { UnifiedCalendarView } from "./UnifiedCalendarView";
-import { UnifiedListView } from "./UnifiedListView";
-import { CheckInModal } from "../check-in-out/CheckInModal";
-import { CheckOutModal } from "../check-in-out/CheckOutModal";
-import { CheckInOutForm } from "../check-in-out/CheckInOutForm";
+import { 
+  useOperacionesData, 
+  OperationalEvent, 
+  UnifiedCalendarView, 
+  UnifiedListView, 
+  CheckInModal, 
+  CheckOutModal, 
+  CheckInOutForm 
+} from "../../components/operational";
 import { NuevaReservaModal } from "../reservas/NuevaReservaModal";
+import { ReservationDetailModal } from "../reservas/ReservationDetailModal";
 import { Modal } from "../../components/ui/Modal";
 
 export function OperacionesPage() {
   const { events, loading, error, refresh } = useOperacionesData();
   const [selectedTab, setSelectedTab] = useState<"calendar" | "list">("calendar");
-  const [statusFilter, setStatusFilter] = useState<"all" | "PENDING" | "CHECKED_IN" | "COMPLETED">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "PENDING" | "CHECKED_IN" | "CHECKED_OUT">("all");
   const [search, setSearch] = useState("");
   const [checkinTarget, setCheckinTarget] = useState<OperationalEvent | null>(null);
   const [checkoutTarget, setCheckoutTarget] = useState<OperationalEvent | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<any | null>(null);
   const [showCheckinModal, setShowCheckinModal] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [showNewReserva, setShowNewReserva] = useState(false);
@@ -29,9 +34,9 @@ export function OperacionesPage() {
     setActionLoading(true);
     try {
       if (checkinTarget.isReservation) {
-        await reservationsApi.checkIn(checkinTarget.originalId, { time: checkInTime });
+        await api.post(`/reservations/${checkinTarget.originalId}/checkin`, { time: checkInTime });
       } else {
-        await checkInOutApi.checkIn(checkinTarget.originalId, { checkInTime, performedByUserId });
+        await api.post(`/check-in-out/${checkinTarget.originalId}/check-in`, { checkInTime, performedByUserId });
       }
       setShowCheckinModal(false);
       setCheckinTarget(null);
@@ -55,13 +60,13 @@ export function OperacionesPage() {
     setActionLoading(true);
     try {
       if (checkoutTarget.isReservation) {
-        await reservationsApi.checkOut(checkoutTarget.originalId, { 
+        await api.post(`/reservations/${checkoutTarget.originalId}/checkout`, { 
           time: checkOutTime, 
           createIncome: createIncome ?? false, 
           paymentMethod 
         });
       } else {
-        await checkInOutApi.checkOut(checkoutTarget.originalId, { checkOutTime, performedByUserId });
+        await api.post(`/check-in-out/${checkoutTarget.originalId}/check-out`, { checkOutTime, performedByUserId });
       }
       setShowCheckoutModal(false);
       setCheckoutTarget(null);
@@ -71,6 +76,32 @@ export function OperacionesPage() {
       throw err;
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!confirm("¿Cancelar esta reserva?")) return;
+    try {
+      await api.del(`/reservations/${id}`);
+      await refresh();
+    } catch (err) {
+      console.error("Error canceling reservation:", err);
+      alert("Error al cancelar la reserva");
+    }
+  };
+
+  const handleViewDetail = async (event: OperationalEvent) => {
+    if (event.isReservation) {
+      try {
+        const res = await api.get<any>(`/reservations/${event.originalId}`);
+        setSelectedDetail(res);
+      } catch (err) {
+        console.error("Error fetching reservation detail:", err);
+      }
+    } else {
+      // For Ad-hoc, we could show a different modal or the same one if compatible
+      // For now, let's just log it or show a simple alert
+      console.log("Ad-hoc detail viewing not fully implemented yet", event);
     }
   };
 
@@ -133,7 +164,7 @@ export function OperacionesPage() {
           <option value="all">Todos los estados</option>
           <option value="PENDING">Pendiente</option>
           <option value="CHECKED_IN">Ingresado</option>
-          <option value="COMPLETED">Completado</option>
+          <option value="CHECKED_OUT">Completado</option>
         </select>
       </div>
 
@@ -191,6 +222,7 @@ export function OperacionesPage() {
                   setShowCheckoutModal(true);
                 }
               }}
+              onViewDetail={handleViewDetail}
             />
           )}
 
@@ -211,6 +243,7 @@ export function OperacionesPage() {
                   setShowCheckoutModal(true);
                 }
               }}
+              onViewDetail={handleViewDetail}
             />
           )}
 
@@ -254,6 +287,14 @@ export function OperacionesPage() {
           <NuevaReservaModal
             open={showNewReserva}
             onClose={() => setShowNewReserva(false)}
+            onSaved={refresh}
+          />
+
+          {/* Reservation Detail Modal */}
+          <ReservationDetailModal
+            open={!!selectedDetail}
+            onClose={() => setSelectedDetail(null)}
+            reservation={selectedDetail}
             onSaved={refresh}
           />
 

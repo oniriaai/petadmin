@@ -85,9 +85,9 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
       };
 
       if (income?.id) {
-        await api.put(`/financial/incomes/${income.id}`, data);
+        await api.put(`/incomes/${income.id}`, data);
       } else {
-        await api.post("/financial/incomes", data);
+        await api.post("/incomes", data);
       }
       onSaved();
       onClose();

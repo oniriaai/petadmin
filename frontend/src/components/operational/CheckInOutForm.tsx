@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { api } from "../../lib/api";
-import { PageLoader } from "../../components/ui/Spinner";
+import { PageLoader } from "../ui/Spinner";
 
 interface Client {
   id: string;

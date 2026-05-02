@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal } from "../../components/ui/Modal";
+import { Modal } from "../ui/Modal";
 import { fmt, fmtTime } from "../../lib/utils";
 
 interface CheckInOutRecord {

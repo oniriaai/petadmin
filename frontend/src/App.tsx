@@ -5,7 +5,7 @@ import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/Dashboard";
 import { ClientesPage } from "./pages/clientes/ClientesPage";
 import { AnimalesPage } from "./pages/animales/AnimalesPage";
-import { ReservasPage } from "./pages/reservas/ReservasPage";
+import { OperacionesPage } from "./pages/operaciones/OperacionesPage";
 import { DisponibilidadPage } from "./pages/disponibilidad/DisponibilidadPage";
 import { TransportePage } from "./pages/transporte/TransportePage";
 import { InformesPage } from "./pages/informes/InformesPage";
@@ -15,8 +15,6 @@ import { GuidePage } from "./pages/GuidePage";
 import { RoomsPage } from "./pages/salas/RoomsPage";
 import { RecurringPlansPage } from "./pages/planes/RecurringPlansPage";
 import { FinancialPage } from "./pages/transacciones/FinancialPage";
-import { FinancialDashboard } from "./pages/transacciones/FinancialDashboard";
-import { OperacionesPage } from "./pages/operaciones/OperacionesPage";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -52,14 +50,11 @@ export function App() {
                     <Route path="/clientes" element={<ClientesPage />} />
                     <Route path="/animales" element={<AnimalesPage />} />
                     <Route path="/operaciones" element={<OperacionesPage />} />
-                    <Route path="/reservas" element={<ReservasPage />} />
                     <Route path="/salas" element={<RoomsPage />} />
                     <Route path="/planes" element={<RecurringPlansPage />} />
                     <Route path="/disponibilidad" element={<DisponibilidadPage />} />
                     <Route path="/transporte" element={<TransportePage />} />
                     <Route path="/transacciones" element={<FinancialPage />} />
-                    <Route path="/transacciones/dashboard" element={<FinancialDashboard />} />
-                    <Route path="/administrativa" element={<Navigate to="/transacciones" />} />
                     <Route path="/informes" element={<InformesPage />} />
                     <Route path="/herramientas" element={<HerramientasPage />} />
                     <Route path="/configuracion" element={<ConfiguracionPage />} />

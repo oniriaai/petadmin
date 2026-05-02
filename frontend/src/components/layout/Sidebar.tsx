@@ -9,7 +9,6 @@ import { cls } from "../../lib/utils";
 
 const navItems = [
   { to: "/",              label: "Dashboard",           icon: LayoutDashboard },
-  { to: "/nuevo",         label: "+ Nuevo",             icon: Plus },
   { to: "/operaciones",   label: "Operaciones",         icon: CalendarDays },
   { to: "/salas",         label: "Salas",               icon: Home },
   { to: "/planes",        label: "Planes Recurrentes",  icon: Repeat },
