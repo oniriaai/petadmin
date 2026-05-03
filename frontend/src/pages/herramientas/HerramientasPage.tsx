@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, CheckCircle, AlertTriangle } from "lucide-react";
 import { api } from "../../lib/api";
 import { SEVERITY_COLOR } from "../../lib/utils";
@@ -157,7 +157,6 @@ function AlertasTab() {
 }
 
 function EstimadorTab() {
-  const [tipo, setTipo] = useState<"planes" | "ventas">("planes");
   const [planes, setPlanes] = useState({ dias2: 10, dias3: 15, dias4: 15, dias5: 6, precioDia: 12 });
   const [ventas, setVentas] = useState({ reservasMes: 30, ticketPromedio: 35, serviciosExtra: 5, precioExtra: 20 });
 

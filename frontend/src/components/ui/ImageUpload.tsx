@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import axios from "axios";
-import { Camera, X, UploadCloud } from "lucide-react";
+import { X, UploadCloud } from "lucide-react";
 import { api } from "../../lib/api";
 import { Spinner } from "./Spinner";
 

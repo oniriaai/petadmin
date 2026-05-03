@@ -22,6 +22,10 @@ export function fmtDateTime(date: string | Date | null | undefined) {
   return fmt(date, "dd/MM/yyyy HH:mm");
 }
 
+export function fmtDateTimeLocalInput(date: Date) {
+  return format(date, "yyyy-MM-dd'T'HH:mm");
+}
+
 export function fmtCurrency(v: number | null | undefined) {
   if (v == null) return "$0.00";
   return new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(v);

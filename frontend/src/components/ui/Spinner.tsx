@@ -1,5 +1,3 @@
-import React from "react";
-
 export function Spinner({ size = 20 }: { size?: number }) {
   return (
     <svg className="animate-spin text-indigo-600" width={size} height={size} viewBox="0 0 24 24" fill="none">

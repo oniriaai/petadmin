@@ -1,8 +1,7 @@
-import React from "react";
 import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard, Plus, CalendarDays, Users, PawPrint, Grid3X3,
-  Truck, Briefcase, BarChart3, Wrench, Settings, BookOpen, LogOut, Home, Repeat, DollarSign, Clock,
+  LayoutDashboard, CalendarDays, Users, PawPrint, Grid3X3,
+  Truck, BarChart3, Wrench, Settings, BookOpen, LogOut, Home, Repeat, DollarSign,
 } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";

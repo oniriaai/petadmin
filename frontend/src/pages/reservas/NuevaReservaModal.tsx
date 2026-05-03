@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Search, User, Calendar, Clock, DollarSign, CreditCard, FileText, Truck, X } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
-import { SERVICES, PAYMENT_METHODS } from "../../lib/utils";
+import { SERVICES, PAYMENT_METHODS, fmtDateTimeLocalInput } from "../../lib/utils";
 import { Spinner } from "../../components/ui/Spinner";
-import { format, addHours, startOfToday, setHours, setMinutes } from "date-fns";
+import { startOfToday, setHours, setMinutes } from "date-fns";
 
 interface Props { open: boolean; onClose: () => void; onSaved: () => void; }
 
@@ -38,17 +38,14 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
   const [concept, setConcept] = useState("");
   const [notes, setNotes] = useState("");
 
-  // Helper to format date for datetime-local
-  const formatForInput = (date: Date) => format(date, "yyyy-MM-dd'T'HH:mm");
-
   useEffect(() => {
     if (!open) return;
     
     // Set default dates: Today 09:00 to 18:00
     const today09 = setMinutes(setHours(startOfToday(), 9), 0);
     const today18 = setMinutes(setHours(startOfToday(), 18), 0);
-    setCheckIn(formatForInput(today09));
-    setCheckOut(formatForInput(today18));
+    setCheckIn(fmtDateTimeLocalInput(today09));
+    setCheckOut(fmtDateTimeLocalInput(today18));
 
     setLoading(true);
     Promise.all([api.get<Client[]>("/clients?status=active"), api.get<Room[]>("/rooms")])

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Phone } from "lucide-react";
 import { api } from "../../lib/api";
-import { fmt, fmtTime } from "../../lib/utils";
+import { fmtTime } from "../../lib/utils";
 import { PageLoader } from "../../components/ui/Spinner";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";

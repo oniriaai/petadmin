@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
 import { fmtCurrency, PAYMENT_METHODS } from "../../lib/utils";

@@ -1,8 +1,7 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, CheckCircle, LogOut, Truck, Clock, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { fmt, fmtTime } from "../../lib/utils";
 import { Badge } from "../ui/Badge";
-import { STATUSES } from "../../lib/utils";
 import type { OperationalEvent, OperationalEventStatus } from "./useOperacionesData";
 
 interface UnifiedCalendarViewProps {

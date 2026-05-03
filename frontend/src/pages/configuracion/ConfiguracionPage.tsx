@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Download } from "lucide-react";
 import { downloadFile } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";

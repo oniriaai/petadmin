@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Edit2, Trash2, RefreshCw, Search } from "lucide-react";
 import { api } from "../../lib/api";
-import { Modal } from "../../components/ui/Modal";
-import { PageLoader, Spinner } from "../../components/ui/Spinner";
+import { PageLoader } from "../../components/ui/Spinner";
 import { RoomForm } from "./RoomForm";
 
 interface Room {

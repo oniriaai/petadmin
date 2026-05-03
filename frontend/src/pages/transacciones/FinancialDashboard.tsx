@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Calendar, TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 import { api } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
 
@@ -211,7 +211,7 @@ export function FinancialDashboard() {
                   fill="#8884d8"
                   dataKey="amount"
                 >
-                  {categories.map((entry, index) => (
+                  {categories.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

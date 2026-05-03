@@ -1,16 +1,14 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
-import { Plus, Edit2, Trash2, RefreshCw, Search, TrendingUp, TrendingDown, ShoppingCart, BarChart3, CreditCard, Building2, LayoutDashboard } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Plus, Edit2, Trash2, RefreshCw, Search, TrendingUp, TrendingDown, CreditCard, Building2, LayoutDashboard } from "lucide-react";
 import { api } from "../../lib/api";
-import { PageLoader, Spinner } from "../../components/ui/Spinner";
+import { PageLoader } from "../../components/ui/Spinner";
 import { IncomeEntryForm } from "./IncomeEntryForm";
 import { PayableEntryForm } from "./PayableEntryForm";
 import { ProviderForm } from "./ProviderForm";
 import { PayModal } from "./PayModal";
 import { FinancialDashboard } from "./FinancialDashboard";
-import { Modal } from "../../components/ui/Modal";
 import { Badge } from "../../components/ui/Badge";
-import { fmt, fmtCurrency, EXPENSE_CATEGORIES, PAYMENT_METHODS } from "../../lib/utils";
+import { fmt, fmtCurrency, EXPENSE_CATEGORIES } from "../../lib/utils";
 
 interface IncomeEntry {
   id: string;
@@ -119,11 +117,6 @@ export function FinancialPage() {
     await api.del(`/payables/${id}`);
     loadPayables();
   }
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("es-CO", { month: "short", day: "numeric", year: "numeric" });
-  };
 
   const filteredIncomes = incomes.filter((income) => {
     const matchSearch = income.concept.toLowerCase().includes(search.toLowerCase()) ||

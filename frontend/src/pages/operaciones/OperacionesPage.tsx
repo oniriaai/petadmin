@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Calendar, List, Plus, Search, RefreshCw } from "lucide-react";
-import { api, reservationsApi } from "../../lib/api";
+import { api, reservationsApi, checkInOutApi } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
 import { 
   useOperacionesData, 
@@ -34,9 +34,9 @@ export function OperacionesPage() {
     setActionLoading(true);
     try {
       if (checkinTarget.isReservation) {
-        await api.post(`/reservations/${checkinTarget.originalId}/checkin`, { time: checkInTime });
+        await reservationsApi.checkIn(id, { time: checkInTime });
       } else {
-        await api.post(`/check-in-out/${checkinTarget.originalId}/check-in`, { checkInTime, performedByUserId });
+        await checkInOutApi.checkIn(id, { checkInTime, performedByUserId });
       }
       setShowCheckinModal(false);
       setCheckinTarget(null);
@@ -60,13 +60,13 @@ export function OperacionesPage() {
     setActionLoading(true);
     try {
       if (checkoutTarget.isReservation) {
-        await api.post(`/reservations/${checkoutTarget.originalId}/checkout`, { 
+        await reservationsApi.checkOut(id, {
           time: checkOutTime, 
           createIncome: createIncome ?? false, 
           paymentMethod 
         });
       } else {
-        await api.post(`/check-in-out/${checkoutTarget.originalId}/check-out`, { checkOutTime, performedByUserId });
+        await checkInOutApi.checkOut(id, { checkOutTime, performedByUserId });
       }
       setShowCheckoutModal(false);
       setCheckoutTarget(null);
@@ -76,17 +76,6 @@ export function OperacionesPage() {
       throw err;
     } finally {
       setActionLoading(false);
-    }
-  };
-
-  const handleCancel = async (id: string) => {
-    if (!confirm("¿Cancelar esta reserva?")) return;
-    try {
-      await api.del(`/reservations/${id}`);
-      await refresh();
-    } catch (err) {
-      console.error("Error canceling reservation:", err);
-      alert("Error al cancelar la reserva");
     }
   };
 
@@ -261,7 +250,6 @@ export function OperacionesPage() {
               roomName: checkinTarget.roomName,
               status: checkinTarget.status,
             } : null}
-            isReservation={checkinTarget?.isReservation}
             onConfirm={handleCheckin}
           />
 

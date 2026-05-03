@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { Spinner } from "../../components/ui/Spinner";
 import { api } from "../../lib/api";
@@ -24,10 +24,14 @@ interface Provider {
   name: string;
 }
 
+interface EditablePayable extends PayableEntry {
+  provider?: Provider;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  payable?: any | null; // Using any to match the current loose typing in FinancialPage, but I should probably use PayableEntry
+  payable?: EditablePayable | null;
   providers: Provider[];
   onSaved: () => void;
 }
@@ -51,12 +55,17 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
   useEffect(() => {
     if (payable) {
       setForm({
-        ...payable,
+        type: payable.type,
+        category: payable.category,
+        description: payable.description,
         subtotal: payable.subtotal.toString(),
         vatPercent: payable.vatPercent.toString(),
+        invoiceNumber: payable.invoiceNumber ?? "",
         invoiceDate: payable.invoiceDate?.slice(0, 10) ?? "",
         dueDate: payable.dueDate?.slice(0, 10) ?? "",
-        providerId: payable.provider?.id ?? payable.providerId ?? ""
+        providerId: payable.provider?.id ?? payable.providerId ?? "",
+        isRecurring: payable.isRecurring,
+        notes: payable.notes ?? "",
       });
     } else {
       setForm({

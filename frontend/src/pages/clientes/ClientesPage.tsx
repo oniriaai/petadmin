@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, Eye, Edit2, UserX, PawPrint, Phone } from "lucide-react";
 import { api } from "../../lib/api";
-import { fmt, fmtCurrency } from "../../lib/utils";
+import { fmt } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
-import { PageLoader, Spinner } from "../../components/ui/Spinner";
+import { PageLoader } from "../../components/ui/Spinner";
 import { ClienteForm } from "./ClienteForm";
 import { PetForm } from "./PetForm";
 

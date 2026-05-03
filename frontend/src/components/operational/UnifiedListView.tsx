@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, Search, CheckCircle, LogOut, Calendar, Plus } from "lucide-react";
 import { fmt, fmtTime } from "../../lib/utils";
 import { Badge } from "../ui/Badge";

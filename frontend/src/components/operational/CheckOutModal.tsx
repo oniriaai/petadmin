@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Modal } from "../ui/Modal";
-import { fmt, fmtTime } from "../../lib/utils";
+import { fmt, fmtTime, PAYMENT_METHODS, fmtDateTimeLocalInput } from "../../lib/utils";
 
 interface CheckInOutRecord {
   id: string;
@@ -34,13 +34,7 @@ interface Props {
 }
 
 export function CheckOutModal({ open, onClose, record, users = [], isReservation = false, onConfirm }: Props) {
-  // Helper to format date for datetime-local input: YYYY-MM-DDTHH:mm
-  const formatForInput = (date: Date) => {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  };
-
-  const [checkOutTime, setCheckOutTime] = useState(formatForInput(new Date()));
+  const [checkOutTime, setCheckOutTime] = useState(fmtDateTimeLocalInput(new Date()));
   const [performedByUserId, setPerformedByUserId] = useState("");
   const [createIncome, setCreateIncome] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
@@ -132,10 +126,11 @@ export function CheckOutModal({ open, onClose, record, users = [], isReservation
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                 >
-                  <option value="EFECTIVO">Efectivo</option>
-                  <option value="TRANSFERENCIA">Transferencia</option>
-                  <option value="TARJETA">Tarjeta</option>
-                  <option value="OTROS">Otros</option>
+                  {PAYMENT_METHODS.map((method) => (
+                    <option key={method} value={method}>
+                      {method.charAt(0) + method.slice(1).toLowerCase()}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}

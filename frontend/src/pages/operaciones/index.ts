@@ -1,1 +1,0 @@
-export { OperacionesPage } from './OperacionesPage';

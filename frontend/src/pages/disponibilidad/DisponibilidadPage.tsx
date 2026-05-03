@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../../lib/api";
-import { fmt, STATUSES } from "../../lib/utils";
 import { PageLoader } from "../../components/ui/Spinner";
-import { format, addDays, subDays, parseISO } from "date-fns";
+import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface Reservation {
@@ -15,8 +14,6 @@ interface Reservation {
   checkIn?: string; checkOut?: string;
 }
 interface Room { id: string; name: string; capacity: number; type: string }
-
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 7);
 
 export function DisponibilidadPage() {
   const [date, setDate] = useState(new Date());
@@ -86,16 +83,13 @@ export function DisponibilidadPage() {
                   </div>
                   {rsvs.length > 0 && (
                     <div className="space-y-1">
-                      {rsvs.slice(0, 4).map(r => {
-                        const st = STATUSES[r.status] ?? { color: "bg-gray-100 text-gray-600" };
-                        return (
+                      {rsvs.slice(0, 4).map(r => (
                           <div key={r.id} className="flex items-center gap-2 text-xs">
                             <span className={`w-2 h-2 rounded-full shrink-0 ${r.status === "ACTIVA" ? "bg-green-500" : r.status === "CONFIRMADA" ? "bg-blue-500" : "bg-gray-300"}`} />
                             <span className="truncate">{r.client.firstName} {r.client.lastName}</span>
                             <span className="ml-auto text-gray-400">{r.pets.map(p => p.pet.name).join(", ")}</span>
                           </div>
-                        );
-                      })}
+                      ))}
                       {rsvs.length > 4 && <p className="text-xs text-gray-400 pl-4">+{rsvs.length - 4} más</p>}
                     </div>
                   )}

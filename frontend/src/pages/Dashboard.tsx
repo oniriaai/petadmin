@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Users, DollarSign, AlertTriangle, TrendingUp, ArrowRight, Clock } from "lucide-react";
+import { CalendarDays, Users, DollarSign, AlertTriangle, ArrowRight, Clock } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { fmtCurrency, fmt, fmtTime, STATUSES } from "../lib/utils";

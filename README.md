@@ -1,49 +1,104 @@
-# Pethijos - Sistema Administrativo
+# Pethijos Admin
 
-Administrative system for managing **Kinderdog** (dog daycare) and **Pethijos** (pet grooming) operations.
+Sistema administrativo para operar dos unidades de negocio relacionadas:
 
-## 🌟 Overview
+- `Kinderdog`: guarderia y operaciones diarias.
+- `Pethijos`: peluqueria y servicios complementarios.
 
-This project provides a unified platform for pet business management, handling everything from client/pet records and facility availability to complex financial tracking and operational check-ins.
+El repositorio contiene una aplicacion web React, una API Express con Prisma y PostgreSQL, y la infraestructura minima para levantar el entorno local con Docker Compose.
 
-### Tech Stack
-- **Backend**: Node.js, TypeScript, Express, Prisma ORM, PostgreSQL.
-- **Frontend**: React, Vite, TypeScript, Tailwind CSS.
-- **Infrastructure**: Docker, Docker Compose.
-- **Storage**: Backblaze B2 (S3-compatible).
+## Vista General
 
-## 🚀 Quick Start
+### Stack
+- `frontend/`: React 18, Vite, TypeScript, Tailwind CSS.
+- `backend/`: Node.js 20, Express, TypeScript, Prisma ORM.
+- `postgres`: base de datos PostgreSQL 16.
+- `pgadmin`: consola opcional para inspeccionar la base de datos.
+- Backblaze B2: almacenamiento S3-compatible para archivos e imagenes.
 
-### 1. Environment Setup
-Copy the example environment file and update it with your local credentials:
+### Arquitectura
+- El frontend consume la API bajo `/api/v1`.
+- El backend expone autenticacion, operaciones, clientes, mascotas, reservas, finanzas, inventario, reportes y almacenamiento.
+- PostgreSQL persiste los datos de negocio.
+- Backblaze B2 se usa para carga directa de archivos mediante URLs firmadas generadas por el backend.
+
+## Inicio Rapido
+
+### 1. Preparar variables de entorno
+
+Desde la raiz del proyecto:
+
 ```bash
 cp .env.example .env
 ```
 
-### 2. Run with Docker
-Start the entire stack (PostgreSQL, Backend, Frontend):
+Revisa al menos estos valores:
+
+- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `DATABASE_URL`
+- `BACKEND_PORT`, `FRONTEND_PORT`
+- `JWT_SECRET`
+- `VAT_PERCENT`
+- `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT`, `B2_REGION`
+
+Nota: el `DATABASE_URL` de `.env.example` usa el host `postgres` porque esta pensado para el entorno Docker.
+
+### 2. Levantar todo el stack
+
 ```bash
 docker compose up --build
 ```
 
-### 3. Access the Application
-- **Frontend**: [http://localhost:5174](http://localhost:5174)
-- **Backend Health**: [http://localhost:3001/api/v1/health](http://localhost:3001/api/v1/health)
+Que hace el entorno:
 
-## 📖 Detailed Documentation
+- crea PostgreSQL y pgAdmin
+- instala dependencias del backend y frontend dentro de los contenedores
+- genera el cliente de Prisma
+- ejecuta `prisma db push`
+- corre el seed inicial del backend
 
-The project is divided into two main modules, each with its own detailed documentation:
+### 3. Acceder a los servicios
 
-- [**Backend Documentation**](backend/README.md): API reference, architecture details, and data models.
-- [**Frontend Documentation**](frontend/README.md): UI components, state management, and implementation details.
-- [**Functional Design**](docs/functional-design.md): Detailed functional requirements and implementation logic.
+- Frontend: `http://localhost:5174`
+- Backend health check: `http://localhost:3001/api/v1/health`
+- pgAdmin: `http://localhost:5050`
 
-## 🛠 Features
+Credenciales por defecto de pgAdmin:
 
-- **Dual Identity Support**: Independent branding and operations for Kinderdog and Pethijos.
-- **Unified Operations**: Integrated calendar and list views for check-ins and reservations.
-- **Financial Management**: Automated income generation from check-outs and detailed expense tracking.
-- **Resource Management**: Room capacity tracking and pet medical records.
+- usuario: `admin@pethijos.com`
+- clave: `admin123`
 
----
-**Status**: MVP Phase 1 Complete
+## Credenciales Iniciales
+
+El seed actual crea dos usuarios administrativos:
+
+- `kinderdog_admin` / `kinderdog123`
+- `pethijos_admin` / `pethijos123`
+
+Si la base ya contiene usuarios, el seed no vuelve a insertar datos.
+
+## Estructura Del Proyecto
+
+- [backend/README.md](backend/README.md): API, scripts, variables de entorno y dominios del backend.
+- [frontend/README.md](frontend/README.md): estructura de la aplicacion web, configuracion y modulos de interfaz.
+- [docs/functional-design.md](docs/functional-design.md): diseno funcional y reglas de negocio de referencia.
+
+Estructura base:
+
+```text
+.
+├── backend/
+├── frontend/
+├── docs/
+├── docker-compose.yml
+└── .env.example
+```
+
+## Desarrollo Sin Docker
+
+Docker es el camino recomendado para onboarding porque ya resuelve la base, el seed y los puertos. Si necesitas correr partes del sistema fuera de contenedores:
+
+- Backend: revisa [backend/README.md](backend/README.md)
+- Frontend: revisa [frontend/README.md](frontend/README.md)
+
+En ese flujo tendras que crear variables de entorno locales por paquete y ajustar el `DATABASE_URL` para usar `localhost:5433` en lugar de `postgres`.

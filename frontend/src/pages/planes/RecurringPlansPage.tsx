@@ -1,9 +1,8 @@
-import React, { useEffect, useState, useCallback } from "react";
-import { Plus, Edit2, Trash2, RefreshCw, Search, Calendar } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Plus, Edit2, Trash2, RefreshCw, Search } from "lucide-react";
 import { api } from "../../lib/api";
-import { fmt } from "../../lib/utils";
-import { Modal } from "../../components/ui/Modal";
-import { PageLoader, Spinner } from "../../components/ui/Spinner";
+import { fmt, SERVICES } from "../../lib/utils";
+import { PageLoader } from "../../components/ui/Spinner";
 import { RecurringPlanForm } from "./RecurringPlanForm";
 
 interface RecurringPlan {
@@ -67,14 +66,7 @@ export function RecurringPlansPage() {
     : plans;
 
   const serviceLabel = (service: string) => {
-    const services: Record<string, string> = {
-      GUARDERIA: "Guardería",
-      PELUQUERIA_CANINA: "Peluquería Canina",
-      PELUQUERIA_FELINA: "Peluquería Felina",
-      TRANSPORTE: "Transporte",
-      OTRO: "Otro",
-    };
-    return services[service] || service;
+    return SERVICES.find((item) => item.value === service)?.label ?? service;
   };
 
   const daysLabel = (days: string) => {

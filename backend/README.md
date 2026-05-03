@@ -1,63 +1,184 @@
-# Pethijos Backend
+# Backend
 
-Modular API for managing Kinderdog (daycare) and Pethijos (grooming) business operations.
+API Express para la operacion administrativa de Kinderdog y Pethijos. El backend concentra autenticacion, reglas de negocio, acceso a PostgreSQL via Prisma y generacion de URLs firmadas para Backblaze B2.
 
-## 🚀 Getting Started
+## Requisitos
 
-### Prerequisites
 - Node.js 20+
-- Docker & Docker Compose
+- npm
 - PostgreSQL
+- Docker y Docker Compose para el flujo recomendado
 
-### Environment Setup
-1. Copy `.env.example` to `.env`.
-2. Configure database, B2 storage, and JWT credentials.
-3. **Note**: Never commit `.env` to version control.
+## Formas De Ejecutarlo
 
-### Scripts
-- `npm run dev`: Start dev server with hot reload.
-- `npm run build`: Build TypeScript.
-- `npm run start`: Start production server.
+### Opcion recomendada: desde la raiz con Docker
 
-## 🏗 Architecture
+Desde la raiz del repo:
 
-The system uses a modular Express.js architecture with Prisma ORM and Zod validation.
+```bash
+cp .env.example .env
+docker compose up --build
+```
 
-- **Authentication**: JWT-based with business unit (KINDERDOG/PETHIJOS) and role-based authorization.
-- **Storage**: Backblaze B2 (S3-compatible) via presigned URLs for direct client uploads.
-- **Validation**: Strict schema validation using Zod and shared business logic utilities.
-- **Data Pattern**: Soft deletes enabled via `isActive` flag on all core models.
+En este modo el backend:
 
-## 📦 Core Modules
+- usa `BACKEND_PORT` desde la raiz
+- se conecta a PostgreSQL con el host `postgres`
+- ejecuta `prisma generate`, `prisma db push` y el seed al iniciar el contenedor
 
-1. **Clients & Pets**: Shared database for managing customers and their animals.
-2. **Rooms**: Facility management with real-time occupancy tracking.
-3. **Reservations**: Individual booking management with conflict detection and capacity validation.
-4. **Check-In/Out**: Precise timestamp tracking for pet arrivals and departures.
-5. **Financial**: Income, expense, and purchase tracking separated by business unit.
+### Opcion local: backend fuera de Docker
 
-## 🔌 API Reference
+1. Levanta solo la base de datos:
 
-### Authentication
-`POST /api/v1/auth/login` -> Authenticates and returns JWT.
+```bash
+docker compose up -d postgres
+```
 
-### Key Endpoints
-- `GET /api/v1/clients`: List active clients.
-- `GET /api/v1/pets`: List pets (filterable by client).
-- `GET /api/v1/rooms`: Facility rooms with occupancy.
-- `POST /api/v1/reservations`: Create new booking.
-- `POST /api/v1/check-in-out`: Standalone or reservation-linked check-ins.
-- `GET /api/v1/financial/incomes`: Revenue tracking by business unit.
+2. Instala dependencias:
 
-### Error Handling
-- `400`: Validation error (returns Zod error array).
-- `401/403`: Unauthorized or Forbidden access.
-- `404`: Resource not found.
+```bash
+cd backend
+npm install
+```
 
-## 🗄 Database
+3. Crea `backend/.env` con las variables necesarias. Si partes del archivo raiz, cambia el host de `DATABASE_URL` a `localhost:5433`.
 
-Uses PostgreSQL with Prisma. Key tables: `users`, `clients`, `pets`, `rooms`, `reservations`, `incomes`, `expenses`, `purchases`.
+Ejemplo minimo:
 
----
-**Version**: 1.2  
-**Status**: Production Ready
+```env
+DATABASE_URL=postgresql://pethijos:pethijos123@localhost:5433/pethijos
+BACKEND_PORT=3001
+JWT_SECRET=change_me
+VAT_PERCENT=15
+B2_KEY_ID=tu_key_id
+B2_APPLICATION_KEY=tu_application_key
+B2_BUCKET_NAME=nombre_del_bucket
+B2_ENDPOINT=s3.us-east-005.backblazeb2.com
+B2_REGION=us-east-005
+```
+
+4. Genera Prisma y prepara la base:
+
+```bash
+npm run db:generate
+npm run db:setup
+```
+
+5. Inicia el servidor:
+
+```bash
+npm run dev
+```
+
+## Scripts
+
+- `npm run dev`: inicia `tsx watch src/main.ts`.
+- `npm run build`: compila TypeScript a `dist/`.
+- `npm run start`: ejecuta el build compilado.
+- `npm run db:generate`: genera el cliente de Prisma.
+- `npm run db:push`: aplica el esquema a la base sin migraciones versionadas.
+- `npm run db:seed`: ejecuta `prisma/seed.ts`.
+- `npm run db:setup`: corre `db push` y luego seed.
+- `npm run test:financial`: suite E2E del modulo financiero.
+- `npm run test:checkin`: suite E2E del flujo de check-in/check-out.
+
+## Variables De Entorno
+
+Variables usadas directamente por el backend:
+
+- `DATABASE_URL`: conexion PostgreSQL para Prisma.
+- `BACKEND_PORT`: puerto HTTP del servicio. Por defecto `3001`.
+- `JWT_SECRET`: firma y verificacion de tokens JWT.
+- `VAT_PERCENT`: porcentaje por defecto para calculos tributarios.
+- `B2_KEY_ID`
+- `B2_APPLICATION_KEY`
+- `B2_BUCKET_NAME`
+- `B2_ENDPOINT`
+- `B2_REGION`
+
+Notas importantes:
+
+- En Docker, `DATABASE_URL` apunta a `postgres:5432`.
+- Fuera de Docker, normalmente debe apuntar a `localhost:5433`.
+- Si faltan variables de B2, el backend arranca, pero las cargas de archivos pueden fallar.
+
+## Estructura Tecnica
+
+### Entrada principal
+
+- `src/main.ts` configura CORS, JSON, health check, rutas y middleware global de errores.
+- El health check vive en `GET /api/v1/health` y valida tambien conectividad a la base de datos con `SELECT 1`.
+
+### Rutas montadas
+
+Rutas activas bajo `/api/v1`:
+
+- `auth`: login y emision de JWT.
+- `dashboard`: resumenes y metricas principales.
+- `clients`, `pets`: gestion de clientes y mascotas.
+- `storage`: URLs firmadas y eliminacion de archivos en B2.
+- `reservations`, `recurring-plans`, `check-in-out`: operaciones diarias, reservas y planes recurrentes.
+- `rooms`: salas, capacidad y disponibilidad operativa.
+- `providers`, `payables`, `incomes`: proveedores, cuentas por pagar e ingresos.
+- `inventory`: items y movimientos de inventario.
+- `reports`, `export`: consultas y exportaciones.
+- `alerts`, `contracts`: alertas operativas y contratos.
+
+## Dominios De Negocio
+
+El esquema de Prisma modela principalmente:
+
+- usuarios con `businessUnit` y `role`
+- clientes y mascotas
+- documentos, vacunas y alertas de mascotas
+- salas
+- reservas y planes recurrentes
+- check-in/check-out
+- ingresos
+- proveedores, cuentas por pagar y pagos
+- inventario y movimientos
+- contratos
+
+Patrones actuales relevantes:
+
+- varios modelos usan `isActive` para soft delete
+- los ingresos pueden quedar asociados a una reserva
+- los planes recurrentes generan soporte para operacion repetitiva por dias
+
+## Seed Y Datos Iniciales
+
+`prisma/seed.ts` crea datos base solo si la tabla `users` esta vacia:
+
+- usuarios admin de Kinderdog y Pethijos
+- salas iniciales
+- proveedor base
+- clientes y mascotas de ejemplo
+- reservas de ejemplo
+- una cuenta por pagar
+- inventario inicial
+
+Credenciales creadas por defecto:
+
+- `kinderdog_admin` / `kinderdog123`
+- `pethijos_admin` / `pethijos123`
+
+## Flujo De Archivos E Imagenes
+
+El backend no sube archivos grandes directamente a B2 desde el navegador. El flujo actual es:
+
+1. el frontend solicita una URL firmada a `storage`
+2. el cliente sube el archivo directamente a Backblaze B2
+3. el backend persiste o reutiliza la URL publica
+4. cuando corresponde, el frontend pide al backend eliminar archivos previos
+
+Esto reduce carga en la API y centraliza credenciales de almacenamiento en el servidor.
+
+## Pruebas
+
+Las pruebas E2E disponibles viven en `backend/tests/` y asumen:
+
+- backend corriendo en `http://localhost:3001`
+- base inicializada con seed
+- credenciales administrativas disponibles
+
+Consulta `backend/tests/README.md` si necesitas detalles del flujo de pruebas.

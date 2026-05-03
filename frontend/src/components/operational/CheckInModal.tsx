@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Modal } from "../ui/Modal";
-import { fmt, fmtTime } from "../../lib/utils";
+import { fmtDateTimeLocalInput } from "../../lib/utils";
 
 interface CheckInOutRecord {
   id: string;
@@ -23,18 +23,11 @@ interface Props {
   onClose: () => void;
   record: CheckInOutRecord | null;
   users?: User[];
-  isReservation?: boolean;
   onConfirm: (id: string, checkInTime: string, performedByUserId?: string) => Promise<void>;
 }
 
-export function CheckInModal({ open, onClose, record, users = [], isReservation = false, onConfirm }: Props) {
-  // Helper to format date for datetime-local input: YYYY-MM-DDTHH:mm
-  const formatForInput = (date: Date) => {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  };
-
-  const [checkInTime, setCheckInTime] = useState(formatForInput(new Date()));
+export function CheckInModal({ open, onClose, record, users = [], onConfirm }: Props) {
+  const [checkInTime, setCheckInTime] = useState(fmtDateTimeLocalInput(new Date()));
   const [performedByUserId, setPerformedByUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
