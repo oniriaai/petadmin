@@ -22,6 +22,8 @@ interface RecurringPlan {
   clientId: string;
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   daysOfWeek: string;
   petIds: string;
   service: string;
@@ -42,6 +44,8 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
   const [clientId, setClientId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [startTime, setStartTime] = useState("08:00");
+  const [endTime, setEndTime] = useState("18:00");
   const [daysOfWeek, setDaysOfWeek] = useState<string[]>([]);
   const [selectedPets, setSelectedPets] = useState<string[]>([]);
   const [service, setService] = useState("GUARDERIA");
@@ -72,6 +76,8 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
       setClientId(plan.clientId);
       setStartDate(plan.startDate.split("T")[0]);
       setEndDate(plan.endDate.split("T")[0]);
+      setStartTime(plan.startTime);
+      setEndTime(plan.endTime);
       setDaysOfWeek(plan.daysOfWeek.split(","));
       setSelectedPets(plan.petIds.split(","));
       setService(plan.service);
@@ -81,6 +87,8 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
       setClientId("");
       setStartDate("");
       setEndDate("");
+      setStartTime("08:00");
+      setEndTime("18:00");
       setDaysOfWeek([]);
       setSelectedPets([]);
       setService("GUARDERIA");
@@ -103,6 +111,14 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
       setError("Selecciona al menos un día");
       return;
     }
+    if (!startTime || !endTime) {
+      setError("Las horas de entrada y salida son requeridas");
+      return;
+    }
+    if (endTime <= startTime) {
+      setError("La hora de salida debe ser mayor a la hora de entrada");
+      return;
+    }
 
     setError("");
     setSaving(true);
@@ -111,6 +127,8 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
         clientId,
         startDate: `${startDate}T00:00:00Z`,
         endDate: `${endDate}T23:59:59Z`,
+        startTime,
+        endTime,
         daysOfWeek: daysOfWeek.join(","),
         petIds: selectedPets.join(",") || "unknown",
         service,
@@ -240,6 +258,26 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="label">Hora de entrada *</label>
+              <input
+                className="input"
+                type="time"
+                value={startTime}
+                onChange={e => setStartTime(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="label">Hora de salida *</label>
+              <input
+                className="input"
+                type="time"
+                value={endTime}
+                onChange={e => setEndTime(e.target.value)}
               />
             </div>
 

@@ -11,6 +11,8 @@ interface RecurringPlan {
   client: { id: string; firstName: string; lastName: string };
   startDate: string;
   endDate: string;
+  startTime: string;
+  endTime: string;
   daysOfWeek: string;
   petIds: string;
   service: string;

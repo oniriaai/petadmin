@@ -156,6 +156,8 @@ model RecurringPlan {
   clientId     String
   startDate    DateTime
   endDate      DateTime
+  startTime    String
+  endTime      String
   daysOfWeek   String
   petIds       String
   service      String        @default("GUARDERIA")
@@ -168,6 +170,16 @@ model RecurringPlan {
   reservations Reservation[]
 
   @@map("recurring_plans")
+}
+
+model BusinessUnitSetting {
+  id           String   @id @default(cuid())
+  businessUnit String   @unique
+  timezone     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("business_unit_settings")
 }
 
 model Reservation {
@@ -203,6 +215,7 @@ model Reservation {
   recurringPlan    RecurringPlan?   @relation(fields: [recurringPlanId], references: [id])
   room             Room?            @relation(fields: [roomId], references: [id])
 
+  @@unique([recurringPlanId, checkIn])
   @@map("reservations")
 }
 

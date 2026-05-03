@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { Spinner } from "../components/ui/Spinner";
 
@@ -8,6 +8,7 @@ type BU = "KINDERDOG" | "PETHIJOS";
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [bu, setBu] = useState<BU | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +22,8 @@ export function Login() {
     setError("");
     try {
       await login(bu, username, password);
-      navigate("/");
+      const to = (location.state as { from?: string } | null)?.from ?? "/";
+      navigate(to, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error al iniciar sesión");
     } finally {

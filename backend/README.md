@@ -79,6 +79,8 @@ npm run dev
 - `npm run db:push`: aplica el esquema a la base sin migraciones versionadas.
 - `npm run db:seed`: ejecuta `prisma/seed.ts`.
 - `npm run db:setup`: corre `db push` y luego seed.
+- `npm run seed:photos:upload`: carga fotos de mascotas del seed a B2 una sola vez (omite claves ya existentes).
+- `npm run seed:photos:replace`: recarga fotos del seed sobre las mismas claves canonicas (sin duplicar keys).
 - `npm run test:financial`: suite E2E del modulo financiero.
 - `npm run test:checkin`: suite E2E del flujo de check-in/check-out.
 
@@ -145,6 +147,24 @@ Patrones actuales relevantes:
 - los ingresos pueden quedar asociados a una reserva
 - los planes recurrentes generan soporte para operacion repetitiva por dias
 
+## Planes Recurrentes Y Reservas
+
+Implementacion actual (backend):
+
+- existe un scheduler en `src/main.ts` que inicia al levantar el servicio
+- el scheduler ejecuta una generacion de reservas al iniciar y luego cada 24 horas
+- se generan reservas para los proximos 30 dias para planes activos segun `daysOfWeek`
+- cada reserva generada queda vinculada al plan via `Reservation.recurringPlanId`
+- al crear esas reservas se crean tambien registros `check_in_out` vinculados por mascota
+- el sistema evita duplicados de ocurrencias con una restriccion unica en `reservations` sobre `(recurringPlanId, checkIn)`
+
+Sincronizacion y desactivacion:
+
+- al editar un plan recurrente se sincronizan solo reservas futuras con estado `PENDIENTE` vinculadas a ese plan
+- al desactivar (`PATCH /recurring-plans/:id/status` con `isActive=false`) o eliminar (`DELETE /recurring-plans/:id`) un plan:
+  - se cancelan reservas futuras `PENDIENTE` vinculadas (`status = CANCELADA`)
+  - se marcan sus `check_in_out` vinculados como inactivos (`isActive = false`)
+
 ## Seed Y Datos Iniciales
 
 `prisma/seed.ts` crea datos base solo si la tabla `users` esta vacia:
@@ -161,6 +181,13 @@ Credenciales creadas por defecto:
 
 - `kinderdog_admin` / `kinderdog123`
 - `pethijos_admin` / `pethijos123`
+
+Fotos de mascotas en seed:
+
+- El mapeo vive en `prisma/seed-pet-photos.json` y asigna 1 URL publica de B2 por mascota.
+- Las imagenes se suben con `seed:photos:upload` usando claves canonicas `pets/seed/<pet>.jpg`.
+- El script nunca crea claves con timestamp, por lo que re-ejecutarlo no genera duplicados en el bucket.
+- `prisma/seed.ts` falla si falta el mapeo de alguna mascota esperada.
 
 ## Flujo De Archivos E Imagenes
 

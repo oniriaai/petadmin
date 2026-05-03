@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Login } from "./pages/Login";
@@ -16,10 +16,26 @@ import { RoomsPage } from "./pages/salas/RoomsPage";
 import { RecurringPlansPage } from "./pages/planes/RecurringPlansPage";
 import { FinancialPage } from "./pages/transacciones/FinancialPage";
 
-function PrivateRoute({ children }: { children: React.ReactNode }) {
+export function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
-  if (isLoading) return null;
-  if (!user) return <Navigate to="/login" />;
+  const location = useLocation();
+  if (isLoading) {
+    return <div className="min-h-screen grid place-items-center text-gray-500">Cargando sesión...</div>;
+  }
+  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  return <>{children}</>;
+}
+
+export function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+  if (isLoading) {
+    return <div className="min-h-screen grid place-items-center text-gray-500">Cargando sesión...</div>;
+  }
+  if (user) {
+    const to = (location.state as { from?: string } | null)?.from ?? "/";
+    return <Navigate to={to} replace />;
+  }
   return <>{children}</>;
 }
 
@@ -39,7 +55,7 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route
             path="/*"
             element={

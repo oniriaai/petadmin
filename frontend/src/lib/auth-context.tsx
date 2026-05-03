@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { api } from "./api";
+import { api, setUnauthorizedHandler } from "./api";
 
 interface User {
   id: string;
@@ -13,6 +13,7 @@ interface AuthCtx {
   user: User | null;
   login: (businessUnit: string, username: string, password: string) => Promise<void>;
   logout: () => void;
+  clearSession: () => void;
   isLoading: boolean;
 }
 
@@ -22,13 +23,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  function clearSession() {
+    localStorage.clear();
+    setUser(null);
+  }
+
   useEffect(() => {
     const stored = localStorage.getItem("user");
     const token = localStorage.getItem("token");
     if (stored && token) {
-      try { setUser(JSON.parse(stored)); } catch { localStorage.clear(); }
+      try {
+        setUser(JSON.parse(stored));
+      } catch {
+        clearSession();
+      }
+    } else if (stored || token) {
+      clearSession();
     }
     setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      clearSession();
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+    });
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   async function login(businessUnit: string, username: string, password: string) {
@@ -39,12 +61,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function logout() {
-    localStorage.clear();
-    setUser(null);
+    clearSession();
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, clearSession, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

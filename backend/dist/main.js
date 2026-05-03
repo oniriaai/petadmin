@@ -16,7 +16,6 @@ const providers_1 = require("./routes/providers");
 const rooms_1 = require("./routes/rooms");
 const payables_1 = require("./routes/payables");
 const incomes_1 = require("./routes/incomes");
-const financial_1 = require("./routes/financial");
 const inventory_1 = require("./routes/inventory");
 const reports_1 = require("./routes/reports");
 const alerts_1 = require("./routes/alerts");
@@ -24,12 +23,32 @@ const contracts_1 = require("./routes/contracts");
 const export_1 = require("./routes/export");
 const check_in_out_1 = require("./routes/check-in-out");
 const storage_1 = require("./routes/storage");
+const db_1 = require("./db");
+const recurring_plans_2 = require("./services/recurring-plans");
 const app = (0, express_1.default)();
 const port = Number(process.env.BACKEND_PORT ?? 3001);
 app.use((0, cors_1.default)());
 app.use(express_1.default.json({ limit: "10mb" }));
-app.get("/api/v1/health", (_req, res) => {
-    res.json({ ok: true, service: "pethijos-backend", ts: new Date().toISOString() });
+app.get("/api/v1/health", async (_req, res) => {
+    try {
+        // Ping database
+        await db_1.prisma.$queryRaw `SELECT 1`;
+        res.json({
+            ok: true,
+            db: true,
+            service: "pethijos-backend",
+            ts: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        res.status(500).json({
+            ok: false,
+            db: false,
+            error: error instanceof Error ? error.message : "Database connection failed",
+            service: "pethijos-backend",
+            ts: new Date().toISOString()
+        });
+    }
 });
 app.use("/api/v1/auth", auth_1.authRouter);
 app.use("/api/v1/dashboard", dashboard_1.dashboardRouter);
@@ -43,7 +62,6 @@ app.use("/api/v1/providers", providers_1.providersRouter);
 app.use("/api/v1/rooms", rooms_1.roomsRouter);
 app.use("/api/v1/payables", payables_1.payablesRouter);
 app.use("/api/v1/incomes", incomes_1.incomesRouter);
-app.use("/api/v1/financial", financial_1.financialRouter);
 app.use("/api/v1/inventory", inventory_1.inventoryRouter);
 app.use("/api/v1/reports", reports_1.reportsRouter);
 app.use("/api/v1/alerts", alerts_1.alertsRouter);
@@ -55,4 +73,5 @@ app.use((err, _req, res, _next) => {
 });
 app.listen(port, () => {
     console.log(`Pethijos backend running on http://localhost:${port}/api/v1`);
+    (0, recurring_plans_2.startRecurringPlansScheduler)();
 });

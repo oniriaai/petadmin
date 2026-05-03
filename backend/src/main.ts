@@ -22,6 +22,7 @@ import { checkInOutRouter } from "./routes/check-in-out";
 import { storageRouter } from "./routes/storage";
 
 import { prisma } from "./db";
+import { startRecurringPlansScheduler } from "./services/recurring-plans";
 
 const app = express();
 const port = Number(process.env.BACKEND_PORT ?? 3001);
@@ -75,4 +76,5 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 app.listen(port, () => {
   console.log(`Pethijos backend running on http://localhost:${port}/api/v1`);
+  startRecurringPlansScheduler();
 });

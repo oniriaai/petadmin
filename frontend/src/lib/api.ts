@@ -1,7 +1,12 @@
 const BASE = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:3001/api/v1";
+let onUnauthorized: (() => void) | null = null;
 
 function getToken() {
   return localStorage.getItem("token");
+}
+
+export function setUnauthorizedHandler(handler: (() => void) | null) {
+  onUnauthorized = handler;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -15,6 +20,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      onUnauthorized?.();
+      throw new Error("Sesion expirada. Inicia sesion nuevamente.");
+    }
     const err = await res.json().catch(() => ({ message: "Error de red" }));
     throw new Error(err.message ?? "Error del servidor");
   }

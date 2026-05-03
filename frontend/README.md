@@ -53,6 +53,7 @@ npm run dev -- --port 5174
 - `npm run dev`: inicia Vite en modo desarrollo.
 - `npm run build`: compila TypeScript y genera el build de produccion.
 - `npm run preview`: sirve localmente el build generado.
+- `npm run test`: ejecuta pruebas de frontend con Vitest.
 
 ## Configuracion
 
@@ -70,9 +71,9 @@ Notas:
 
 Piezas principales:
 
-- `src/App.tsx`: define el router, `PrivateRoute` y el layout general con sidebar.
-- `src/lib/auth-context.tsx`: estado de autenticacion y sesion.
-- `src/lib/api.ts`: wrapper de llamadas HTTP, helpers de descarga y APIs de check-in/out y reservas.
+- `src/App.tsx`: define router, `PrivateRoute`, `PublicOnlyRoute` y layout general con sidebar.
+- `src/lib/auth-context.tsx`: estado de autenticacion, bootstrap de sesion y limpieza centralizada.
+- `src/lib/api.ts`: wrapper HTTP, helpers de descarga, APIs de check-in/out y manejo global de `401`.
 - `src/components/`: layout y componentes reutilizables.
 - `src/pages/`: modulos funcionales de la aplicacion.
 
@@ -115,6 +116,20 @@ El wrapper de `src/lib/api.ts`:
 - agrega `Authorization: Bearer <token>` si existe sesion
 - serializa JSON por defecto
 - convierte errores HTTP en mensajes utilizables por la UI
+- ante `401` dispara una limpieza de sesion y redireccion a `/login`
+
+## Reglas De Guardas De Ruta
+
+- `PrivateRoute`: bloquea rutas privadas cuando no hay sesion; redirige a `/login` con `state.from` para retorno post-login.
+- `PublicOnlyRoute`: bloquea `/login` para usuarios ya autenticados y los redirige a su `from` o `/`.
+- `Login`: despues de autenticarse, navega a `state.from` si existe; en caso contrario a `/`.
+
+## Pruebas De Guardas
+
+- Archivo: `src/test/route-guards.test.tsx`
+- Cubre:
+  - redireccion desde ruta privada a `/login` conservando `from`
+  - redireccion de usuario autenticado fuera de `/login` hacia la ruta solicitada
 
 ## Carga De Imagenes
 

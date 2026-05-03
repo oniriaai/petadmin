@@ -10,6 +10,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:setup": "prisma db push && tsx prisma/seed.ts",
+    "seed:photos:upload": "tsx scripts/upload-seed-pet-photos.ts",
+    "seed:photos:replace": "tsx scripts/upload-seed-pet-photos.ts --replace",
     "test:financial": "tsx tests/financial.e2e.ts",
     "test:checkin": "tsx tests/check-in-out.e2e.ts"
   },
