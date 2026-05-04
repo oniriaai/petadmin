@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
-import { api } from "../../lib/api";
+import { api, checkInOutApi } from "../../lib/api";
 import { PageLoader } from "../ui/Spinner";
 
 interface Client {
@@ -83,7 +83,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
 
     setSubmitting(true);
     try {
-      await api.post("/check-in-out", {
+      await checkInOutApi.create({
         clientId: formData.clientId,
         petIds: formData.petIds,
         roomId: formData.roomId,

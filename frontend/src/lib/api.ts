@@ -60,6 +60,15 @@ export interface CheckInOutRecord {
   updatedAt?: string;
 }
 
+export interface CheckInOutHistoryResponse {
+  data: CheckInOutRecord[];
+  pagination: {
+    total: number;
+    skip: number;
+    take: number;
+  };
+}
+
 // Reservations API functions
 export const reservationsApi = {
   checkIn: (id: string, data: { time: string }) =>
@@ -72,7 +81,7 @@ export const reservationsApi = {
 // Check-In/Check-Out API functions
 export const checkInOutApi = {
   // Create standalone check-in/check-out records
-  create: (data: { clientId: string; petIds: string[]; roomId: string; notes?: string }) =>
+  create: (data: { clientId: string; petIds: string[]; roomId: string; notes?: string; checkInNow?: boolean }) =>
     api.post<CheckInOutRecord[]>('/check-in-out', data),
 
   // Register check-in time
@@ -97,7 +106,7 @@ export const checkInOutApi = {
     if (filters?.endDate) params.append('endDate', filters.endDate);
     if (filters?.limit) params.append('limit', String(filters.limit));
     if (filters?.offset) params.append('offset', String(filters.offset));
-    return api.get<{ data: CheckInOutRecord[]; total: number; limit: number; offset: number }>(`/check-in-out/history?${params}`);
+    return api.get<CheckInOutHistoryResponse>(`/check-in-out/history?${params}`);
   },
 
   // Update notes

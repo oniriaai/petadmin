@@ -343,8 +343,8 @@ checkInOutRouter.get("/active", async (req, res) => {
 checkInOutRouter.get("/history", async (req, res) => {
   try {
     const bu = req.user!.businessUnit;
-    const { 
-      petId, roomId, reservationId, startDate, endDate, 
+    const {
+      clientId, petId, roomId, reservationId, startDate, endDate,
       skip, take, offset, limit 
     } = req.query as Record<string, string>;
 
@@ -356,6 +356,7 @@ checkInOutRouter.get("/history", async (req, res) => {
       isActive: true,
     };
 
+    if (clientId) where.clientId = clientId;
     if (petId) where.petId = petId;
     if (roomId) where.roomId = roomId;
     if (reservationId) where.reservationId = reservationId;
