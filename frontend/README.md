@@ -66,6 +66,8 @@ Notas:
 - no hay archivo `frontend/.env.example` en este momento
 - el frontend usa `fetch` mediante un wrapper en `src/lib/api.ts`
 - el token JWT se guarda en `localStorage`
+- para usuario `admin`, la unidad activa (`KINDERDOG`/`PETHIJOS`) se guarda en `localStorage` como `activeBusinessUnit`; si no existe, la vista es consolidada
+- cuando hay unidad activa, el frontend envia `X-Business-Unit` al backend para filtrar alcance
 
 ## Estructura De La Aplicacion
 

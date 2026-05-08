@@ -39,6 +39,16 @@ export function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function RoleRoute({ children, allowedRoles }: { children: React.ReactNode; allowedRoles: string[] }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) {
+    return <div className="min-h-screen grid place-items-center text-gray-500">Cargando sesión...</div>;
+  }
+  if (!user) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -73,7 +83,7 @@ export function App() {
                     <Route path="/transacciones" element={<FinancialPage />} />
                     <Route path="/informes" element={<InformesPage />} />
                     <Route path="/herramientas" element={<HerramientasPage />} />
-                    <Route path="/configuracion" element={<ConfiguracionPage />} />
+                    <Route path="/configuracion" element={<RoleRoute allowedRoles={["admin"]}><ConfiguracionPage /></RoleRoute>} />
                     <Route path="/guia" element={<GuidePage />} />
                     {/* Fallback para rutas no encontradas o en desarrollo */}
                     <Route path="*" element={<div className="p-8"><h1 className="text-2xl font-bold">Próximamente</h1><p>Este módulo está en desarrollo.</p></div>} />

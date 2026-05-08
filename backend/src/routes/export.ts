@@ -1,6 +1,6 @@
 import { Response, Router } from "express";
 import ExcelJS from "exceljs";
-import { requireAuth } from "../middleware/auth";
+import { buildBusinessUnitWhere, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 
 export const exportRouter = Router();
@@ -29,9 +29,9 @@ exportRouter.get("/clients", async (req, res) => {
 });
 
 exportRouter.get("/reservations", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { from, to } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (from || to) {
     where.checkIn = {};
     if (from) (where.checkIn as Record<string, unknown>).gte = new Date(from);
@@ -51,12 +51,17 @@ exportRouter.get("/reservations", async (req, res) => {
     ws.addRow([r.id.slice(-8), `${r.client.lastName}, ${r.client.firstName}`, r.pets.map(p => p.pet.name).join(", "), r.service, r.room?.name, r.checkIn?.toLocaleDateString("es-EC"), r.checkOut?.toLocaleDateString("es-EC"), r.status, r.totalAmount, r.pendingAmount, r.paymentMethod]);
   });
   await sendWorkbook(res, wb, "reservas.xlsx");
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 exportRouter.get("/incomes", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { from, to } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (from || to) {
     where.date = {};
     if (from) (where.date as Record<string, unknown>).gte = new Date(from);
@@ -72,12 +77,17 @@ exportRouter.get("/incomes", async (req, res) => {
     ws.addRow([i.date.toLocaleDateString("es-EC"), i.type, i.concept, i.amount, i.vatPercent, i.vatAmount, i.total, i.paymentMethod, i.invoiceNumber, i.invoiceStatus]);
   });
   await sendWorkbook(res, wb, "ingresos.xlsx");
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 exportRouter.get("/expenses", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const payables = await prisma.payable.findMany({
-    where: { businessUnit: bu },
+    where: buildBusinessUnitWhere(req),
     include: { provider: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -90,4 +100,9 @@ exportRouter.get("/expenses", async (req, res) => {
     ws.addRow([p.type, p.category, p.description, p.provider?.name, p.invoiceNumber, p.subtotal, p.vatPercent, p.vatAmount, p.total, p.paid, p.balance, p.status, p.dueDate?.toLocaleDateString("es-EC")]);
   });
   await sendWorkbook(res, wb, "gastos-compras.xlsx");
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

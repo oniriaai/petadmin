@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 
 export const payablesRouter = Router();
@@ -22,9 +22,9 @@ const schema = z.object({
 });
 
 payablesRouter.get("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { type, status, category } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (type) where.type = type;
   if (status) where.status = status;
   if (category) where.category = category;
@@ -34,19 +34,32 @@ payablesRouter.get("/", async (req, res) => {
     orderBy: { createdAt: "desc" },
   });
   res.json(payables);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 payablesRouter.get("/:id", async (req, res) => {
+  try {
   const p = await prisma.payable.findUnique({
     where: { id: req.params.id },
     include: { provider: true, payments: { orderBy: { date: "desc" } } },
   });
   if (!p) { res.status(404).json({ message: "Documento no encontrado" }); return; }
+  assertBusinessUnitAccess(req, p.businessUnit);
   res.json(p);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 payablesRouter.post("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
+  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() }); return; }
   const { invoiceDate, dueDate, nextPayment, subtotal, vatPercent = 0, ...rest } = parsed.data;
@@ -68,15 +81,22 @@ payablesRouter.post("/", async (req, res) => {
     include: { provider: { select: { id: true, name: true } } },
   });
   res.status(201).json(p);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 payablesRouter.put("/:id", async (req, res) => {
+  try {
   const parsed = schema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const { invoiceDate, dueDate, nextPayment, subtotal, vatPercent, ...rest } = parsed.data;
 
   const current = await prisma.payable.findUnique({ where: { id: req.params.id } });
   if (!current) { res.status(404).json({ message: "Documento no encontrado" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
 
   const sb = subtotal ?? current.subtotal;
   const vp = vatPercent ?? current.vatPercent;
@@ -96,11 +116,25 @@ payablesRouter.put("/:id", async (req, res) => {
     include: { provider: { select: { id: true, name: true } } },
   });
   res.json(p);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 payablesRouter.delete("/:id", async (req, res) => {
+  try {
+  const current = await prisma.payable.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Documento no encontrado" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   await prisma.payable.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 const paymentSchema = z.object({
@@ -112,12 +146,14 @@ const paymentSchema = z.object({
 });
 
 payablesRouter.post("/:id/payments", async (req, res) => {
+  try {
   const parsed = paymentSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const { date, ...rest } = parsed.data;
 
   const payable = await prisma.payable.findUnique({ where: { id: req.params.id } });
   if (!payable) { res.status(404).json({ message: "Documento no encontrado" }); return; }
+  assertBusinessUnitAccess(req, payable.businessUnit);
 
   const payment = await prisma.payment.create({
     data: { payableId: req.params.id, date: date ? new Date(date) : new Date(), registeredBy: req.user!.username, ...rest },
@@ -133,13 +169,21 @@ payablesRouter.post("/:id/payments", async (req, res) => {
   });
 
   res.status(201).json(payment);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 payablesRouter.delete("/:id/payments/:pid", async (req, res) => {
+  try {
   const payment = await prisma.payment.findUnique({ where: { id: req.params.pid } });
   if (!payment) { res.status(404).json({ message: "Pago no encontrado" }); return; }
-  await prisma.payment.delete({ where: { id: req.params.pid } });
   const payable = await prisma.payable.findUnique({ where: { id: req.params.id } });
+  if (!payable) { res.status(404).json({ message: "Documento no encontrado" }); return; }
+  assertBusinessUnitAccess(req, payable.businessUnit);
+  await prisma.payment.delete({ where: { id: req.params.pid } });
   if (payable) {
     const newPaid = payable.paid - payment.amount;
     const newBalance = payable.total - newPaid;
@@ -147,4 +191,9 @@ payablesRouter.delete("/:id/payments/:pid", async (req, res) => {
     await prisma.payable.update({ where: { id: req.params.id }, data: { paid: Math.max(0, newPaid), balance: Math.max(0, newBalance), status: newStatus } });
   }
   res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

@@ -126,6 +126,13 @@ Rutas activas bajo `/api/v1`:
 - `reports`, `export`: consultas y exportaciones.
 - `alerts`, `contracts`: alertas operativas y contratos.
 
+### Multirol y alcance por unidad
+
+- Roles normalizados: `admin`, `kinderdog`, `pethijos`.
+- Usuarios `kinderdog` y `pethijos` operan solo sobre su unidad.
+- `admin` tiene vista consolidada por defecto (ambas unidades) y puede acotar por unidad enviando `X-Business-Unit: KINDERDOG|PETHIJOS` (o `?businessUnit=`).
+- En operaciones de escritura para `admin`, debe existir una unidad objetivo (header/query o `businessUnit` en body).
+
 ## Dominios De Negocio
 
 El esquema de Prisma modela principalmente:
@@ -169,7 +176,7 @@ Sincronizacion y desactivacion:
 
 `prisma/seed.ts` crea datos base solo si la tabla `users` esta vacia:
 
-- usuarios admin de Kinderdog y Pethijos
+- usuarios admin global, Kinderdog y Pethijos
 - salas iniciales
 - proveedor base
 - clientes y mascotas de ejemplo
@@ -179,6 +186,7 @@ Sincronizacion y desactivacion:
 
 Credenciales creadas por defecto:
 
+- `admin_global` / `admin123`
 - `kinderdog_admin` / `kinderdog123`
 - `pethijos_admin` / `pethijos123`
 

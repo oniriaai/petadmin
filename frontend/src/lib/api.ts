@@ -5,17 +5,25 @@ function getToken() {
   return localStorage.getItem("token");
 }
 
+function getActiveBusinessUnit() {
+  const value = localStorage.getItem("activeBusinessUnit");
+  if (value === "KINDERDOG" || value === "PETHIJOS") return value;
+  return null;
+}
+
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  const activeBusinessUnit = getActiveBusinessUnit();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(activeBusinessUnit ? { "X-Business-Unit": activeBusinessUnit } : {}),
       ...options.headers,
     },
   });
@@ -120,8 +128,12 @@ export const checkInOutApi = {
 
 export async function downloadFile(path: string, filename: string) {
   const token = getToken();
+  const activeBusinessUnit = getActiveBusinessUnit();
   const res = await fetch(`${BASE}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(activeBusinessUnit ? { "X-Business-Unit": activeBusinessUnit } : {}),
+    },
   });
   if (!res.ok) throw new Error("Error al descargar");
   const blob = await res.blob();

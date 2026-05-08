@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 import { Spinner } from "../components/ui/Spinner";
 
-type BU = "KINDERDOG" | "PETHIJOS";
+type BU = "KINDERDOG" | "PETHIJOS" | "ADMIN";
 
 export function Login() {
   const { login } = useAuth();
@@ -21,7 +21,7 @@ export function Login() {
     setLoading(true);
     setError("");
     try {
-      await login(bu, username, password);
+      await login(bu === "ADMIN" ? null : bu, username, password);
       const to = (location.state as { from?: string } | null)?.from ?? "/";
       navigate(to, { replace: true });
     } catch (err) {
@@ -45,6 +45,7 @@ export function Login() {
 
           <div className="grid grid-cols-2 gap-3 mb-6">
             {([
+              { id: "ADMIN",     label: "Admin",     emoji: "🧭", desc: "Vista consolidada", color: "border-slate-500 bg-slate-50 ring-slate-400" },
               { id: "KINDERDOG", label: "Kinderdog", emoji: "🐶", desc: "Guardería canina", color: "border-amber-500 bg-amber-50 ring-amber-400" },
               { id: "PETHIJOS",  label: "Pethijos",  emoji: "✂️",  desc: "Peluquería",       color: "border-violet-500 bg-violet-50 ring-violet-400" },
             ] as const).map(({ id, label, emoji, desc, color }) => (
@@ -78,7 +79,7 @@ export function Login() {
           </form>
 
           <p className="text-xs text-gray-400 text-center mt-4">
-            Kinderdog: kinderdog_admin / kinderdog123 · Pethijos: pethijos_admin / pethijos123
+            Admin: admin_global / admin123 · Kinderdog: kinderdog_admin / kinderdog123 · Pethijos: pethijos_admin / pethijos123
           </p>
         </div>
       </div>

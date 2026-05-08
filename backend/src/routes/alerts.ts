@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 
 export const alertsRouter = Router();
@@ -15,9 +15,9 @@ const schema = z.object({
 });
 
 alertsRouter.get("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { resolved, severity } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (resolved === "true") where.isResolved = true;
   else if (resolved === "false") where.isResolved = false;
   if (severity) where.severity = severity;
@@ -27,25 +27,54 @@ alertsRouter.get("/", async (req, res) => {
     orderBy: [{ isResolved: "asc" }, { severity: "asc" }, { createdAt: "desc" }],
   });
   res.json(alerts);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 alertsRouter.post("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
+  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const alert = await prisma.alert.create({ data: { ...parsed.data, businessUnit: bu } });
   res.status(201).json(alert);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 alertsRouter.patch("/:id/resolve", async (req, res) => {
+  try {
+  const existing = await prisma.alert.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!existing) { res.status(404).json({ message: "Alerta no encontrada" }); return; }
+  assertBusinessUnitAccess(req, existing.businessUnit);
   const alert = await prisma.alert.update({
     where: { id: req.params.id },
     data: { isResolved: true, resolvedAt: new Date() },
   });
   res.json(alert);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 alertsRouter.delete("/:id", async (req, res) => {
+  try {
+  const existing = await prisma.alert.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!existing) { res.status(404).json({ message: "Alerta no encontrada" }); return; }
+  assertBusinessUnitAccess(req, existing.businessUnit);
   await prisma.alert.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

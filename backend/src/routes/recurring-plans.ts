@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 import {
   cancelFuturePendingReservationsForPlan,
@@ -24,10 +24,10 @@ const recurringPlanSchema = z.object({
 });
 
 recurringPlansRouter.get("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { status, clientId } = req.query as Record<string, string>;
 
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (status === "active") where.isActive = true;
   else if (status === "inactive") where.isActive = false;
   if (clientId) where.clientId = clientId;
@@ -42,9 +42,15 @@ recurringPlansRouter.get("/", async (req, res) => {
     orderBy: { startDate: "desc" },
   });
   res.json(plans);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 recurringPlansRouter.get("/:id", async (req, res) => {
+  try {
   const plan = await prisma.recurringPlan.findUnique({
     where: { id: req.params.id },
     include: {
@@ -54,14 +60,21 @@ recurringPlansRouter.get("/:id", async (req, res) => {
     },
   });
   if (!plan) { res.status(404).json({ message: "Plan no encontrado" }); return; }
+  assertBusinessUnitAccess(req, plan.businessUnit);
   res.json(plan);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 recurringPlansRouter.post("/", async (req, res) => {
   const parsed = recurringPlanSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() }); return; }
 
-  const bu = req.user!.businessUnit;
+  try {
+  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
   const { clientId, startDate, endDate, startTime, endTime, daysOfWeek, petIds, service, roomId, notes } = parsed.data;
   if (endTime <= startTime) {
     res.status(400).json({ message: "La hora de salida debe ser mayor a la hora de entrada" });
@@ -76,6 +89,7 @@ recurringPlansRouter.post("/", async (req, res) => {
   if (roomId) {
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
+    if (room.businessUnit !== bu) { res.status(400).json({ message: "La sala no pertenece a la unidad seleccionada" }); return; }
   }
 
   const plan = await prisma.recurringPlan.create({
@@ -99,14 +113,21 @@ recurringPlansRouter.post("/", async (req, res) => {
     },
   });
   res.status(201).json(plan);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 recurringPlansRouter.put("/:id", async (req, res) => {
+  try {
   const parsed = recurringPlanSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
 
   const plan = await prisma.recurringPlan.findUnique({ where: { id: req.params.id } });
   if (!plan) { res.status(404).json({ message: "Plan no encontrado" }); return; }
+  assertBusinessUnitAccess(req, plan.businessUnit);
 
   const { roomId, clientId, startDate, endDate, startTime, endTime, ...rest } = parsed.data;
   const effectiveStartTime = startTime ?? plan.startTime;
@@ -120,6 +141,7 @@ recurringPlansRouter.put("/:id", async (req, res) => {
   if (roomId) {
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
+    if (room.businessUnit !== plan.businessUnit) { res.status(400).json({ message: "La sala no pertenece a la unidad del plan" }); return; }
   }
 
   // Verify client exists if changing
@@ -148,10 +170,19 @@ recurringPlansRouter.put("/:id", async (req, res) => {
 
   await syncFuturePendingReservationsForPlan(updated.id);
   res.json(updated);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 recurringPlansRouter.patch("/:id/status", async (req, res) => {
+  try {
   const { isActive } = req.body;
+  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Plan no encontrado" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   const plan = await prisma.recurringPlan.update({
     where: { id: req.params.id },
     data: { isActive },
@@ -160,9 +191,18 @@ recurringPlansRouter.patch("/:id/status", async (req, res) => {
     await cancelFuturePendingReservationsForPlan(plan.id);
   }
   res.json(plan);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 recurringPlansRouter.delete("/:id", async (req, res) => {
+  try {
+  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Plan no encontrado" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   await cancelFuturePendingReservationsForPlan(req.params.id);
   // Soft delete by marking as inactive
   await prisma.recurringPlan.update({
@@ -170,4 +210,9 @@ recurringPlansRouter.delete("/:id", async (req, res) => {
     data: { isActive: false },
   });
   res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

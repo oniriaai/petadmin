@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 
 export const incomesRouter = Router();
@@ -20,9 +20,9 @@ const schema = z.object({
 });
 
 incomesRouter.get("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { type, status, from, to } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (type) where.type = type;
   if (status) where.invoiceStatus = status;
   if (from || to) {
@@ -36,10 +36,16 @@ incomesRouter.get("/", async (req, res) => {
     orderBy: { date: "desc" },
   });
   res.json(incomes);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 incomesRouter.post("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
+  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const { date, amount, vatPercent = 0, ...rest } = parsed.data;
@@ -49,14 +55,21 @@ incomesRouter.post("/", async (req, res) => {
     data: { ...rest, businessUnit: bu, amount, vatPercent, vatAmount, total, date: date ? new Date(date) : new Date() },
   });
   res.status(201).json(income);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 incomesRouter.put("/:id", async (req, res) => {
+  try {
   const parsed = schema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const { date, amount, vatPercent, ...rest } = parsed.data;
   const current = await prisma.income.findUnique({ where: { id: req.params.id } });
   if (!current) { res.status(404).json({ message: "Ingreso no encontrado" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   const a = amount ?? current.amount;
   const vp = vatPercent ?? current.vatPercent;
   const vatAmount = a * (vp / 100);
@@ -66,9 +79,23 @@ incomesRouter.put("/:id", async (req, res) => {
     data: { ...rest, amount: a, vatPercent: vp, vatAmount, total, date: date ? new Date(date) : undefined },
   });
   res.json(income);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 incomesRouter.delete("/:id", async (req, res) => {
+  try {
+  const current = await prisma.income.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Ingreso no encontrado" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   await prisma.income.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

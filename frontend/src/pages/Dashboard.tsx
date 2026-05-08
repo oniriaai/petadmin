@@ -37,7 +37,7 @@ function StatCard({ label, value, sub, icon: Icon, color }: { label: string; val
 const SEVERITY_ICON: Record<string, string> = { ALTA: "🔴", MEDIA: "🟡", BAJA: "🟢" };
 
 export function Dashboard() {
-  const { user } = useAuth();
+  const { user, activeBusinessUnit } = useAuth();
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -51,13 +51,21 @@ export function Dashboard() {
   if (loading) return <PageLoader />;
   if (!summary) return <p className="text-red-600 p-6">Error cargando dashboard</p>;
 
-  const isKinderdog = user?.businessUnit === "KINDERDOG";
+  const dashboardLabel = user?.role === "admin"
+    ? activeBusinessUnit === "KINDERDOG"
+      ? "🐶 Kinderdog"
+      : activeBusinessUnit === "PETHIJOS"
+        ? "✂️ Pethijos"
+        : "📊 Consolidado"
+    : user?.businessUnit === "KINDERDOG"
+      ? "🐶 Kinderdog"
+      : "✂️ Pethijos";
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="page-title">
-          {isKinderdog ? "🐶 Kinderdog" : "✂️ Pethijos"} — Dashboard
+          {dashboardLabel} — Dashboard
         </h1>
         <p className="text-gray-500 text-sm mt-1">{fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}</p>
       </div>

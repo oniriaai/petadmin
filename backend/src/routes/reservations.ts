@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 
 export const reservationsRouter = Router();
@@ -27,10 +27,10 @@ const reservationSchema = z.object({
 });
 
 reservationsRouter.get("/", async (req, res) => {
-  const bu = req.user!.businessUnit;
+  try {
   const { status, date, search } = req.query as Record<string, string>;
 
-  const where: Record<string, unknown> = { businessUnit: bu };
+  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
   if (status) where.status = status;
   if (date) {
     const d = new Date(date);
@@ -56,9 +56,15 @@ reservationsRouter.get("/", async (req, res) => {
     orderBy: { checkIn: "asc" },
   });
   res.json(reservations);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.get("/:id", async (req, res) => {
+  try {
   const r = await prisma.reservation.findUnique({
     where: { id: req.params.id },
     include: {
@@ -69,13 +75,20 @@ reservationsRouter.get("/:id", async (req, res) => {
     },
   });
   if (!r) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+  assertBusinessUnitAccess(req, r.businessUnit);
   res.json(r);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.post("/", async (req, res) => {
+  try {
   const parsed = reservationSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() }); return; }
-  const bu = req.user!.businessUnit;
+  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
   const { petIds, checkIn, checkOut, roomId, clientId, vatPercent = 15, basePrice = 0, discountAmount = 0, advanceAmount = 0, ...rest } = parsed.data;
 
   // Validate all pets belong to the client
@@ -91,6 +104,7 @@ reservationsRouter.post("/", async (req, res) => {
   if (roomId && checkIn && checkOut) {
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
+    if (room.businessUnit !== bu) { res.status(400).json({ message: "La sala no pertenece a la unidad seleccionada" }); return; }
 
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
@@ -176,15 +190,22 @@ reservationsRouter.post("/", async (req, res) => {
     console.error("Error creating reservation with CheckInOut:", error);
     res.status(500).json({ message: "Error creando reserva" });
   }
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.put("/:id", async (req, res) => {
+  try {
   const parsed = reservationSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const { petIds, checkIn, checkOut, roomId, clientId, basePrice, vatPercent, discountAmount, advanceAmount, ...rest } = parsed.data;
 
   const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, include: { pets: true } });
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
 
   // Validate pets belong to client if changing
   if (petIds && clientId) {
@@ -213,6 +234,7 @@ reservationsRouter.put("/:id", async (req, res) => {
   if (newRoomId && newCheckIn && newCheckOut) {
     const room = await prisma.room.findUnique({ where: { id: newRoomId } });
     if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
+    if (room.businessUnit !== current.businessUnit) { res.status(400).json({ message: "La sala no pertenece a la unidad de la reserva" }); return; }
 
     // Check for conflicts with other reservations (exclude current)
     const conflicts = await prisma.reservation.count({
@@ -276,14 +298,21 @@ reservationsRouter.put("/:id", async (req, res) => {
     include: { client: true, pets: { include: { pet: true } }, room: true },
   });
   res.json(reservation);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.post("/:id/checkin", async (req, res) => {
+  try {
   const reservation = await prisma.reservation.findUnique({
     where: { id: req.params.id },
     include: { pets: { include: { pet: true } }, room: true },
   });
   if (!reservation) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+  assertBusinessUnitAccess(req, reservation.businessUnit);
 
   const checkInTime = req.body.time ? new Date(req.body.time) : new Date();
 
@@ -318,11 +347,21 @@ reservationsRouter.post("/:id/checkin", async (req, res) => {
   });
 
   res.json(r);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.post("/:id/checkout", async (req, res) => {
+  try {
   const { time, createIncome, paymentMethod } = req.body;
   const checkOutTime = time ? new Date(time) : new Date();
+
+  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
 
   const r = await prisma.reservation.update({
     where: { id: req.params.id },
@@ -353,15 +392,38 @@ reservationsRouter.post("/:id/checkout", async (req, res) => {
     });
   }
   res.json(r);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.patch("/:id/status", async (req, res) => {
+  try {
   const { status } = req.body;
+  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   const r = await prisma.reservation.update({ where: { id: req.params.id }, data: { status } });
   res.json(r);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 reservationsRouter.delete("/:id", async (req, res) => {
+  try {
+  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
+  assertBusinessUnitAccess(req, current.businessUnit);
   await prisma.reservation.update({ where: { id: req.params.id }, data: { status: "CANCELADA" } });
   res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

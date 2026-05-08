@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
 import { prisma } from "../db";
 import {
   createCheckInOutSchema,
@@ -47,11 +47,11 @@ function mapToFrontend(record: any) {
  */
 checkInOutRouter.get("/", async (req, res) => {
   try {
-    const bu = req.user!.businessUnit;
+    const buWhere = buildBusinessUnitWhere(req);
     const { search } = req.query as Record<string, string>;
 
     const where: any = {
-      businessUnit: bu,
+      ...buWhere,
       isActive: true,
     };
 
@@ -95,7 +95,7 @@ checkInOutRouter.post("/", async (req, res) => {
       });
     }
 
-    const bu = req.user!.businessUnit;
+    const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
     const { petId, petIds, clientId, roomId, reservationId, notes, checkInNow } = parsed.data;
 
     // Normalize to an array of pet IDs
@@ -148,6 +148,7 @@ checkInOutRouter.post("/", async (req, res) => {
     // Actually, checkInOutApi.create in frontend/src/lib/api.ts expects CheckInOutRecord[]
     return res.status(201).json(createdRecords.map(mapToFrontend));
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error creating CheckInOut:", error);
     return res.status(500).json({ message: "Error creating check-in/out record" });
   }
@@ -167,7 +168,6 @@ checkInOutRouter.post("/:id/check-in", async (req, res) => {
       });
     }
 
-    const bu = req.user!.businessUnit;
     const { checkInTime: checkInTimeStr, performedByUserId, notes } = parsed.data;
     const checkInTime = checkInTimeStr ? new Date(checkInTimeStr) : new Date();
 
@@ -182,9 +182,7 @@ checkInOutRouter.post("/:id/check-in", async (req, res) => {
     }
 
     // Verify business unit access
-    if (checkInOut.businessUnit !== bu) {
-      return res.status(403).json({ message: "No tienes acceso a este registro" });
-    }
+    assertBusinessUnitAccess(req, checkInOut.businessUnit);
 
     // Validate: no prior checkInTime
     if (checkInOut.checkInTime) {
@@ -222,6 +220,7 @@ checkInOutRouter.post("/:id/check-in", async (req, res) => {
 
     return res.json(mapToFrontend(updated));
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error during check-in:", error);
     return res.status(500).json({ message: "Error registering check-in" });
   }
@@ -241,7 +240,6 @@ checkInOutRouter.post("/:id/check-out", async (req, res) => {
       });
     }
 
-    const bu = req.user!.businessUnit;
     const { checkOutTime: checkOutTimeStr, performedByUserId, notes } = parsed.data;
     const checkOutTime = checkOutTimeStr ? new Date(checkOutTimeStr) : new Date();
 
@@ -255,9 +253,7 @@ checkInOutRouter.post("/:id/check-out", async (req, res) => {
     }
 
     // Verify business unit access
-    if (checkInOut.businessUnit !== bu) {
-      return res.status(403).json({ message: "No tienes acceso a este registro" });
-    }
+    assertBusinessUnitAccess(req, checkInOut.businessUnit);
 
     // Validate: must have a checkInTime before checking out
     if (!checkInOut.checkInTime) {
@@ -292,6 +288,7 @@ checkInOutRouter.post("/:id/check-out", async (req, res) => {
 
     return res.json(mapToFrontend(updated));
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error during check-out:", error);
     return res.status(500).json({ message: "Error registering check-out" });
   }
@@ -303,11 +300,11 @@ checkInOutRouter.post("/:id/check-out", async (req, res) => {
  */
 checkInOutRouter.get("/active", async (req, res) => {
   try {
-    const bu = req.user!.businessUnit;
+    const buWhere = buildBusinessUnitWhere(req);
     const { roomId } = req.query as Record<string, string>;
 
     const where: Record<string, unknown> = {
-      businessUnit: bu,
+      ...buWhere,
       checkInTime: { not: null },
       checkOutTime: null,
       isActive: true,
@@ -342,7 +339,7 @@ checkInOutRouter.get("/active", async (req, res) => {
  */
 checkInOutRouter.get("/history", async (req, res) => {
   try {
-    const bu = req.user!.businessUnit;
+    const buWhere = buildBusinessUnitWhere(req);
     const {
       clientId, petId, roomId, reservationId, startDate, endDate,
       skip, take, offset, limit 
@@ -352,7 +349,7 @@ checkInOutRouter.get("/history", async (req, res) => {
     const finalTake = parseInt(limit || take || "50");
 
     const where: Record<string, unknown> = {
-      businessUnit: bu,
+      ...buWhere,
       isActive: true,
     };
 
@@ -399,6 +396,7 @@ checkInOutRouter.get("/history", async (req, res) => {
       },
     });
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error fetching check-in/out history:", error);
     return res.status(500).json({ message: "Error fetching history" });
   }
@@ -418,7 +416,6 @@ checkInOutRouter.put("/:id/notes", async (req, res) => {
       });
     }
 
-    const bu = req.user!.businessUnit;
     const { notes } = parsed.data;
 
     // Get existing CheckInOut record
@@ -431,9 +428,7 @@ checkInOutRouter.put("/:id/notes", async (req, res) => {
     }
 
     // Verify business unit access
-    if (checkInOut.businessUnit !== bu) {
-      return res.status(403).json({ message: "No tienes acceso a este registro" });
-    }
+    assertBusinessUnitAccess(req, checkInOut.businessUnit);
 
     // Update notes
     const updated = await prisma.checkInOut.update({
@@ -448,6 +443,7 @@ checkInOutRouter.put("/:id/notes", async (req, res) => {
 
     return res.json(updated);
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error updating notes:", error);
     return res.status(500).json({ message: "Error updating notes" });
   }
@@ -459,8 +455,6 @@ checkInOutRouter.put("/:id/notes", async (req, res) => {
  */
 checkInOutRouter.get("/:id", async (req, res) => {
   try {
-    const bu = req.user!.businessUnit;
-
     const checkInOut = await prisma.checkInOut.findUnique({
       where: { id: req.params.id },
       include: {
@@ -477,12 +471,11 @@ checkInOutRouter.get("/:id", async (req, res) => {
     }
 
     // Verify business unit access
-    if (checkInOut.businessUnit !== bu) {
-      return res.status(403).json({ message: "No tienes acceso a este registro" });
-    }
+    assertBusinessUnitAccess(req, checkInOut.businessUnit);
 
     return res.json(checkInOut);
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error fetching CheckInOut:", error);
     return res.status(500).json({ message: "Error fetching record" });
   }
