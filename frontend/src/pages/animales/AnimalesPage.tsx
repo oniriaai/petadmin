@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { Search, Eye, Edit2 } from "lucide-react";
+import { Search, Eye, Edit2, Dog, Cat, AlertCircle } from "lucide-react";
 import { api } from "../../lib/api";
 import { fmt } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
@@ -39,7 +39,7 @@ function PetAvatar({ pet, size = "small" }: { pet: Pet; size?: "small" | "large"
 
   return (
     <span className={`${isSmall ? "text-2xl" : "text-5xl"} ${wrapperClass} flex items-center justify-center ${isSmall ? "bg-gray-50" : "bg-white shadow-sm"}`}>
-      {pet.species === "dog" ? "🐶" : "🐱"}
+      {pet.species === "dog" ? <Dog size={isSmall ? 22 : 40} /> : <Cat size={isSmall ? 22 : 40} />}
     </span>
   );
 }
@@ -249,7 +249,7 @@ export function AnimalesPage() {
                 <div key={l as string}><p className="label">{l}</p><p>{v}</p></div>
               ) : null)}
             </div>
-            {selected.allergies && <div className="p-3 bg-red-50 rounded-lg"><p className="label text-red-700">⚠️ Alergias / Observaciones</p><p className="text-sm text-red-800">{selected.allergies}</p></div>}
+            {selected.allergies && <div className="p-3 bg-red-50 rounded-lg"><p className="label text-red-700 flex items-center gap-1"><AlertCircle size={15} /> Alergias / Observaciones</p><p className="text-sm text-red-800">{selected.allergies}</p></div>}
             {selected.notes && <div><p className="label">Notas</p><p className="text-sm text-gray-600">{selected.notes}</p></div>}
             {selected.vaccinations.length > 0 && (
               <div>

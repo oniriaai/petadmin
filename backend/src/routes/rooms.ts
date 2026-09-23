@@ -26,24 +26,41 @@ roomsRouter.get("/", async (req, res) => {
     orderBy: { name: "asc" },
   });
 
-  // Calculate current occupancy for each room (based on number of pets)
+  // Calculate current occupancy for each room based on active check-ins or active reservations.
+  // For rooms with physical check-in tracking (daycare), prefer CheckInOut records.
+  // For all rooms, also count reservations in any "in-progress" status for the modular architecture.
+  const ACTIVE_STATUSES = ["ACTIVA", "RECEPCIONADA", "EN_PROCESO"];
   const now = new Date();
   const roomsWithOccupancy = await Promise.all(
     rooms.map(async (room) => {
+      // Primary: count via active CheckInOut records (most accurate for daycare)
+      const activeCheckIns = await prisma.checkInOut.count({
+        where: {
+          roomId: room.id,
+          isActive: true,
+          checkOutTime: null,
+        },
+      });
+
+      // Fallback / supplement: count via active reservation pets (covers peluquería kanban flow
+      // where check-in records may not be created per-pet but reservation status is set directly)
       const activeReservations = await prisma.reservation.findMany({
         where: {
           roomId: room.id,
-          status: "ACTIVA",
+          status: { in: ACTIVE_STATUSES },
           checkIn: { lte: now },
           checkOut: { gte: now },
         },
         include: { pets: true },
       });
-      const totalPets = activeReservations.reduce((sum, r) => sum + r.pets.length, 0);
+      const reservationPets = activeReservations.reduce((sum, r) => sum + r.pets.length, 0);
+
+      // Use the higher of the two counts to avoid double-counting when both sources exist
+      const totalPets = Math.max(activeCheckIns, reservationPets);
       return {
         ...room,
         currentOccupancy: totalPets,
-        availableCapacity: room.capacity - totalPets,
+        availableCapacity: Math.max(0, room.capacity - totalPets),
       };
     })
   );

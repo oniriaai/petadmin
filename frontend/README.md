@@ -1,152 +1,124 @@
-# Frontend
+# Frontend — Aplicación Web Modular Pethijos & Kinderdog
 
-Aplicacion React para la operacion diaria del sistema administrativo de Kinderdog y Pethijos. El frontend consume la API del backend, protege rutas con autenticacion y organiza la experiencia por modulos operativos.
+Aplicación React 18 con Vite, TypeScript y Tailwind CSS diseñada para la operación diaria y modular de **Guardería (Kinderdog)** y **Peluquería (Pethijos)**.
+
+---
 
 ## Requisitos
 
 - Node.js 20+
 - npm
-- Backend disponible en local o via Docker
+- Backend disponible en `http://localhost:3001/api/v1`
 
-## Formas De Ejecutarlo
+---
 
-### Opcion recomendada: stack completo con Docker
+## Nuevos Módulos y Páginas Especializadas
 
-Desde la raiz del repo:
+### 1. Módulo de Peluquería (`src/pages/peluqueria/AgendaPeluqueriaPage.tsx`)
+Accesible en la ruta `/peluqueria` (exclusivo para `admin` y `pethijos`):
+- **KPIs del Día**: Citas agendadas, perrhijos en salón/baño, listos para entrega, entregados y total facturado.
+- **Tablero Kanban de Flujo de Atención**:
+  - `Agendadas`: Citas con hora de inicio y duración estimada en minutos.
+  - `En Salón`: Recepción de la mascota por el tutor.
+  - `En Baño / Corte`: Proceso de estilismo activo.
+  - `Listo para Entrega`: Mascota terminada en espera de retiro.
+  - `Entregadas / Cobradas`: Cierre y confirmación de cobro.
+- **Modal de Agendamiento Ágil**:
+  - Búsqueda en vivo de clientes.
+  - Selección de mascota(s).
+  - Selector de servicio con duración (minutos) y tarifa base automática.
+  - Fecha y hora con cálculo automático de horario de fin.
+  - Anticipo opcional con medio de pago.
+- **Modal de Cobro Directo**: Registro de ingreso contable independiente a nombre de **Pethijos**.
+
+### 2. Módulo de Guardería (`src/pages/guarderia/ControlGuarderiaPage.tsx`)
+Accesible en la ruta `/guarderia` (exclusivo para `admin` y `kinderdog`):
+- **Semáforo de Cupos en Vivo por Salas**:
+  - Tarjetas visuales por cada sala física con capacidad total, perrhijos presentes y cupos disponibles.
+  - Barra de progreso porcentual coloreada (verde si hay disponibilidad, amarillo si supera el 75%, rojo si está llena).
+  - Lista de perrhijos en estancia con foto, nombre, raza, tutor y hora de ingreso.
+  - Bloqueo de entrada automático cuando la sala alcanza su capacidad máxima.
+- **Lista de Asistencia Diaria**:
+  - Monitoreo de todas las mascotas con check-in activo.
+  - Botón de Check-out rápido con opción de registro de cobro independiente a nombre de **Kinderdog**.
+- **Rutas de Transporte**:
+  - Segmentación de *Recogidas* y *Entregas* del día con hora, tutor, teléfono y dirección.
+
+---
+
+## Navegación Contextual (`src/components/layout/Sidebar.tsx`)
+
+La composición de rutas y navegación vive en `src/modules/registry.tsx`. Cada
+`FrontendModule` declara sus rutas, roles, unidad de negocio y elementos de navegación;
+`App.tsx` y `Sidebar.tsx` consumen el mismo registro para evitar que una ruta protegida
+quede visible o autorizada con reglas distintas.
+
+Los contratos compartidos de autenticación, unidades de negocio, clientes y mascotas
+viven en `src/modules/shared/contracts.ts`; los clientes de API pueden reexportarlos,
+pero las nuevas APIs deben importar los contratos desde ese módulo compartido.
+
+Las operaciones compartidas de Clientes y Mascotas se exponen mediante
+`src/modules/shared/api.ts`. Los módulos de negocio deben consumir ese contrato
+(`clientsApi` / `petsApi`) en lugar de construir URLs de esos dominios directamente.
+
+Consulta [docs/adding-a-module.md](../docs/adding-a-module.md) para el checklist
+completo de incorporación de módulos.
+
+El Sidebar organiza la navegación en dominios claros, evitando la sobrecarga de pestañas planas:
+
+1. **Dashboard Principal (`/`)**: Resumen del día y accesos directos.
+2. **Sección Guardería (🐶)**:
+   - Control Guardería (`/guarderia`)
+   - Salas & Cupos (`/salas`)
+   - Planes Recurrentes (`/planes`)
+   - Transporte (`/transporte`)
+   - Disponibilidad (`/disponibilidad`)
+3. **Sección Peluquería (✂️)**:
+   - Agenda de Peluquería (`/peluqueria`)
+4. **Gestión Transversal (💼)**:
+   - Clientes (`/clientes`), Perrhijos (`/animales`), Operaciones (`/operaciones`), Finanzas (`/transacciones`), Informes (`/informes`), Herramientas (`/herramientas`), Configuración (`/configuracion`), Guía (`/guia`).
+
+### Reglas de Visualización según Rol
+- **Rol `kinderdog`**: Solo visualiza la sección de Guardería y la Gestión Transversal. Las rutas de peluquería están ocultas y protegidas.
+- **Rol `pethijos`**: Solo visualiza la sección de Peluquería y la Gestión Transversal. Las rutas de guardería están ocultas y protegidas.
+- **Rol `admin`**: Dispone de un selector de workspace en la cabecera del Sidebar para filtrar la vista en:
+  - *Consolidado (Ambos)*
+  - *Kinderdog (Guardería)*
+  - *Pethijos (Peluquería)*
+
+---
+
+## Clientes API Modulares (`src/lib/api.ts`)
+
+Se exportan clientes tipados para consumir los nuevos endpoints:
+
+```typescript
+// Peluquería
+import { peluqueriaApi } from "./lib/api";
+
+const services = await peluqueriaApi.getServices();
+const appointments = await peluqueriaApi.getAppointments({ date: "2026-09-22" });
+await peluqueriaApi.createAppointment({ ... });
+await peluqueriaApi.updateStatus(id, { status: "LISTO" });
+await peluqueriaApi.completeAndCollect(id, { paymentMethod: "EFECTIVO", amount: 25 });
+
+// Guardería
+import { guarderiaApi } from "./lib/api";
+
+const occupancy = await guarderiaApi.getOccupancy();
+const attendance = await guarderiaApi.getTodayAttendance();
+await guarderiaApi.checkIn({ clientId, petId, roomId });
+await guarderiaApi.checkOut({ checkInOutId, createIncome: true, amount: 20 });
+const transport = await guarderiaApi.getTransport();
+```
+
+---
+
+## Scripts Disponibles
 
 ```bash
-cp .env.example .env
-docker compose up --build
+npm run dev                  # Servidor de desarrollo Vite (puerto 5173 o 5174 en Docker)
+npm run build                # Compilación estática TypeScript + Vite
+npm run preview              # Vista previa del build generado
+npm run test                 # Pruebas con Vitest (route-guards.test.tsx)
 ```
-
-El servicio frontend queda disponible en `http://localhost:5174` y recibe `VITE_API_URL=http://localhost:3001/api/v1` desde `docker-compose.yml`.
-
-### Opcion local: frontend fuera de Docker
-
-1. Instala dependencias:
-
-```bash
-cd frontend
-npm install
-```
-
-2. Crea `frontend/.env`:
-
-```env
-VITE_API_URL=http://localhost:3001/api/v1
-```
-
-3. Inicia el servidor de desarrollo:
-
-```bash
-npm run dev
-```
-
-Por defecto Vite expone la aplicacion en `http://localhost:5173`. Si quieres replicar el puerto de Docker, usa:
-
-```bash
-npm run dev -- --port 5174
-```
-
-## Scripts
-
-- `npm run dev`: inicia Vite en modo desarrollo.
-- `npm run build`: compila TypeScript y genera el build de produccion.
-- `npm run preview`: sirve localmente el build generado.
-- `npm run test`: ejecuta pruebas de frontend con Vitest.
-
-## Configuracion
-
-La variable clave del frontend es:
-
-- `VITE_API_URL`: base URL de la API. Si no existe, el codigo usa `http://localhost:3001/api/v1`.
-
-Notas:
-
-- no hay archivo `frontend/.env.example` en este momento
-- el frontend usa `fetch` mediante un wrapper en `src/lib/api.ts`
-- el token JWT se guarda en `localStorage`
-- para usuario `admin`, la unidad activa (`KINDERDOG`/`PETHIJOS`) se guarda en `localStorage` como `activeBusinessUnit`; si no existe, la vista es consolidada
-- cuando hay unidad activa, el frontend envia `X-Business-Unit` al backend para filtrar alcance
-
-## Estructura De La Aplicacion
-
-Piezas principales:
-
-- `src/App.tsx`: define router, `PrivateRoute`, `PublicOnlyRoute` y layout general con sidebar.
-- `src/lib/auth-context.tsx`: estado de autenticacion, bootstrap de sesion y limpieza centralizada.
-- `src/lib/api.ts`: wrapper HTTP, helpers de descarga, APIs de check-in/out y manejo global de `401`.
-- `src/components/`: layout y componentes reutilizables.
-- `src/pages/`: modulos funcionales de la aplicacion.
-
-## Modulos Actuales
-
-Rutas y pantallas principales detectadas en el router:
-
-- `Login`
-- `Dashboard`
-- `Clientes`
-- `Animales`
-- `Operaciones`
-- `Salas`
-- `Planes`
-- `Disponibilidad`
-- `Transporte`
-- `Transacciones`
-- `Informes`
-- `Herramientas`
-- `Configuracion`
-- `Guia`
-
-Adicionalmente:
-
-- algunas pantallas incluyen formularios y modales dentro del mismo modulo
-- las rutas no implementadas caen en un placeholder de "Proximamente"
-
-## Flujo Con El Backend
-
-El frontend consume el backend principalmente bajo `/api/v1` para:
-
-- autenticacion
-- CRUD de clientes, mascotas, salas y reservas
-- operaciones de check-in/check-out
-- ingresos, cuentas por pagar e inventario
-- reportes y exportaciones
-
-El wrapper de `src/lib/api.ts`:
-
-- agrega `Authorization: Bearer <token>` si existe sesion
-- serializa JSON por defecto
-- convierte errores HTTP en mensajes utilizables por la UI
-- ante `401` dispara una limpieza de sesion y redireccion a `/login`
-
-## Reglas De Guardas De Ruta
-
-- `PrivateRoute`: bloquea rutas privadas cuando no hay sesion; redirige a `/login` con `state.from` para retorno post-login.
-- `PublicOnlyRoute`: bloquea `/login` para usuarios ya autenticados y los redirige a su `from` o `/`.
-- `Login`: despues de autenticarse, navega a `state.from` si existe; en caso contrario a `/`.
-
-## Pruebas De Guardas
-
-- Archivo: `src/test/route-guards.test.tsx`
-- Cubre:
-  - redireccion desde ruta privada a `/login` conservando `from`
-  - redireccion de usuario autenticado fuera de `/login` hacia la ruta solicitada
-
-## Carga De Imagenes
-
-La UI incluye soporte para imagenes de mascotas y archivos relacionados. El flujo actual es:
-
-1. el frontend pide una URL firmada al backend
-2. sube el archivo directamente a Backblaze B2
-3. guarda la URL resultante en la entidad correspondiente
-4. puede solicitar la eliminacion de archivos anteriores cuando una imagen se reemplaza
-
-Esto evita pasar binarios completos por la API principal.
-
-## Observaciones De Desarrollo
-
-- la aplicacion esta organizada por paginas, no por un framework full-stack
-- el estado global visible en el repo se apoya en React Context y hooks
-- el sistema visual usa Tailwind CSS
-- el comportamiento de cada modulo depende de que el backend y la base esten inicializados con datos validos

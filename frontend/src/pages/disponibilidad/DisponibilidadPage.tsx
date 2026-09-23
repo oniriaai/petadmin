@@ -93,7 +93,7 @@ export function DisponibilidadPage() {
                       {rsvs.length > 4 && <p className="text-xs text-gray-400 pl-4">+{rsvs.length - 4} más</p>}
                     </div>
                   )}
-                  {rsvs.length === 0 && <p className="text-xs text-green-600 text-center py-2">✅ Libre</p>}
+                  {rsvs.length === 0 && <p className="text-xs text-green-600 text-center py-2">Libre</p>}
                 </div>
               );
             })}

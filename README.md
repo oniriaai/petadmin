@@ -1,104 +1,129 @@
-# Pethijos Admin
+# Pethijos Admin — Sistema Modular para Guardería y Peluquería
 
-Sistema administrativo para operar dos unidades de negocio relacionadas:
+Sistema administrativo modular (**Modular Monolith**) para la gestión operativa y financiera de dos unidades de negocio especializadas:
 
-- `Kinderdog`: guarderia y operaciones diarias.
-- `Pethijos`: peluqueria y servicios complementarios.
+- 🐶 **Kinderdog (Módulo Guardería)**: control de salas con semáforo de cupos físicos en tiempo real, estancias diarias, check-in/check-out con validación de capacidad, planes recurrentes semanales y rutas de transporte.
+- ✂️ **Pethijos (Módulo Peluquería)**: catálogo de servicios con duración estimada y tarifas base, agenda de citas por franja horaria, tablero kanban de flujo de atención (`Agendada` → `En Salón` → `En Baño/Corte` → `Listo` → `Entregada`) y cobro directo.
+- 🐾 **Core Compartido**: datos maestros unificados de Clientes (Tutores) y Perrhijos (Mascotas con historial, vacunas y fotos en Backblaze B2), autenticación JWT y control de acceso multi-tenant.
+- 💵 **Finanzas & Administración**: cobros e ingresos contables estrictamente segregados por unidad de negocio, cuentas por pagar, inventario por local y Dashboard Consolidado para la dirección.
 
-El repositorio contiene una aplicacion web React, una API Express con Prisma y PostgreSQL, y la infraestructura minima para levantar el entorno local con Docker Compose.
+---
 
 ## Vista General
 
-### Stack
-- `frontend/`: React 18, Vite, TypeScript, Tailwind CSS.
+### Stack Tecnológico
+- `frontend/`: React 18, Vite, TypeScript, Tailwind CSS, Lucide Icons.
 - `backend/`: Node.js 20, Express, TypeScript, Prisma ORM.
-- `postgres`: base de datos PostgreSQL 16.
-- `pgadmin`: consola opcional para inspeccionar la base de datos.
-- Backblaze B2: almacenamiento S3-compatible para archivos e imagenes.
+- `postgres`: Base de datos relacional PostgreSQL 16.
+- `pgadmin`: Consola opcional para inspección de base de datos.
+- `Backblaze B2`: Almacenamiento compatible S3 para fotos y archivos mediante URLs presignadas.
 
-### Arquitectura
-- El frontend consume la API bajo `/api/v1`.
-- El backend expone autenticacion, operaciones, clientes, mascotas, reservas, finanzas, inventario, reportes y almacenamiento.
-- PostgreSQL persiste los datos de negocio.
-- Backblaze B2 se usa para carga directa de archivos mediante URLs firmadas generadas por el backend.
+### Arquitectura Modular
+```text
+.
+├── backend/
+│   ├── src/
+│   │   ├── core/                  # Capacidades y contratos compartidos
+│   │   ├── modules/               # Slices de negocio especializados
+│   │   ├── platform/              # Bootstrap y registro de módulos
+│   │   ├── routes/                # Routers existentes en proceso de migración
+│   │   └── main.ts                # Bootstrap que compone el registro
+│   └── tests/                     # Suites E2E: modular, financial, checkin
+├── frontend/
+│   └── src/
+│       ├── modules/               # Contratos y registro de módulos
+│       ├── pages/
+│       │   ├── guarderia/         # ControlGuarderiaPage (Salas, Cupos, Transporte)
+│       │   ├── peluqueria/        # AgendaPeluqueriaPage (Kanban de citas y cobro)
+│       │   ├── clientes/          # Gestión unificada de tutores y perrhijos
+│       │   └── transacciones/     # Finanzas e inventario por unidad
+│       └── components/layout/     # Sidebar contextual por rol y unidad activa
+└── docs/                          # Documentación funcional y matriz de trazabilidad
+```
 
-## Inicio Rapido
+### Contrato para nuevos módulos
 
-### 1. Preparar variables de entorno
+Cada módulo nuevo debe registrarse en los dos registros centrales:
 
-Desde la raiz del proyecto:
+1. Backend: implementar un `BackendModule` con `id`, `basePath`, `router` y descripción en `backend/src/platform/module-registry.ts`.
+2. Frontend: implementar un `FrontendModule` con rutas, permisos, navegación y componentes en `frontend/src/modules/registry.tsx`.
+3. Mantener la lógica interna privada al módulo; las integraciones entre dominios deben pasar por contratos públicos del `core`.
+4. Añadir una prueba de flujo y una prueba de aislamiento/autorización para el módulo.
 
+Los registros validan IDs y rutas duplicadas al iniciar o probar la aplicación, evitando que un módulo nuevo se conecte de forma parcial o sobrescriba otro.
+
+La verificación backend se ejecuta con `cd backend && npm run test:architecture`; las suites
+de negocio existentes siguen cubriendo los flujos E2E de Guardería, Peluquería, finanzas y check-in/out.
+
+---
+
+## Inicio Rápido con Docker
+
+### 1. Variables de entorno
+Desde la raíz del proyecto:
 ```bash
 cp .env.example .env
 ```
+Verifica que las credenciales de PostgreSQL, puertos y claves de B2 estén configuradas.
 
-Revisa al menos estos valores:
-
-- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- `DATABASE_URL`
-- `BACKEND_PORT`, `FRONTEND_PORT`
-- `JWT_SECRET`
-- `VAT_PERCENT`
-- `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT`, `B2_REGION`
-
-Nota: el `DATABASE_URL` de `.env.example` usa el host `postgres` porque esta pensado para el entorno Docker.
-
-### 2. Levantar todo el stack
-
+### 2. Levantar el stack completo
 ```bash
 docker compose up --build
 ```
 
-Que hace el entorno:
+El contenedor del backend ejecuta automáticamente:
+1. `prisma generate`
+2. `prisma db push`
+3. Seed inicial (`prisma/seed.ts`)
+4. Servidor Express con scheduler de planes en puerto `3001`
 
-- crea PostgreSQL y pgAdmin
-- instala dependencias del backend y frontend dentro de los contenedores
-- genera el cliente de Prisma
-- ejecuta `prisma db push`
-- corre el seed inicial del backend
+### 3. URLs de acceso
+- **Frontend Web**: [http://localhost:5174](http://localhost:5174)
+- **Backend Health Check**: [http://localhost:3001/api/v1/health](http://localhost:3001/api/v1/health)
+- **pgAdmin**: [http://localhost:5050](http://localhost:5050) (`admin@pethijos.com` / `admin123`)
 
-### 3. Acceder a los servicios
+---
 
-- Frontend: `http://localhost:5174`
-- Backend health check: `http://localhost:3001/api/v1/health`
-- pgAdmin: `http://localhost:5050`
+## Credenciales de Acceso
 
-Credenciales por defecto de pgAdmin:
+El seed inicial provisiona usuarios para cada contexto operativo:
 
-- usuario: `admin@pethijos.com`
-- clave: `admin123`
+| Usuario | Contraseña | Rol | Contexto Operativo |
+|---|---|---|---|
+| `kinderdog_admin` | `kinderdog123` | `kinderdog` | Acceso directo al Módulo de Guardería y finanzas Kinderdog |
+| `pethijos_admin` | `pethijos123` | `pethijos` | Acceso directo al Módulo de Peluquería y finanzas Pethijos |
+| `admin_global` | `admin123` | `admin` | Acceso global consolidado con selector de workspace en Sidebar |
 
-## Credenciales Iniciales
+---
 
-El seed actual crea dos usuarios administrativos:
+## Verificación y Pruebas Automatizadas
 
-- `kinderdog_admin` / `kinderdog123`
-- `pethijos_admin` / `pethijos123`
+El proyecto incluye 3 suites E2E ejecutables dentro del contenedor Docker del backend:
 
-Si la base ya contiene usuarios, el seed no vuelve a insertar datos.
+```bash
+# 1. Pruebas de dominios modulares (Peluquería, Guardería, permisos y cobros)
+docker exec pethijos-backend npm run test:modular
 
-## Estructura Del Proyecto
+# 2. Pruebas de transacciones financieras y cuentas por pagar
+docker exec pethijos-backend npm run test:financial
 
-- [backend/README.md](backend/README.md): API, scripts, variables de entorno y dominios del backend.
-- [frontend/README.md](frontend/README.md): estructura de la aplicacion web, configuracion y modulos de interfaz.
-- [docs/functional-design.md](docs/functional-design.md): diseno funcional y reglas de negocio de referencia.
-
-Estructura base:
-
-```text
-.
-├── backend/
-├── frontend/
-├── docs/
-├── docker-compose.yml
-└── .env.example
+# 3. Pruebas de check-in / check-out
+docker exec pethijos-backend npm run test:checkin
 ```
 
-## Desarrollo Sin Docker
+Compilación del Frontend:
+```bash
+docker exec pethijos-frontend npm run build
+```
 
-Docker es el camino recomendado para onboarding porque ya resuelve la base, el seed y los puertos. Si necesitas correr partes del sistema fuera de contenedores:
+---
 
-- Backend: revisa [backend/README.md](backend/README.md)
-- Frontend: revisa [frontend/README.md](frontend/README.md)
+## Documentación Detallada
 
-En ese flujo tendras que crear variables de entorno locales por paquete y ajustar el `DATABASE_URL` para usar `localhost:5433` en lugar de `postgres`.
+- [backend/README.md](backend/README.md): Especificación técnica de la API, endpoints modulares y servicios.
+- [frontend/README.md](frontend/README.md): Arquitectura de la aplicación React, navegación contextual y páginas modulares.
+- [docs/alcance.md](docs/alcance.md): Alcance funcional por módulo y reglas de negocio.
+- [docs/functional-design.md](docs/functional-design.md): Diseño de flujos operativos y mapa de experiencia.
+- [docs/traceability-matrix.md](docs/traceability-matrix.md): Matriz de trazabilidad requisito -> componente -> endpoint.
+- [docs/adding-a-module.md](docs/adding-a-module.md): Checklist para incorporar nuevos módulos.
+- [docs/futuras-implementaciones.md](docs/futuras-implementaciones.md): Roadmap técnico y fases posteriores.

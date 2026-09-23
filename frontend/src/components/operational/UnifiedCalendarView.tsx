@@ -139,10 +139,9 @@ export function UnifiedCalendarView({
   const EventCard = ({ event, compact = false }: { event: OperationalEvent; compact?: boolean }) => {
     const statusColor = getStatusColor(event.status);
     const unit = getUnitConfig(event.businessUnit);
-    
     return (
       <div
-        className={`text-[10px] sm:text-xs bg-white border-l-4 ${unit.color} border-y border-r border-gray-200 rounded-r shadow-sm p-1 sm:p-1.5 space-y-0.5 sm:space-y-1 cursor-pointer hover:shadow-md transition-shadow`}
+        className="text-[10px] sm:text-xs bg-white border border-gray-200 rounded-lg shadow-sm p-1 sm:p-1.5 space-y-0.5 sm:space-y-1 cursor-pointer hover:shadow-md transition-shadow"
         onClick={() => onViewDetail?.(event)}
         title={`${event.clientName} - ${event.petNames}`}
       >
@@ -187,8 +186,9 @@ export function UnifiedCalendarView({
                   e.stopPropagation();
                   onCheckin(event.id);
                 }}
-                className="btn-success h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center rounded"
+                className="btn-success icon-button rounded"
                 disabled={loading}
+                aria-label="Registrar check-in"
                 title="Check In"
               >
                 <CheckCircle size={10} className="sm:w-3 sm:h-3" />
@@ -200,8 +200,9 @@ export function UnifiedCalendarView({
                   e.stopPropagation();
                   onCheckout(event.id);
                 }}
-                className="btn-warning h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center rounded"
+                className="btn-warning icon-button rounded"
                 disabled={loading}
+                aria-label="Registrar check-out"
                 title="Check Out"
               >
                 <LogOut size={10} className="sm:w-3 sm:h-3" />
@@ -444,11 +445,11 @@ export function UnifiedCalendarView({
           <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unidades:</span>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-l-4 border-amber-500 bg-white" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-amber-500" />
               <span className="text-[10px] sm:text-xs text-gray-600">Guardería (Ambar)</span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 border-l-4 border-violet-500 bg-white" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-violet-500" />
               <span className="text-[10px] sm:text-xs text-gray-600">Peluquería (Violeta)</span>
             </div>
           </div>

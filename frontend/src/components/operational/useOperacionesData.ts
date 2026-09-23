@@ -112,8 +112,15 @@ export function useOperacionesData(): UseOperacionesDataReturn {
         const lastCheckInOut = sortedCIOs[0];
 
         let status: OperationalEventStatus = 'PENDING';
-        if (res.status === 'COMPLETADA') status = 'CHECKED_OUT';
-        else if (res.status === 'ACTIVA') status = 'CHECKED_IN';
+        if (res.status === 'COMPLETADA') {
+          status = 'CHECKED_OUT';
+        } else if (res.status === 'ACTIVA' || res.status === 'RECEPCIONADA' || res.status === 'EN_PROCESO') {
+          // Grooming statuses RECEPCIONADA and EN_PROCESO are active in-progress states
+          status = 'CHECKED_IN';
+        } else if (res.status === 'LISTO') {
+          // LISTO means grooming is finished but pet hasn't been picked up yet – show as checked-out
+          status = 'CHECKED_OUT';
+        }
 
         unifiedEvents.push({
           id: `res-${res.id}`,

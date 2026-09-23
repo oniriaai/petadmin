@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { api, setUnauthorizedHandler } from "./api";
-
-export type BusinessUnit = "KINDERDOG" | "PETHIJOS";
-export type UserRole = "admin" | "kinderdog" | "pethijos";
+import type { BusinessUnit, UserRole } from "../modules/shared/contracts";
+export type { BusinessUnit, UserRole } from "../modules/shared/contracts";
 
 interface User {
   id: string;

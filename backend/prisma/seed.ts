@@ -11,10 +11,11 @@ const BU = {
 } as const;
 
 const SERVICES = {
-  DAYCARE: "GUARDERIA",
-  GROOMING: "GROOMING",
-  TRANSPORT: "TRANSPORTE",
-  OTHER: "OTRO",
+  DAYCARE:          "GUARDERIA",
+  GROOMING_CANINE:  "PELUQUERIA_CANINA",
+  GROOMING_FELINE:  "PELUQUERIA_FELINA",
+  TRANSPORT:        "TRANSPORTE",
+  OTHER:            "OTRO",
 } as const;
 
 const RES_STATUS = {
@@ -282,7 +283,7 @@ async function main() {
         endTime: "14:00",
         daysOfWeek: "6",
         petIds: `${p.coco.id}`,
-        service: SERVICES.GROOMING,
+        service: SERVICES.GROOMING_CANINE,
         roomId: phGroom.id,
         notes: "Plan inactivo histórico",
         isActive: false,
@@ -296,12 +297,15 @@ async function main() {
   const reservations = await Promise.all([
     createReservation({ businessUnit: BU.KINDERDOG, clientId: c.maria.id, petIds: [p.max.id, p.nina.id], service: SERVICES.DAYCARE, status: RES_STATUS.CONFIRMED, dayOffset: 1, inHour: 8, outHour: 18, roomId: kdDaycare.id, basePrice: 40, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Guardería doble - María", recurringPlanId: rpKd.id }),
     createReservation({ businessUnit: BU.KINDERDOG, clientId: c.juan.id, petIds: [p.buddy.id], service: SERVICES.DAYCARE, status: RES_STATUS.PENDING, dayOffset: 2, inHour: 9, outHour: 17, roomId: kdDaycare.id, basePrice: 25, vatPercent: 15, paymentMethod: "TRANSFERENCIA", concept: "Guardería - Buddy" }),
-    createReservation({ businessUnit: BU.KINDERDOG, clientId: c.camila.id, petIds: [p.luna.id], service: SERVICES.GROOMING, status: RES_STATUS.CANCELED, dayOffset: -1, inHour: 11, outHour: 13, roomId: kdGroom.id, basePrice: 18, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Grooming felino - Luna", notes: "Cancelada por cliente" }),
+    // Peluquería felina cancelada (Luna es gata)
+    createReservation({ businessUnit: BU.KINDERDOG, clientId: c.camila.id, petIds: [p.luna.id], service: SERVICES.GROOMING_FELINE, status: RES_STATUS.CANCELED, dayOffset: -1, inHour: 11, outHour: 13, roomId: kdGroom.id, basePrice: 18, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Peluquería felina - Luna", notes: "Cancelada por cliente" }),
     createReservation({ businessUnit: BU.KINDERDOG, clientId: c.juan.id, petIds: [p.buddy.id], service: SERVICES.TRANSPORT, status: RES_STATUS.ACTIVE, dayOffset: 0, inHour: 7, outHour: 10, roomId: kdTransport.id, basePrice: 15, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Transporte ida - Buddy", needsTransport: true, transportType: "pickup" }),
     createReservation({ businessUnit: BU.PETHIJOS, clientId: c.santiago.id, petIds: [p.rocky.id], service: SERVICES.DAYCARE, status: RES_STATUS.CONFIRMED, dayOffset: 3, inHour: 8, outHour: 16, roomId: phDaycare.id, basePrice: 30, vatPercent: 15, paymentMethod: "TARJETA", concept: "Guardería - Rocky", recurringPlanId: rpPh.id }),
-    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.valentina.id, petIds: [p.coco.id], service: SERVICES.GROOMING, status: RES_STATUS.ACTIVE, dayOffset: 0, inHour: 10, outHour: 12, roomId: phGroom.id, basePrice: 22, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Baño y corte - Coco" }),
+    // Peluquería canina en proceso (Coco es perro) – status grooming para poblar el Kanban
+    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.valentina.id, petIds: [p.coco.id], service: SERVICES.GROOMING_CANINE, status: "EN_PROCESO", dayOffset: 0, inHour: 10, outHour: 12, roomId: phGroom.id, basePrice: 22, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Baño y corte - Coco" }),
     createReservation({ businessUnit: BU.PETHIJOS, clientId: c.andres.id, petIds: [p.kiara.id], service: SERVICES.OTHER, status: RES_STATUS.PENDING, dayOffset: -2, inHour: 9, outHour: 11, roomId: phDaycare.id, basePrice: 12, vatPercent: 0, paymentMethod: "TRANSFERENCIA", concept: "Sesión evaluación - Kiara" }),
-    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.santiago.id, petIds: [p.mora.id], service: SERVICES.GROOMING, status: RES_STATUS.CANCELED, dayOffset: 4, inHour: 13, outHour: 15, roomId: phGroom.id, basePrice: 19, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Grooming - Mora" }),
+    // Peluquería felina cancelada (Mora es gata)
+    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.santiago.id, petIds: [p.mora.id], service: SERVICES.GROOMING_FELINE, status: RES_STATUS.CANCELED, dayOffset: 4, inHour: 13, outHour: 15, roomId: phGroom.id, basePrice: 19, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Peluquería felina - Mora" }),
   ]);
 
   const [kdFutureMulti, , kdCanceledPast, kdActiveToday, phFuture, phActiveToday, phPastPending] = reservations;

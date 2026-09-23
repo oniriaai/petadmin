@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Users, DollarSign, AlertTriangle, ArrowRight, Clock } from "lucide-react";
+import { CalendarDays, Users, DollarSign, AlertTriangle, ArrowRight, Clock, PawPrint, Scissors, Car, CheckCircle2, CircleAlert, CalendarPlus, UserPlus, BarChart3, BriefcaseBusiness } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { fmtCurrency, fmt, fmtTime, STATUSES } from "../lib/utils";
@@ -34,7 +34,11 @@ function StatCard({ label, value, sub, icon: Icon, color }: { label: string; val
   );
 }
 
-const SEVERITY_ICON: Record<string, string> = { ALTA: "🔴", MEDIA: "🟡", BAJA: "🟢" };
+const SEVERITY_ICON: Record<string, React.ReactNode> = {
+  ALTA: <CircleAlert size={15} className="text-red-600 inline-block" aria-label="Alta" />,
+  MEDIA: <CircleAlert size={15} className="text-amber-600 inline-block" aria-label="Media" />,
+  BAJA: <CircleAlert size={15} className="text-emerald-600 inline-block" aria-label="Baja" />,
+} as const;
 
 export function Dashboard() {
   const { user, activeBusinessUnit } = useAuth();
@@ -53,13 +57,13 @@ export function Dashboard() {
 
   const dashboardLabel = user?.role === "admin"
     ? activeBusinessUnit === "KINDERDOG"
-      ? "🐶 Kinderdog"
+      ? "Kinderdog"
       : activeBusinessUnit === "PETHIJOS"
-        ? "✂️ Pethijos"
-        : "📊 Consolidado"
+        ? "Pethijos"
+        : "Consolidado"
     : user?.businessUnit === "KINDERDOG"
-      ? "🐶 Kinderdog"
-      : "✂️ Pethijos";
+      ? "Kinderdog"
+      : "Pethijos";
 
   return (
     <div className="p-6 space-y-6">
@@ -94,7 +98,7 @@ export function Dashboard() {
                 return (
                   <div key={r.id} className="flex items-center gap-3 px-5 py-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-lg shrink-0">
-                      {r.servicio === "GUARDERIA" ? "🐶" : r.servicio.startsWith("PELUQUERIA") ? "✂️" : "🚗"}
+                      {r.servicio === "GUARDERIA" ? <PawPrint size={18} className="text-amber-700" /> : r.servicio.startsWith("PELUQUERIA") ? <Scissors size={18} className="text-violet-700" /> : <Car size={18} className="text-blue-700" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">{r.cliente}</p>
@@ -119,7 +123,7 @@ export function Dashboard() {
             <span className="badge bg-red-100 text-red-700">{summary.alertas.length}</span>
           </div>
           {summary.alertas.length === 0 ? (
-            <p className="text-center text-gray-400 py-10 text-sm">Sin alertas pendientes ✅</p>
+            <p className="text-center text-gray-400 py-10 text-sm"><CheckCircle2 size={16} className="inline-block mr-1 text-emerald-600" />Sin alertas pendientes</p>
           ) : (
             <div className="divide-y divide-gray-100">
               {summary.alertas.map(a => (
@@ -142,13 +146,13 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { to: "/operaciones", label: "Nueva Reserva", emoji: "📅", bg: "bg-blue-50 hover:bg-blue-100" },
-          { to: "/clientes", label: "Nuevo Cliente", emoji: "👤", bg: "bg-purple-50 hover:bg-purple-100" },
-          { to: "/informes", label: "Ver Informes", emoji: "📊", bg: "bg-green-50 hover:bg-green-100" },
-          { to: "/transacciones", label: "Gestión Financiera", emoji: "💼", bg: "bg-amber-50 hover:bg-amber-100" },
-        ].map(({ to, label, emoji, bg }) => (
+          { to: "/operaciones", label: "Nueva Reserva", Icon: CalendarPlus, bg: "bg-blue-50 hover:bg-blue-100" },
+          { to: "/clientes", label: "Nuevo Cliente", Icon: UserPlus, bg: "bg-purple-50 hover:bg-purple-100" },
+          { to: "/informes", label: "Ver Informes", Icon: BarChart3, bg: "bg-green-50 hover:bg-green-100" },
+          { to: "/transacciones", label: "Gestión Financiera", Icon: BriefcaseBusiness, bg: "bg-amber-50 hover:bg-amber-100" },
+        ].map(({ to, label, Icon, bg }) => (
           <Link key={to} to={to} className={`card p-4 ${bg} flex items-center gap-3 transition-colors cursor-pointer no-underline`}>
-            <span className="text-2xl">{emoji}</span>
+            <Icon size={22} className="text-slate-700" aria-hidden="true" />
             <span className="font-medium text-gray-800 text-sm">{label}</span>
           </Link>
         ))}

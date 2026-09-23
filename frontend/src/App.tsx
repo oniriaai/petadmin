@@ -2,19 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Login } from "./pages/Login";
-import { Dashboard } from "./pages/Dashboard";
-import { ClientesPage } from "./pages/clientes/ClientesPage";
-import { AnimalesPage } from "./pages/animales/AnimalesPage";
-import { OperacionesPage } from "./pages/operaciones/OperacionesPage";
-import { DisponibilidadPage } from "./pages/disponibilidad/DisponibilidadPage";
-import { TransportePage } from "./pages/transporte/TransportePage";
-import { InformesPage } from "./pages/informes/InformesPage";
-import { HerramientasPage } from "./pages/herramientas/HerramientasPage";
-import { ConfiguracionPage } from "./pages/configuracion/ConfiguracionPage";
-import { GuidePage } from "./pages/GuidePage";
-import { RoomsPage } from "./pages/salas/RoomsPage";
-import { RecurringPlansPage } from "./pages/planes/RecurringPlansPage";
-import { FinancialPage } from "./pages/transacciones/FinancialPage";
+import { frontendModules, ModuleRoute, validateFrontendModules } from "./modules/registry";
+
+validateFrontendModules();
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -60,6 +50,12 @@ function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function ModuleRouteElement({ route }: { route: ModuleRoute }) {
+  const Component = route.component;
+  const element = <Component />;
+  return route.roles ? <RoleRoute allowedRoles={route.roles}>{element}</RoleRoute> : element;
+}
+
 export function App() {
   return (
     <AuthProvider>
@@ -72,19 +68,11 @@ export function App() {
               <PrivateRoute>
                 <Layout>
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/clientes" element={<ClientesPage />} />
-                    <Route path="/animales" element={<AnimalesPage />} />
-                    <Route path="/operaciones" element={<OperacionesPage />} />
-                    <Route path="/salas" element={<RoomsPage />} />
-                    <Route path="/planes" element={<RecurringPlansPage />} />
-                    <Route path="/disponibilidad" element={<DisponibilidadPage />} />
-                    <Route path="/transporte" element={<TransportePage />} />
-                    <Route path="/transacciones" element={<FinancialPage />} />
-                    <Route path="/informes" element={<InformesPage />} />
-                    <Route path="/herramientas" element={<HerramientasPage />} />
-                    <Route path="/configuracion" element={<RoleRoute allowedRoles={["admin"]}><ConfiguracionPage /></RoleRoute>} />
-                    <Route path="/guia" element={<GuidePage />} />
+                    {frontendModules.flatMap((module) =>
+                      module.routes.map((route) => (
+                        <Route key={`${module.id}:${route.path}`} path={route.path} element={<ModuleRouteElement route={route} />} />
+                      )),
+                    )}
                     {/* Fallback para rutas no encontradas o en desarrollo */}
                     <Route path="*" element={<div className="p-8"><h1 className="text-2xl font-bold">Próximamente</h1><p>Este módulo está en desarrollo.</p></div>} />
                   </Routes>

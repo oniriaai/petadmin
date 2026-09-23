@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
+import { clientsApi } from "../../modules/shared/api";
 import { Spinner } from "../../components/ui/Spinner";
 
 interface Client { id: string; firstName: string; lastName: string; idNumber?: string; phone?: string; whatsapp?: string; email?: string; address?: string; city?: string; province?: string; language?: string; birthdate?: string; notes?: string }
@@ -25,7 +26,7 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
     setSaving(true); setError("");
     try {
       if (client) await api.put(`/clients/${client.id}`, form);
-      else await api.post("/clients", form);
+      else await clientsApi.create(form);
       onSaved(); onClose();
     } catch (e) { setError(e instanceof Error ? e.message : "Error al guardar"); }
     finally { setSaving(false); }

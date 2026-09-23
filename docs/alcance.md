@@ -1,88 +1,56 @@
-Análisis del Alcance Real
-Lo que REALMENTE necesitan (crítico para operar):
-Módulo Compartido (Base de Datos Unificada)
+# Alcance del Sistema Modular Pethijos & Kinderdog
 
-✅ Clientes y Mascotas (CRUD completo)
-✅ Sistema de etiquetas para categorizar animales
-✅ Subida de imágenes (clientes + mascotas)
+El sistema se estructura como un **Modular Monolith** enfocado en la operación de dos unidades de negocio con flujos especializados, soportadas por un núcleo de datos maestros compartidos.
 
-Kinderdog (Guardería)
+---
 
-✅ Planes de guardería (2,3,4,5 días/semana por N meses)
-✅ Reservas con planes asignados
-✅ Check-in/Check-out simple
-✅ Capacidad física del local (habitaciones)
-✅ Registro de ingresos
-✅ Gastos y Compras (separados de Pethijos)
-✅ Reportes financieros y estadísticos con gráficos
-⚠️ Transporte (deseable pero no bloqueante)
+## 1. Módulo Core Compartido (Datos Maestros Unificados)
 
-Pethijos (Peluquería)
+- ✅ **Clientes / Tutores (CRUD completo)**: Cédula, teléfono, WhatsApp, email, dirección, notas y estado activo.
+- ✅ **Mascotas / Perrhijos (CRUD completo)**: Nombre, especie, raza, sexo, fecha de nacimiento, microchip, notas médicas, alergias, foto y estado.
+- ✅ **Almacenamiento de Imágenes y Documentos**: Carga directa a Backblaze B2 mediante URLs presignadas sin sobrecargar la API.
+- ✅ **Autenticación y Control de Acceso**: JWT con roles `admin`, `kinderdog` y `pethijos`, con aislamiento estricto por unidad de negocio.
 
-✅ Citas individuales (sin planes)
-✅ Registro de ingresos
-✅ Gastos y Compras (separados de Kinderdog)
-✅ Reportes financieros y estadísticos con gráficos
+---
 
-Admin
+## 2. Módulo de Guardería (Kinderdog)
 
-✅ Usuarios y roles
-✅ Dashboard consolidado (ambos negocios)
-✅ Reportes comparativos Kinderdog vs Pethijos
-❌ Contratos (opcional, post-MVP)
-❌ Tareas y alertas (opcional)
+Centrado en estancias físicas prolongadas (día completo o medio día) y ocupación de espacios:
 
+- ✅ **Salas y Capacidad Física**: Nombre, tipo de sala y capacidad máxima de perrhijos.
+- ✅ **Semáforo de Cupos en Vivo**: Monitoreo en tiempo real de cupos ocupados, cupos libres y porcentaje de saturación por sala.
+- ✅ **Control de Asistencia (Check-In / Check-Out)**:
+  - Check-in con validación estricta de cupo disponible en sala (bloqueo automático ante sobrecupo).
+  - Check-out con registro de cobro contable independiente para `KINDERDOG`.
+- ✅ **Planes Recurrentes de Guardería**: Suscripciones por días semanales (2, 3, 4, 5 días) con generación automática de estancias para los próximos 30 días mediante scheduler diario.
+- ✅ **Rutas de Transporte**: Control de perrhijos con servicio de transporte, segmentado en ruta de recogida (mañana) y ruta de entrega (tarde).
+- ✅ **Finanzas de Guardería**: Registro de ingresos, gastos y compras separados estrictamente de Peluquería.
 
-Nueva Propuesta de Fases
-FASE 1: MVP Funcional Completo (8-10 semanas)
-Este ES el sistema operativo mínimo viable:
-Core Compartido:
+---
 
-Clientes (CRUD: nombre, cédula, teléfono, email, dirección, WhatsApp, estado)
-Mascotas (CRUD: nombre, especie, raza, sexo, fecha nacimiento, microchip, foto, estado)
-Sistema de etiquetas (crear etiquetas, asignar N:M a mascotas)
-Subida de imágenes (avatares clientes + fotos mascotas) → B2
-Autenticación JWT con roles: admin, recepcion, guarderia, peluqueria
+## 3. Módulo de Peluquería (Pethijos)
 
-Kinderdog - Guardería:
+Centrado en citas y turnos individuales por servicio de estética:
 
-Planes de guardería (tabla: nombre, días_semana [2,3,4,5], precio_mensual, activo)
-Contratación de planes por cliente (tabla: cliente_id, plan_id, fecha_inicio, fecha_fin, meses_contratados, estado)
-Reservas diarias (vinculadas a plan o sin plan, check-in/out, habitación asignada)
-Habitaciones (nombre, capacidad física, ocupación actual)
-Validación de capacidad al hacer reserva
-Ingresos (registro manual: concepto, monto, fecha, forma_pago)
-Gastos (categoría, monto, proveedor_nombre [texto simple], fecha)
-Compras (descripción, cantidad, precio, proveedor_nombre, fecha)
+- ✅ **Catálogo de Servicios de Estética**: Servicios predefinidos (Baño básico, Corte higiénico, Peluquería integral de raza, Deslanado profundo, Corte de uñas spa, Baño medicado) con tiempos estimados de atención en minutos y tarifas base.
+- ✅ **Agenda de Citas por Turnos**: Agendamiento ágil por fecha, servicio y duración estimada (`endTime = startTime + durationMinutes`), sin exigir salas de guardería.
+- ✅ **Tablero Kanban de Flujo de Atención**:
+  - `Agendadas`: Próximas citas del día.
+  - `En Salón`: Mascota recepcionada en el local.
+  - `En Baño / Corte`: Proceso activo de estética.
+  - `Listo para Entrega`: Mascota lista esperando al tutor.
+  - `Entregadas / Cobradas`: Confirmación de entrega.
+- ✅ **Cobro Directo e Independiente**: Registro de ingreso contable acreditado exclusivamente a `PETHIJOS`. Admite anticipo al agendar y cobro del saldo al entregar.
+- ✅ **Finanzas de Peluquería**: Registro de ingresos y gastos separados estrictamente de Kinderdog.
 
-Pethijos - Peluquería:
+---
 
-Citas individuales (cliente, mascota, fecha_hora, servicio, precio, estado)
-Check-in/completado simple
-Ingresos (registro manual)
-Gastos (separados de Kinderdog)
-Compras (separadas de Kinderdog)
+## 4. Módulo de Administración y Finanzas
 
-Reportes (EL CORAZÓN DEL SISTEMA):
-
-Dashboard Kinderdog:
-
-Gráfico de ingresos vs gastos (últimos 6 meses, barras)
-Indicador de ocupación promedio (%)
-Tabla top 10 clientes por frecuencia
-Flujo de animales (gráfico de línea: entradas por semana)
-
-
-Dashboard Pethijos:
-
-Gráfico de ingresos vs gastos (últimos 6 meses)
-Citas completadas por mes (barras)
-Servicios más solicitados (pie chart)
-
-
-Dashboard Admin Consolidado:
-
-Ingresos totales (Kinderdog + Pethijos) vs gastos totales
-Rentabilidad por negocio (comparativa)
-Flujo de caja mensual (línea temporal)
-Exportar datos a Excel (tabla cruda, sin Polars aún)
+- ✅ **Usuarios y Multi-Tenancy**: Control de roles y conmutación de contexto.
+- ✅ **Dashboard Consolidado**: Resumen diario de ingresos totales (Kinderdog + Pethijos), ocupación promedio y flujo de perrhijos.
+- ✅ **Gestión Contable Segregada**:
+  - Dos cobros separados por unidad cuando una mascota recibe servicios de guardería y peluquería el mismo día.
+  - Cuentas por pagar (`Payables`) y pagos parciales/totales categorizados por unidad.
+- ✅ **Inventario**: Control de stock e insumos clasificado por unidad de negocio.
+- ✅ **Exportación de Datos**: Reportes y exportación en formato tabular para integración con herramientas de analítica.

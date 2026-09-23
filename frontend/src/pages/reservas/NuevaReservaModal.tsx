@@ -209,7 +209,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                               : "bg-white border-blue-200 text-blue-700 hover:border-blue-400"
                           }`}
                         >
-                          {p.species === "dog" ? "🐶" : "🐱"} {p.name}
+                          {p.species === "dog" ? "Perro" : "Gato"} · {p.name}
                         </button>
                       ))}
                     </div>

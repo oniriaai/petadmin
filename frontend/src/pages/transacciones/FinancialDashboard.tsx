@@ -245,19 +245,19 @@ export function FinancialDashboard() {
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Información de Ocupación</h2>
           <div className="grid grid-cols-4 gap-4">
-            <div className="border-l-4 border-blue-500 pl-4 py-2">
+            <div className="border border-gray-200 rounded-lg px-4 py-2">
               <div className="text-sm text-gray-600">Total de Salas</div>
               <div className="text-2xl font-bold text-gray-900">{occupancy.totalRooms}</div>
             </div>
-            <div className="border-l-4 border-green-500 pl-4 py-2">
+            <div className="border border-gray-200 rounded-lg px-4 py-2">
               <div className="text-sm text-gray-600">Capacidad Total</div>
               <div className="text-2xl font-bold text-gray-900">{occupancy.totalCapacity}</div>
             </div>
-            <div className="border-l-4 border-orange-500 pl-4 py-2">
+            <div className="border border-gray-200 rounded-lg px-4 py-2">
               <div className="text-sm text-gray-600">Reservas Activas</div>
               <div className="text-2xl font-bold text-gray-900">{occupancy.activeReservations}</div>
             </div>
-            <div className="border-l-4 border-purple-500 pl-4 py-2">
+            <div className="border border-gray-200 rounded-lg px-4 py-2">
               <div className="text-sm text-gray-600">Porcentaje Ocupación</div>
               <div className="text-2xl font-bold text-gray-900">{occupancy.occupancyPercent}%</div>
             </div>

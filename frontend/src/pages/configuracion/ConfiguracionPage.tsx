@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { Download, BarChart3, Settings, Check } from "lucide-react";
 import { downloadFile } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
 
@@ -29,7 +29,7 @@ export function ConfiguracionPage() {
       </div>
 
       <div className="card p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3">⚙️ General</h2>
+        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3 flex items-center gap-2"><Settings size={17} /> General</h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">IVA Ecuador (%)</label>
@@ -45,12 +45,12 @@ export function ConfiguracionPage() {
           </div>
         </div>
         <button onClick={save} className={`btn-primary ${saved ? "bg-green-600" : ""}`}>
-          {saved ? "✅ Guardado" : "Guardar configuración"}
+          {saved ? <><Check size={15} className="inline-block mr-1" />Guardado</> : "Guardar configuración"}
         </button>
       </div>
 
       <div className="card p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3">📥 Exportar datos</h2>
+        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3 flex items-center gap-2"><Download size={17} /> Exportar datos</h2>
         <p className="text-sm text-gray-500">Descarga tus datos en formato Excel para análisis externo o Power BI.</p>
         <div className="grid grid-cols-2 gap-3">
           {[
@@ -68,7 +68,7 @@ export function ConfiguracionPage() {
       </div>
 
       <div className="card p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3">📊 Power BI</h2>
+        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3 flex items-center gap-2"><BarChart3 size={17} /> Power BI</h2>
         <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-700 space-y-2">
           <p className="font-medium">Instrucciones para cargar en Power BI:</p>
           <ol className="list-decimal list-inside space-y-1 text-blue-600">
@@ -82,20 +82,6 @@ export function ConfiguracionPage() {
         </div>
       </div>
 
-      <div className="card p-5 space-y-3">
-        <h2 className="font-semibold text-gray-800 border-b border-gray-100 pb-3">🔐 Credenciales de acceso</h2>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between p-3 bg-amber-50 rounded-lg">
-            <span className="text-gray-600">Kinderdog Admin</span>
-            <span className="font-mono text-gray-800">kinderdog_admin / kinderdog123</span>
-          </div>
-          <div className="flex justify-between p-3 bg-violet-50 rounded-lg">
-            <span className="text-gray-600">Pethijos Admin</span>
-            <span className="font-mono text-gray-800">pethijos_admin / pethijos123</span>
-          </div>
-        </div>
-        <p className="text-xs text-gray-400">Para gestión de usuarios y permisos avanzados: próxima fase.</p>
-      </div>
     </div>
   );
 }

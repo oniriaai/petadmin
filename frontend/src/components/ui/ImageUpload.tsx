@@ -107,7 +107,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
       >
         {preview ? (
           <>
-            <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+            <img src={preview} alt="Vista previa de la foto" className="w-full h-full object-cover" />
             {!uploading && !deleting && (
               <button 
                 onClick={removeImage}

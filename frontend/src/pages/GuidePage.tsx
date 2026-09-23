@@ -6,7 +6,7 @@ const sections = [
     content: `El sistema Pethijos Admin está dividido en dos unidades de negocio: **Kinderdog** (guardería canina) y **Pethijos** (peluquería). Al iniciar sesión, selecciona tu unidad para acceder al dashboard correspondiente.`
   },
   {
-    id: "reservas", title: "📅 Crear una Reserva",
+    id: "reservas", title: "Crear una Reserva",
     steps: [
       "Ve a **Control de Reservas** en el menú lateral",
       "Haz clic en **Nueva Reserva** (botón azul, esquina superior derecha)",
@@ -22,22 +22,22 @@ const sections = [
     id: "entrada-salida", title: "🚪 Registrar Entrada y Salida",
     steps: [
       "En la lista de reservas, busca la reserva **Confirmada**",
-      "Haz clic en el botón verde ✅ para **Registrar Entrada** — cambia el estado a Activa",
+      "Haz clic en el botón verde para **Registrar Entrada** — cambia el estado a Activa",
       "Cuando el cliente retire su mascota, haz clic en el botón amarillo para **Registrar Salida**",
       "Puedes generar automáticamente el ingreso al hacer la salida"
     ]
   },
   {
-    id: "clientes", title: "👤 Gestión de Clientes",
+    id: "clientes", title: "Gestión de Clientes",
     steps: [
       "Ve a **Perfil del Cliente** para ver todos los clientes",
       "Usa el botón **+ Nuevo Cliente** para registrar un dueño",
-      "Desde la lista, usa el ícono 🐾 para **agregar mascotas** al cliente",
+      "Desde la lista, usa el ícono de mascota para **agregar mascotas** al cliente",
       "Haz clic en el ícono 👁 para ver el perfil completo con historial de reservas"
     ]
   },
   {
-    id: "administrativa", title: "💼 Gestión Administrativa",
+    id: "administrativa", title: "Gestión Administrativa",
     steps: [
       "Ve a **Gestión Admin** para manejar gastos y proveedores",
       "En la pestaña **Gastos y Compras**, registra todos los egresos",
@@ -47,7 +47,7 @@ const sections = [
     ]
   },
   {
-    id: "informes", title: "📊 Informes y Exportación",
+    id: "informes", title: "Informes y Exportación",
     steps: [
       "Ve a **Informes y Gráficos** para ver tu análisis financiero",
       "Los KPIs muestran ingresos del mes, utilidad y tendencias",
@@ -57,7 +57,7 @@ const sections = [
     ]
   },
   {
-    id: "transporte", title: "🚗 Transporte",
+    id: "transporte", title: "Transporte",
     content: `La pantalla de **Transporte** muestra las recogidas y entregas del día. Para que una reserva aparezca aquí, debe tener activada la opción **Requiere transporte** al crearla. Las recogidas se muestran en la columna izquierda (clientes que van al establecimiento) y las entregas en la derecha (clientes que regresan a casa).`
   },
   {
@@ -65,7 +65,7 @@ const sections = [
     content: `La pantalla de **Disponibilidad** muestra la ocupación de cada sala para el día seleccionado. La barra de color indica el porcentaje de ocupación: verde (< 60%), amarillo (60-90%), rojo (> 90%). Usa las flechas para navegar entre días.`
   },
   {
-    id: "alertas", title: "🔔 Alertas y Avisos",
+    id: "alertas", title: "Alertas y Avisos",
     steps: [
       "Ve a **Herramientas** → pestaña Alertas",
       "Crea alertas de comportamiento, salud, o progreso para mascotas específicas",
@@ -117,14 +117,6 @@ export function GuidePage() {
         ))}
       </div>
 
-      <div className="card p-5 bg-indigo-50 border-indigo-200">
-        <h3 className="font-semibold text-indigo-800 mb-2">💡 Credenciales de prueba</h3>
-        <p className="text-sm text-indigo-700">
-          Kinderdog: <code className="bg-white px-1.5 py-0.5 rounded">kinderdog_admin / kinderdog123</code>
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          Pethijos: <code className="bg-white px-1.5 py-0.5 rounded">pethijos_admin / pethijos123</code>
-        </p>
-      </div>
     </div>
   );
 }

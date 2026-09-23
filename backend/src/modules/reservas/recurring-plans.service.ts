@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../db";
-import { validateNoReservationConflicts, validateRoomCapacity } from "../utils/validation";
-import { getBusinessUnitTimezone } from "./business-unit-settings";
+import { prisma } from "../../db";
+import { validateNoReservationConflicts, validateRoomCapacity } from "../../utils/validation";
+import { getBusinessUnitTimezone } from "../../services/business-unit-settings";
 
 const HORIZON_DAYS = 30;
 

@@ -117,7 +117,7 @@ export function TransportePage() {
       )}
 
       <div className="card p-4 bg-blue-50 border-blue-200">
-        <p className="text-sm text-blue-700 font-medium">💡 Capacidad de transporte</p>
+        <p className="text-sm text-blue-700 font-medium">Capacidad de transporte</p>
         <p className="text-sm text-blue-600 mt-1">
           Recogidas: <strong>{data.pickups.length}</strong> · Entregas: <strong>{data.deliveries.length}</strong> · Total viajes: <strong>{data.pickups.length + data.deliveries.length}</strong>
         </p>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, CheckCircle, AlertTriangle } from "lucide-react";
+import { Plus, CheckCircle, AlertTriangle, Bell, BarChart3, PawPrint } from "lucide-react";
 import { api } from "../../lib/api";
 import { SEVERITY_COLOR } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
@@ -22,9 +22,9 @@ export function HerramientasPage() {
         <p className="text-gray-500 text-sm mt-1">Alertas, avisos y estimaciones</p>
       </div>
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {([["alertas", "🔔 Alertas y Avisos"], ["estimador", "📊 Estimaciones"]] as const).map(([t, label]) => (
+        {([["alertas", "Alertas y Avisos", Bell], ["estimador", "Estimaciones", BarChart3]] as const).map(([t, label, Icon]) => (
           <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-            {label}
+            <Icon size={15} className="inline-block mr-1.5" />{label}
           </button>
         ))}
       </div>
@@ -74,7 +74,7 @@ function AlertasTab() {
     <>
       <div className="flex items-center justify-between">
         <div className="flex gap-2 items-center">
-          {openCount > 0 && <span className="badge bg-red-100 text-red-700">⚠️ {openCount} activa{openCount > 1 ? "s" : ""}</span>}
+          {openCount > 0 && <span className="badge bg-red-100 text-red-700"><AlertTriangle size={13} className="inline-block mr-1" />{openCount} activa{openCount > 1 ? "s" : ""}</span>}
           <select className="input w-36" value={resolvedFilter} onChange={e => setResolvedFilter(e.target.value)}>
             <option value="false">Activas</option>
             <option value="true">Resueltas</option>
@@ -100,7 +100,7 @@ function AlertasTab() {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-semibold text-gray-900">{a.title}</p>
-                    {a.pet && <p className="text-xs text-gray-500">🐾 {a.pet.name} — {a.pet.client.firstName} {a.pet.client.lastName}</p>}
+                    {a.pet && <p className="text-xs text-gray-500"><PawPrint size={13} className="inline-block mr-1" />{a.pet.name} — {a.pet.client.firstName} {a.pet.client.lastName}</p>}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge color={SEVERITY_COLOR[a.severity]}>{a.severity}</Badge>
@@ -142,9 +142,9 @@ function AlertasTab() {
             <div>
               <label className="label">Severidad</label>
               <select className="input" value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value as "ALTA" | "MEDIA" | "BAJA" }))}>
-                <option value="ALTA">🔴 Alta</option>
-                <option value="MEDIA">🟡 Media</option>
-                <option value="BAJA">🟢 Baja</option>
+                <option value="ALTA">Alta</option>
+                <option value="MEDIA">Media</option>
+                <option value="BAJA">Baja</option>
               </select>
             </div>
           </div>
@@ -184,7 +184,7 @@ function EstimadorTab() {
         <div className="border-t pt-4">
           <div className="bg-indigo-50 rounded-xl p-4 text-center">
             <p className="text-sm text-indigo-600 font-medium">Estimación de ingreso mensual</p>
-            <p className="text-3xl font-bold text-indigo-700 mt-1">${totalPlanesIngresos.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-slate-900 mt-1">${totalPlanesIngresos.toLocaleString()}</p>
             <p className="text-xs text-indigo-500 mt-1">{planes.dias2 + planes.dias3 + planes.dias4 + planes.dias5} clientes totales</p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, Search, Eye, Edit2, UserX, PawPrint, Phone } from "lucide-react";
+import { Plus, Search, Eye, Edit2, UserX, PawPrint, Phone, Dog, Cat } from "lucide-react";
 import { api } from "../../lib/api";
 import { fmt } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
@@ -105,7 +105,7 @@ export function ClientesPage() {
                     <div className="flex flex-wrap gap-1">
                       {c.pets.slice(0, 3).map(p => (
                         <span key={p.id} className="badge bg-indigo-50 text-indigo-700">
-                          {p.species === "dog" ? "🐶" : "🐱"} {p.name}
+                          {p.species === "dog" ? <Dog size={14} /> : <Cat size={14} />} {p.name}
                         </span>
                       ))}
                       {c.pets.length > 3 && <span className="badge bg-gray-100 text-gray-500">+{c.pets.length - 3}</span>}
@@ -155,7 +155,7 @@ export function ClientesPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {selectedClient.pets.map(p => (
                     <div key={p.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                      <span className="text-xl">{p.species === "dog" ? "🐶" : "🐱"}</span>
+                      {p.species === "dog" ? <Dog size={20} /> : <Cat size={20} />}
                       <div>
                         <p className="font-medium text-sm">{p.name}</p>
                         <p className="text-xs text-gray-400">{p.breed ?? p.species} · {p.sex === "M" ? "Macho" : "Hembra"}</p>

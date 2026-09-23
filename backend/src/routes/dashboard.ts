@@ -13,13 +13,13 @@ dashboardRouter.get("/summary", async (req, res) => {
 
   const [reservasHoy, activas, entradas, salidas, ingresosHoy, alertas, proximasReservas] = await Promise.all([
     prisma.reservation.count({ where: { ...buWhere, checkIn: { gte: todayStart, lte: todayEnd } } }),
-    prisma.reservation.count({ where: { ...buWhere, status: "ACTIVA" } }),
-    prisma.reservation.count({ where: { ...buWhere, status: { in: ["CONFIRMADA", "ACTIVA"] }, checkIn: { gte: todayStart, lte: todayEnd } } }),
-    prisma.reservation.count({ where: { ...buWhere, status: "ACTIVA", checkOut: { gte: todayStart, lte: todayEnd } } }),
+    prisma.reservation.count({ where: { ...buWhere, status: { in: ["ACTIVA", "RECEPCIONADA", "EN_PROCESO", "LISTO"] } } }),
+    prisma.reservation.count({ where: { ...buWhere, status: { in: ["CONFIRMADA", "ACTIVA", "RECEPCIONADA", "EN_PROCESO", "LISTO"] }, checkIn: { gte: todayStart, lte: todayEnd } } }),
+    prisma.reservation.count({ where: { ...buWhere, status: { in: ["ACTIVA", "COMPLETADA", "LISTO"] }, checkOut: { gte: todayStart, lte: todayEnd } } }),
     prisma.income.aggregate({ where: { ...buWhere, date: { gte: todayStart, lte: todayEnd } }, _sum: { total: true } }),
     prisma.alert.findMany({ where: { ...buWhere, isResolved: false }, orderBy: [{ severity: "asc" }, { createdAt: "desc" }], take: 5, include: { pet: { select: { name: true } } } }),
     prisma.reservation.findMany({
-      where: { ...buWhere, status: { in: ["PENDIENTE", "CONFIRMADA"] }, checkIn: { gte: todayStart } },
+      where: { ...buWhere, status: { in: ["PENDIENTE", "CONFIRMADA", "RECEPCIONADA", "EN_PROCESO", "LISTO"] }, checkIn: { gte: todayStart } },
       take: 8,
       orderBy: { checkIn: "asc" },
       include: { client: { select: { firstName: true, lastName: true } }, pets: { include: { pet: { select: { name: true } } } }, room: { select: { name: true } } },

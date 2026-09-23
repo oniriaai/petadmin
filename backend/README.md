@@ -1,219 +1,146 @@
-# Backend
+# Backend — API Modular Pethijos & Kinderdog
 
-API Express para la operacion administrativa de Kinderdog y Pethijos. El backend concentra autenticacion, reglas de negocio, acceso a PostgreSQL via Prisma y generacion de URLs firmadas para Backblaze B2.
+API Express con TypeScript y Prisma ORM estructurada como un **Modular Monolith** por dominios de negocio verticales. Concentra autenticación, lógica de guardería y peluquería, persistencia en PostgreSQL y generación de URLs firmadas para Backblaze B2.
+
+---
 
 ## Requisitos
 
 - Node.js 20+
 - npm
-- PostgreSQL
-- Docker y Docker Compose para el flujo recomendado
+- PostgreSQL 16
+- Docker y Docker Compose (recomendado)
 
-## Formas De Ejecutarlo
+---
 
-### Opcion recomendada: desde la raiz con Docker
+## Estructura Modular del Backend
 
-Desde la raiz del repo:
+```text
+backend/src/
+├── core/                                # Contratos y capacidades transversales
+│   ├── auth/                           # Middleware JWT, roles, normalización
+│   ├── clients/                        # Router público de Clientes / Tutores
+│   ├── pets/                           # Router público de Mascotas
+│   ├── storage/                        # Cliente S3 presigned para Backblaze B2
+│   └── index.ts                        # Barrel de utilidades y exports del Core
+│
+├── modules/                             # Slices de negocio especializados
+│   ├── reservas/                         # Reservas y planes recurrentes
+│   ├── guarderia/                      # MÓDULO GUARDERÍA (Kinderdog)
+│   │   ├── attendance.service.ts       # Ocupación en vivo, control de cupos y check-in/out
+│   │   └── guarderia.router.ts         # Router montado en /api/v1/guarderia
+│   │
+│   └── peluqueria/                     # MÓDULO PELUQUERÍA (Pethijos)
+│       ├── services.ts                 # Catálogo de servicios y duraciones estimadas
+│       ├── appointments.service.ts     # Agendamiento, cálculo de horarios y cobro directo
+│       └── peluqueria.router.ts        # Router montado en /api/v1/peluqueria
+│
+├── routes/                             # Routers existentes en migración
+│   ├── auth.ts                         # Login y emisión de JWT
+│   ├── dashboard.ts                    # Resúmenes operativos y KPIs
+│   ├── reservations.ts                 # Compatibilidad; implementación en modules/reservas
+│   ├── check-in-out.ts                 # Asistencia legacy
+│   ├── rooms.ts                        # Salas físicas
+│   ├── recurring-plans.ts              # Compatibilidad; implementación en modules/reservas
+│   ├── incomes.ts                      # Ingresos contables segregados
+│   ├── payables.ts                     # Cuentas por pagar y gastos
+│   ├── inventory.ts                    # Inventario y movimientos por unidad
+│   └── reports.ts                      # Reportes y exportaciones
+│
+├── db.ts                               # Instancia central de PrismaClient
+└── main.ts                             # Bootstrap de la aplicación Express
+```
+
+### Registro de módulos
+
+`src/platform/module-registry.ts` es el punto de composición del backend. Cada entrada
+declara un `id`, `basePath`, router y descripción, y `main.ts` registra todas las
+entradas mediante `registerBackendModules`. Los IDs y paths se validan para impedir
+colisiones al incorporar un módulo nuevo.
+
+Los dominios compartidos de Clientes y Mascotas se exponen desde `src/core/clients`,
+`src/core/pets` y `src/core/modules.ts`. Sus rutas HTTP actuales se mantienen estables,
+pero el registro ya depende de la superficie pública de Core y no de los archivos planos
+de `src/routes`.
+
+Consulta [docs/adding-a-module.md](../docs/adding-a-module.md) para el checklist
+completo de backend y frontend.
+
+---
+
+## Nuevos Endpoints Modulares
+
+### Módulo de Guardería (`/api/v1/guarderia`)
+*Acceso exclusivo para roles `admin` y `kinderdog` (usuarios con rol `pethijos` reciben `403 Forbidden`).*
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/guarderia/occupancy` | Consulta ocupación en tiempo real por cada sala (capacidad, ocupados, libres, % ocupación y lista de perrhijos en estancia con foto y tutor). |
+| `GET` | `/guarderia/attendance/today` | Lista reservas esperadas para hoy y check-ins activos. |
+| `POST` | `/guarderia/attendance/check-in` | Registra check-in en sala validando que no se exceda la capacidad física máxima. |
+| `POST` | `/guarderia/attendance/check-out` | Registra salida de guardería con opción de generar cobro contable independiente para `KINDERDOG`. |
+| `GET` | `/guarderia/transport` | Rutas consolidadas de transporte del día (recogidas y entregas). |
+
+### Módulo de Peluquería (`/api/v1/peluqueria`)
+*Acceso exclusivo para roles `admin` y `pethijos` (usuarios con rol `kinderdog` reciben `403 Forbidden`).*
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/peluqueria/services` | Catálogo de servicios con nombre, categoría, duración estimada en minutos y tarifa base. |
+| `GET` | `/peluqueria/appointments` | Listado de citas de peluquería con filtros por fecha (`?date=YYYY-MM-DD`), estado y búsqueda. |
+| `GET` | `/peluqueria/appointments/:id` | Detalle completo de una cita y sus pagos registrados. |
+| `POST` | `/peluqueria/appointments` | Agenda nueva cita por fecha, servicio y duración estimada (`endTime = startTime + durationMinutes`). Admite anticipo opcional. |
+| `PATCH` | `/peluqueria/appointments/:id/status` | Actualiza estado del servicio: `PENDIENTE` → `RECEPCIONADA` → `EN_PROCESO` → `LISTO` → `COMPLETADA` → `CANCELADA`. |
+| `POST` | `/peluqueria/appointments/:id/complete` | Completa la cita y registra el cobro contable independiente para `PETHIJOS`. |
+| `DELETE` | `/peluqueria/appointments/:id` | Cancela/elimina una cita de peluquería. |
+
+---
+
+## Multi-Tenancy y Aislamiento de Negocio
+
+El sistema aplica aislamiento estricto mediante el middleware `auth.ts`:
+
+1. **Roles disponibles**: `admin`, `kinderdog`, `pethijos`.
+2. **Usuarios `kinderdog`**: Solo pueden acceder al módulo `/guarderia` y a finanzas de Kinderdog.
+3. **Usuarios `pethijos`**: Solo pueden acceder al módulo `/peluqueria` y a finanzas de Pethijos.
+4. **Usuarios `admin`**: Acceso sin restricción a ambos módulos y vistas consolidadas. Pueden acotar el alcance enviando el header `X-Business-Unit: KINDERDOG|PETHIJOS`.
+5. **Datos Compartidos**: Las entidades `Client` y `Pet` viven en el Core compartido para evitar duplicar tutores y permitir que un perrhijo utilice tanto guardería como peluquería sin fragmentar su historial.
+6. **Segregación Contable**: Cada cobro (`Income`) y compra/gasto (`Payable`) pertenece estrictamente a una unidad (`KINDERDOG` o `PETHIJOS`). Los cobros de guardería y peluquería se registran por separado.
+
+---
+
+## Scripts Disponibles
 
 ```bash
-cp .env.example .env
+# Desarrollo local
+npm run dev                  # Inicia tsx watch src/main.ts
+npm run build                # Compila TypeScript a dist/
+npm run start                # Ejecuta build compilado
+
+# Base de datos
+npm run db:generate          # Genera Prisma Client
+npm run db:push              # Sincroniza esquema en PostgreSQL
+npm run db:seed              # Ejecuta datos iniciales (seed.ts)
+npm run db:setup             # push + seed
+
+# Suites de Pruebas E2E
+npm run test:modular         # Suite E2E de dominios modulares (Guardería y Peluquería)
+npm run test:financial       # Suite E2E de transacciones y cuentas por pagar
+npm run test:checkin         # Suite E2E de check-in / check-out
+```
+
+---
+
+## Ejecución con Docker
+
+Recomendado para garantizar el entorno idéntico a producción:
+
+```bash
+# Desde la raíz del repositorio:
 docker compose up --build
+
+# Correr pruebas dentro del contenedor:
+docker exec pethijos-backend npm run test:modular
+docker exec pethijos-backend npm run test:financial
+docker exec pethijos-backend npm run test:checkin
 ```
-
-En este modo el backend:
-
-- usa `BACKEND_PORT` desde la raiz
-- se conecta a PostgreSQL con el host `postgres`
-- ejecuta `prisma generate`, `prisma db push` y el seed al iniciar el contenedor
-
-### Opcion local: backend fuera de Docker
-
-1. Levanta solo la base de datos:
-
-```bash
-docker compose up -d postgres
-```
-
-2. Instala dependencias:
-
-```bash
-cd backend
-npm install
-```
-
-3. Crea `backend/.env` con las variables necesarias. Si partes del archivo raiz, cambia el host de `DATABASE_URL` a `localhost:5433`.
-
-Ejemplo minimo:
-
-```env
-DATABASE_URL=postgresql://pethijos:pethijos123@localhost:5433/pethijos
-BACKEND_PORT=3001
-JWT_SECRET=change_me
-VAT_PERCENT=15
-B2_KEY_ID=tu_key_id
-B2_APPLICATION_KEY=tu_application_key
-B2_BUCKET_NAME=nombre_del_bucket
-B2_ENDPOINT=s3.us-east-005.backblazeb2.com
-B2_REGION=us-east-005
-```
-
-4. Genera Prisma y prepara la base:
-
-```bash
-npm run db:generate
-npm run db:setup
-```
-
-5. Inicia el servidor:
-
-```bash
-npm run dev
-```
-
-## Scripts
-
-- `npm run dev`: inicia `tsx watch src/main.ts`.
-- `npm run build`: compila TypeScript a `dist/`.
-- `npm run start`: ejecuta el build compilado.
-- `npm run db:generate`: genera el cliente de Prisma.
-- `npm run db:push`: aplica el esquema a la base sin migraciones versionadas.
-- `npm run db:seed`: ejecuta `prisma/seed.ts`.
-- `npm run db:setup`: corre `db push` y luego seed.
-- `npm run seed:photos:upload`: carga fotos de mascotas del seed a B2 una sola vez (omite claves ya existentes).
-- `npm run seed:photos:replace`: recarga fotos del seed sobre las mismas claves canonicas (sin duplicar keys).
-- `npm run test:financial`: suite E2E del modulo financiero.
-- `npm run test:checkin`: suite E2E del flujo de check-in/check-out.
-
-## Variables De Entorno
-
-Variables usadas directamente por el backend:
-
-- `DATABASE_URL`: conexion PostgreSQL para Prisma.
-- `BACKEND_PORT`: puerto HTTP del servicio. Por defecto `3001`.
-- `JWT_SECRET`: firma y verificacion de tokens JWT.
-- `VAT_PERCENT`: porcentaje por defecto para calculos tributarios.
-- `B2_KEY_ID`
-- `B2_APPLICATION_KEY`
-- `B2_BUCKET_NAME`
-- `B2_ENDPOINT`
-- `B2_REGION`
-
-Notas importantes:
-
-- En Docker, `DATABASE_URL` apunta a `postgres:5432`.
-- Fuera de Docker, normalmente debe apuntar a `localhost:5433`.
-- Si faltan variables de B2, el backend arranca, pero las cargas de archivos pueden fallar.
-
-## Estructura Tecnica
-
-### Entrada principal
-
-- `src/main.ts` configura CORS, JSON, health check, rutas y middleware global de errores.
-- El health check vive en `GET /api/v1/health` y valida tambien conectividad a la base de datos con `SELECT 1`.
-
-### Rutas montadas
-
-Rutas activas bajo `/api/v1`:
-
-- `auth`: login y emision de JWT.
-- `dashboard`: resumenes y metricas principales.
-- `clients`, `pets`: gestion de clientes y mascotas.
-- `storage`: URLs firmadas y eliminacion de archivos en B2.
-- `reservations`, `recurring-plans`, `check-in-out`: operaciones diarias, reservas y planes recurrentes.
-- `rooms`: salas, capacidad y disponibilidad operativa.
-- `providers`, `payables`, `incomes`: proveedores, cuentas por pagar e ingresos.
-- `inventory`: items y movimientos de inventario.
-- `reports`, `export`: consultas y exportaciones.
-- `alerts`, `contracts`: alertas operativas y contratos.
-
-### Multirol y alcance por unidad
-
-- Roles normalizados: `admin`, `kinderdog`, `pethijos`.
-- Usuarios `kinderdog` y `pethijos` operan solo sobre su unidad.
-- `admin` tiene vista consolidada por defecto (ambas unidades) y puede acotar por unidad enviando `X-Business-Unit: KINDERDOG|PETHIJOS` (o `?businessUnit=`).
-- En operaciones de escritura para `admin`, debe existir una unidad objetivo (header/query o `businessUnit` en body).
-
-## Dominios De Negocio
-
-El esquema de Prisma modela principalmente:
-
-- usuarios con `businessUnit` y `role`
-- clientes y mascotas
-- documentos, vacunas y alertas de mascotas
-- salas
-- reservas y planes recurrentes
-- check-in/check-out
-- ingresos
-- proveedores, cuentas por pagar y pagos
-- inventario y movimientos
-- contratos
-
-Patrones actuales relevantes:
-
-- varios modelos usan `isActive` para soft delete
-- los ingresos pueden quedar asociados a una reserva
-- los planes recurrentes generan soporte para operacion repetitiva por dias
-
-## Planes Recurrentes Y Reservas
-
-Implementacion actual (backend):
-
-- existe un scheduler en `src/main.ts` que inicia al levantar el servicio
-- el scheduler ejecuta una generacion de reservas al iniciar y luego cada 24 horas
-- se generan reservas para los proximos 30 dias para planes activos segun `daysOfWeek`
-- cada reserva generada queda vinculada al plan via `Reservation.recurringPlanId`
-- al crear esas reservas se crean tambien registros `check_in_out` vinculados por mascota
-- el sistema evita duplicados de ocurrencias con una restriccion unica en `reservations` sobre `(recurringPlanId, checkIn)`
-
-Sincronizacion y desactivacion:
-
-- al editar un plan recurrente se sincronizan solo reservas futuras con estado `PENDIENTE` vinculadas a ese plan
-- al desactivar (`PATCH /recurring-plans/:id/status` con `isActive=false`) o eliminar (`DELETE /recurring-plans/:id`) un plan:
-  - se cancelan reservas futuras `PENDIENTE` vinculadas (`status = CANCELADA`)
-  - se marcan sus `check_in_out` vinculados como inactivos (`isActive = false`)
-
-## Seed Y Datos Iniciales
-
-`prisma/seed.ts` crea datos base solo si la tabla `users` esta vacia:
-
-- usuarios admin global, Kinderdog y Pethijos
-- salas iniciales
-- proveedor base
-- clientes y mascotas de ejemplo
-- reservas de ejemplo
-- una cuenta por pagar
-- inventario inicial
-
-Credenciales creadas por defecto:
-
-- `admin_global` / `admin123`
-- `kinderdog_admin` / `kinderdog123`
-- `pethijos_admin` / `pethijos123`
-
-Fotos de mascotas en seed:
-
-- El mapeo vive en `prisma/seed-pet-photos.json` y asigna 1 URL publica de B2 por mascota.
-- Las imagenes se suben con `seed:photos:upload` usando claves canonicas `pets/seed/<pet>.jpg`.
-- El script nunca crea claves con timestamp, por lo que re-ejecutarlo no genera duplicados en el bucket.
-- `prisma/seed.ts` falla si falta el mapeo de alguna mascota esperada.
-
-## Flujo De Archivos E Imagenes
-
-El backend no sube archivos grandes directamente a B2 desde el navegador. El flujo actual es:
-
-1. el frontend solicita una URL firmada a `storage`
-2. el cliente sube el archivo directamente a Backblaze B2
-3. el backend persiste o reutiliza la URL publica
-4. cuando corresponde, el frontend pide al backend eliminar archivos previos
-
-Esto reduce carga en la API y centraliza credenciales de almacenamiento en el servidor.
-
-## Pruebas
-
-Las pruebas E2E disponibles viven en `backend/tests/` y asumen:
-
-- backend corriendo en `http://localhost:3001`
-- base inicializada con seed
-- credenciales administrativas disponibles
-
-Consulta `backend/tests/README.md` si necesitas detalles del flujo de pruebas.

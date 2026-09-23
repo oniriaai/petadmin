@@ -44,11 +44,15 @@ export const SERVICES = [
 ];
 
 export const STATUSES: Record<string, { label: string; color: string }> = {
-  PENDIENTE:   { label: "Pendiente",   color: "bg-yellow-100 text-yellow-800" },
-  CONFIRMADA:  { label: "Confirmada",  color: "bg-blue-100 text-blue-800" },
-  ACTIVA:      { label: "Activa",      color: "bg-green-100 text-green-800" },
-  COMPLETADA:  { label: "Completada",  color: "bg-gray-100 text-gray-700" },
-  CANCELADA:   { label: "Cancelada",   color: "bg-red-100 text-red-700" },
+  PENDIENTE:    { label: "Pendiente",    color: "bg-yellow-100 text-yellow-800" },
+  CONFIRMADA:   { label: "Confirmada",   color: "bg-blue-100 text-blue-800" },
+  ACTIVA:       { label: "Activa",       color: "bg-green-100 text-green-800" },
+  COMPLETADA:   { label: "Completada",   color: "bg-gray-100 text-gray-700" },
+  CANCELADA:    { label: "Cancelada",    color: "bg-red-100 text-red-700" },
+  // Grooming / Peluquería workflow statuses
+  RECEPCIONADA: { label: "Recepcionada", color: "bg-indigo-100 text-indigo-800" },
+  EN_PROCESO:   { label: "En proceso",   color: "bg-orange-100 text-orange-800" },
+  LISTO:        { label: "Listo",        color: "bg-teal-100 text-teal-800" },
 };
 
 export const PAYMENT_METHODS = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "OTRO"];

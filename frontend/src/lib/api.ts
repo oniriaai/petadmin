@@ -1,4 +1,5 @@
 const BASE = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:3001/api/v1";
+export type { BusinessUnit, ClientSummary, ClientWithPets, PetSummary, UserRole } from "../modules/shared/contracts";
 let onUnauthorized: (() => void) | null = null;
 
 function getToken() {
@@ -144,3 +145,118 @@ export async function downloadFile(path: string, filename: string) {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// ==========================================
+// MÓDULO PELUQUERÍA (Pethijos)
+// ==========================================
+export interface GroomingService {
+  id: string;
+  name: string;
+  category: "BANO" | "CORTE" | "COMPLETO" | "TRATAMIENTO" | "ADICIONAL";
+  durationMinutes: number;
+  basePrice: number;
+  description: string;
+}
+
+export interface GroomingAppointment {
+  id: string;
+  clientId: string;
+  client: { id: string; firstName: string; lastName: string; phone?: string; whatsapp?: string };
+  pets: Array<{ id: string; name: string; species: string; breed?: string; photoUrl?: string }>;
+  service: string;
+  status: "PENDIENTE" | "RECEPCIONADA" | "EN_PROCESO" | "LISTO" | "COMPLETADA" | "CANCELADA";
+  startTime: string;
+  endTime: string;
+  durationMinutes: number;
+  concept?: string;
+  notes?: string;
+  totalAmount: number;
+  advanceAmount: number;
+  pendingAmount: number;
+  paymentMethod?: string;
+  incomes?: Array<{ id: string; total: number; paymentMethod: string; date: string }>;
+  createdAt: string;
+}
+
+export const peluqueriaApi = {
+  getServices: () => api.get<GroomingService[]>("/peluqueria/services"),
+  getAppointments: (params?: { date?: string; status?: string; search?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.date) q.append("date", params.date);
+    if (params?.status) q.append("status", params.status);
+    if (params?.search) q.append("search", params.search);
+    return api.get<GroomingAppointment[]>(`/peluqueria/appointments?${q}`);
+  },
+  getAppointment: (id: string) => api.get<GroomingAppointment>(`/peluqueria/appointments/${id}`),
+  createAppointment: (data: {
+    clientId: string;
+    petIds: string[];
+    serviceId?: string;
+    serviceName?: string;
+    startTime: string;
+    durationMinutes: number;
+    notes?: string;
+    basePrice?: number;
+    vatPercent?: number;
+    discountAmount?: number;
+    advanceAmount?: number;
+    paymentMethod?: string;
+  }) => api.post<any>("/peluqueria/appointments", data),
+  updateStatus: (id: string, data: { status: string; notes?: string }) =>
+    api.patch<GroomingAppointment>(`/peluqueria/appointments/${id}/status`, data),
+  completeAndCollect: (id: string, data: { paymentMethod: string; amount?: number; notes?: string }) =>
+    api.post<GroomingAppointment>(`/peluqueria/appointments/${id}/complete`, data),
+  deleteAppointment: (id: string) => api.del<{ ok: boolean }>(`/peluqueria/appointments/${id}`),
+};
+
+// ==========================================
+// MÓDULO GUARDERÍA (Kinderdog)
+// ==========================================
+export interface DaycareRoomOccupancy {
+  id: string;
+  name: string;
+  type: string;
+  capacity: number;
+  currentOccupancy: number;
+  availableSlots: number;
+  occupancyRate: number;
+  isFull: boolean;
+  currentPets: Array<{
+    checkInOutId: string;
+    petId: string;
+    petName: string;
+    petBreed?: string;
+    petPhoto?: string;
+    clientName: string;
+    clientPhone?: string;
+    checkInTime: string;
+    notes?: string;
+  }>;
+}
+
+export interface DaycareAttendanceData {
+  reservations: any[];
+  activeCheckIns: any[];
+}
+
+export const guarderiaApi = {
+  getOccupancy: () => api.get<DaycareRoomOccupancy[]>("/guarderia/occupancy"),
+  getTodayAttendance: () => api.get<DaycareAttendanceData>("/guarderia/attendance/today"),
+  checkIn: (data: {
+    petId: string;
+    clientId: string;
+    roomId: string;
+    reservationId?: string;
+    checkInTime?: string;
+    notes?: string;
+  }) => api.post<any>("/guarderia/attendance/check-in", data),
+  checkOut: (data: {
+    checkInOutId: string;
+    checkOutTime?: string;
+    createIncome?: boolean;
+    paymentMethod?: string;
+    amount?: number;
+    notes?: string;
+  }) => api.post<any>("/guarderia/attendance/check-out", data),
+  getTransport: () => api.get<{ total: number; recogidas: any[]; entregas: any[] }>("/guarderia/transport"),
+};

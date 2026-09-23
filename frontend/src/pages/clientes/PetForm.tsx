@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
+import { petsApi } from "../../modules/shared/api";
 import { Spinner } from "../../components/ui/Spinner";
 import { ImageUpload } from "../../components/ui/ImageUpload";
 
@@ -51,7 +52,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
       
       const body = { ...form, weight: form.weight ? +form.weight : undefined, height: form.height ? +form.height : undefined, birthdate: form.birthdate || undefined, clientId: client?.id };
       if (pet) await api.put(`/pets/${pet.id}`, body);
-      else await api.post("/pets", body);
+      else await petsApi.create(body);
       onSaved(); onClose();
     } catch (e) { setError(e instanceof Error ? e.message : "Error al guardar"); }
     finally { setSaving(false); }
@@ -85,8 +86,8 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
           <div>
             <label className="label">Especie</label>
             <select className="input" value={form.species} onChange={setS("species")}>
-              <option value="dog">🐶 Perro</option>
-              <option value="cat">🐱 Gato</option>
+              <option value="dog">Perro</option>
+              <option value="cat">Gato</option>
             </select>
           </div>
           <div><label className="label">Raza</label><input className="input" value={form.breed} onChange={setS("breed")} /></div>
