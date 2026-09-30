@@ -7,11 +7,13 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_NAME, B2_ENDPOINT } from "../lib/s3";
-import { requireAuth } from "../middleware/auth";
+import { handleAuthzError } from "../middleware/auth";
+import { buildPetPhotoKey, resolveObjectKey } from "../core/storage/object-keys";
+import { buildChildScopeWhere, buildDaycareWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import { prisma } from "../db";
 import { z } from "zod";
 
 export const storageRouter = Router();
-storageRouter.use(requireAuth);
 
 const uploadUrlSchema = z.object({
   fileName: z.string().min(1),
@@ -36,12 +38,10 @@ storageRouter.post("/upload-url", async (req, res) => {
     }
 
     const { fileName, contentType, petName, ownerName } = parsed.data;
-    
-    // Naming convention: pets/{petName}_{ownerName}/{timestamp}-{sanitizedFileName}
-    const timestamp = Date.now();
-    const cleanFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const sanitizedOwner = ownerName.replace(/[^a-zA-Z0-9-]/g, "_");
-    const key = `pets/${petName}_${sanitizedOwner}/${timestamp}-${cleanFileName}`;
+
+    // Every component is sanitized inside buildPetPhotoKey, so a caller-supplied petName
+    // cannot escape the pets/ prefix. Previously petName was interpolated raw.
+    const key = buildPetPhotoKey({ daycareId: getRequiredDaycareId(req), petName, ownerName, fileName });
     
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
@@ -54,6 +54,7 @@ storageRouter.post("/upload-url", async (req, res) => {
 
     res.json({ uploadUrl, publicUrl, key });
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error generating presigned URL:", error);
     res.status(500).json({ message: "Error generating upload URL" });
   }
@@ -70,32 +71,32 @@ storageRouter.post("/remove", async (req, res) => {
       return res.status(400).json({ message: "Storage configuration incomplete" });
     }
 
-    let { key } = parsed.data;
+    // Accepts a raw key or a full public URL; anything that does not resolve to a plausible
+    // in-bucket key is refused rather than handed to the storage API.
+    const key = resolveObjectKey(parsed.data.key, BUCKET_NAME, B2_ENDPOINT);
+    if (!key) {
+      return res.status(400).json({ message: "Referencia de archivo inválida" });
+    }
 
-    // Extract key from full URL if provided
-    // Handle both B2 formats:
-    // - https://bucket-name.s3.us-east-005.backblazeb2.com/pets/fluffy/123-photo.jpg
-    // - https://s3.us-east-005.backblazeb2.com/bucket-name/pets/fluffy/123-photo.jpg
-    if (key.startsWith("https://")) {
-      try {
-        const url = new URL(key);
-        const pathName = url.pathname;
-        
-        // Remove leading slash and bucket name if present in path
-        let extractedKey = pathName.startsWith("/") ? pathName.slice(1) : pathName;
-        
-        // If bucket name is in the path (path-style), remove it
-        if (extractedKey.startsWith(BUCKET_NAME + "/")) {
-          extractedKey = extractedKey.slice(BUCKET_NAME.length + 1);
-        }
-        
-        key = extractedKey;
-      } catch (urlErr) {
-        console.error("URL parsing error:", urlErr);
-        // Fallback: try simple split
-        const parts = key.split("/");
-        key = parts.slice(4).join("/");
-      }
+    // Authorization: only an object this application actually references may be deleted.
+    // Checking the database rather than the key's shape means a caller cannot delete an
+    // arbitrary object by guessing its name, and it will scope to the caller's daycare
+    // automatically once pets and documents carry a tenant.
+    // Scoped to the caller's daycare: without this, knowing another tenant's key would be
+    // enough to delete their file, since the reference check alone would still pass.
+    const [referencingPet, referencingDocument] = await Promise.all([
+      prisma.pet.findFirst({
+        where: { photoUrl: { contains: key }, ...buildDaycareWhere(req) },
+        select: { id: true },
+      }),
+      prisma.petDocument.findFirst({
+        where: { filePath: { contains: key }, ...buildChildScopeWhere(req, "pet") },
+        select: { id: true },
+      }),
+    ]);
+    if (!referencingPet && !referencingDocument) {
+      console.warn(`[Storage] Refused delete for unreferenced key: ${key}`);
+      return res.status(404).json({ message: "Archivo no encontrado" });
     }
 
     console.log(`[Storage] Deleting file from B2: bucket=${BUCKET_NAME}, key=${key}`);
@@ -169,6 +170,7 @@ storageRouter.post("/remove", async (req, res) => {
 
     res.json({ ok: true, message: "File deleted successfully" });
   } catch (error) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error deleting file from B2:", error);
     res.status(500).json({ message: "Error deleting file" });
   }

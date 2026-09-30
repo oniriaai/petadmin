@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { buildBusinessUnitWhere, handleAuthzError, requireAuth } from "../middleware/auth";
+import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
 
 export const reportsRouter = Router();
-reportsRouter.use(requireAuth);
 
 reportsRouter.get("/incomes", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const { from, to } = req.query as Record<string, string>;
   const where: Record<string, unknown> = { ...buWhere };
   if (from || to) {
@@ -45,7 +45,7 @@ reportsRouter.get("/incomes", async (req, res) => {
 
 reportsRouter.get("/expenses", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const { from, to } = req.query as Record<string, string>;
   const where: Record<string, unknown> = { ...buWhere };
   if (from || to) {
@@ -71,7 +71,7 @@ reportsRouter.get("/expenses", async (req, res) => {
 
 reportsRouter.get("/kpis", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -82,7 +82,7 @@ reportsRouter.get("/kpis", async (req, res) => {
     prisma.income.aggregate({ where: { ...buWhere, date: { gte: lastMonthStart, lte: lastMonthEnd } }, _sum: { total: true } }),
     prisma.payable.aggregate({ where: { ...buWhere, createdAt: { gte: monthStart } }, _sum: { total: true } }),
     prisma.reservation.count({ where: { ...buWhere, createdAt: { gte: monthStart }, status: { not: "CANCELADA" } } }),
-    prisma.client.count({ where: { isActive: true } }),
+    prisma.client.count({ where: { isActive: true, ...buildDaycareWhere(req) } }),
     prisma.income.aggregate({ where: { ...buWhere }, _avg: { total: true } }),
   ]);
 
@@ -115,7 +115,7 @@ reportsRouter.get("/kpis", async (req, res) => {
 
 reportsRouter.get("/transport", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const { date } = req.query as Record<string, string>;
   const d = date ? new Date(date) : new Date();
   const start = new Date(d); start.setHours(0, 0, 0, 0);

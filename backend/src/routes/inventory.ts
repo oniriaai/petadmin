@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 
 export const inventoryRouter = Router();
-inventoryRouter.use(requireAuth);
 
 const itemSchema = z.object({
   name: z.string().min(1),
@@ -19,7 +19,7 @@ inventoryRouter.get("/items", async (req, res) => {
   try {
   const { lowStock } = req.query as Record<string, string>;
   const items = await prisma.inventoryItem.findMany({
-    where: { ...buildBusinessUnitWhere(req), isActive: true },
+    where: { ...buildScopeWhere(req), isActive: true },
     orderBy: { name: "asc" },
   });
   const result = lowStock === "true" ? items.filter(i => i.currentStock <= i.minStock) : items;
@@ -36,7 +36,7 @@ inventoryRouter.post("/items", async (req, res) => {
   const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
   const parsed = itemSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
-  const item = await prisma.inventoryItem.create({ data: { ...parsed.data, businessUnit: bu } });
+  const item = await prisma.inventoryItem.create({ data: { ...parsed.data, businessUnit: bu, daycareId: getRequiredDaycareId(req) } });
   res.status(201).json(item);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
@@ -49,9 +49,9 @@ inventoryRouter.put("/items/:id", async (req, res) => {
   try {
   const parsed = itemSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
-  const current = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   const item = await prisma.inventoryItem.update({ where: { id: req.params.id }, data: parsed.data });
   res.json(item);
   } catch (error) {
@@ -63,9 +63,9 @@ inventoryRouter.put("/items/:id", async (req, res) => {
 
 inventoryRouter.delete("/items/:id", async (req, res) => {
   try {
-  const current = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   await prisma.inventoryItem.update({ where: { id: req.params.id }, data: { isActive: false } });
   res.json({ ok: true });
   } catch (error) {
@@ -85,9 +85,9 @@ const movementSchema = z.object({
 
 inventoryRouter.get("/items/:id/movements", async (req, res) => {
   try {
-  const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!item) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertBusinessUnitAccess(req, item.businessUnit);
+  assertRecordAccess(req, item);
   const movements = await prisma.inventoryMovement.findMany({
     where: { itemId: req.params.id },
     orderBy: { date: "desc" },
@@ -105,9 +105,9 @@ inventoryRouter.post("/items/:id/movements", async (req, res) => {
   const parsed = movementSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
   const { date, type, quantity, ...rest } = parsed.data;
-  const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, currentStock: true } });
+  const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true, currentStock: true } });
   if (!item) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertBusinessUnitAccess(req, item.businessUnit);
+  assertRecordAccess(req, item);
 
   const movement = await prisma.inventoryMovement.create({
     data: { itemId: req.params.id, type, quantity, date: date ? new Date(date) : new Date(), ...rest },

@@ -2,13 +2,25 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { TOGGLEABLE_PRODUCT_MODULES } from "../src/platform/product-modules";
 
 const prisma = new PrismaClient();
 
 const BU = {
-  KINDERDOG: "KINDERDOG",
-  PETHIJOS: "PETHIJOS",
+  DAYCARE: "DAYCARE",
+  GROOMING: "GROOMING",
 } as const;
+
+/**
+ * Literal tenant ids, matching 20260903000000_add_daycare_tenancy so the migration, this seed,
+ * the platform console fixtures and the e2e suites all refer to the same daycares.
+ */
+const PETHIJOS_ID = "daycare_pethijos";
+const DEMO_ID = "daycare_demo";
+
+/** Stamps the default tenant onto a batch of seed rows. */
+const tenant = <T extends object>(rows: readonly T[]): (T & { daycareId: string })[] =>
+  rows.map((row) => ({ ...row, daycareId: PETHIJOS_ID }));
 
 const SERVICES = {
   DAYCARE:          "GUARDERIA",
@@ -58,8 +70,124 @@ function money(subtotal: number, vatPercent = 0, paid = 0) {
   };
 }
 
+/**
+ * The platform (vendor) account. Provisioned from the environment and upserted OUTSIDE the
+ * "already seeded" guard below, so an existing database can still acquire a superadmin.
+ * Its password is never downgraded once set.
+ */
+async function ensureSuperadmin() {
+  const username = process.env.SUPERADMIN_USERNAME || "superadmin";
+  const name = process.env.SUPERADMIN_NAME || "Plataforma";
+  let password = process.env.SUPERADMIN_PASSWORD;
+
+  if (!password) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SUPERADMIN_PASSWORD es obligatorio fuera de desarrollo");
+    }
+    password = "superadmin123";
+    console.warn(
+      `[seed] SUPERADMIN_PASSWORD no definido: usando la contraseña de desarrollo por defecto ` +
+        `para '${username}'. No usar en producción.`,
+    );
+  }
+
+  const existing = await prisma.user.findUnique({ where: { username } });
+  if (existing) {
+    console.log(`[seed] superadmin '${username}' ya existe (contraseña sin cambios)`);
+    return;
+  }
+
+  // daycareId stays null: that is what makes this a platform account, and the
+  // users_superadmin_untenanted CHECK constraint enforces it.
+  await prisma.user.create({
+    data: {
+      username,
+      name,
+      passwordHash: bcrypt.hashSync(password, 10),
+      role: "superadmin",
+      businessUnit: "GLOBAL",
+      daycareId: null,
+    },
+  });
+  console.log(`[seed] superadmin '${username}' creado`);
+}
+
+/** The two tenants: the real operating business, plus a restricted one for isolation tests. */
+async function ensureDaycares() {
+  await prisma.daycare.upsert({
+    where: { id: PETHIJOS_ID },
+    update: {},
+    create: {
+      id: PETHIJOS_ID,
+      slug: "pethijos",
+      name: "Pethijos",
+      timezone: "America/Guayaquil",
+      units: `${BU.DAYCARE},${BU.GROOMING}`,
+    },
+  });
+
+  // A second tenant is not decoration: tenant-isolation tests and the console's module matrix
+  // both need a real second row, and a one-tenant database hides cross-tenant bugs.
+  await prisma.daycare.upsert({
+    where: { id: DEMO_ID },
+    update: {},
+    create: {
+      id: DEMO_ID,
+      slug: "demo",
+      name: "Demo Peluquería",
+      timezone: "America/Bogota",
+      units: BU.GROOMING,
+    },
+  });
+
+  // Entitlements. The existing business gets every sellable module, derived from the catalog
+  // rather than listed here: a module added later must not end up silently off for it.
+  const DEMO_ENABLED = new Set(["reservas", "peluqueria"]);
+  const entitlements: Array<{ daycareId: string; moduleId: string; isEnabled: boolean }> = [
+    ...TOGGLEABLE_PRODUCT_MODULES.map((m) => ({ daycareId: PETHIJOS_ID, moduleId: m.id, isEnabled: true })),
+    // The demo tenant is deliberately restricted and IS listed explicitly, because which
+    // modules are off is the point of it.
+    ...TOGGLEABLE_PRODUCT_MODULES.map((m) => ({
+      daycareId: DEMO_ID,
+      moduleId: m.id,
+      isEnabled: DEMO_ENABLED.has(m.id),
+    })),
+  ];
+
+  for (const entitlement of entitlements) {
+    await prisma.daycareModule.upsert({
+      where: { daycareId_moduleId: { daycareId: entitlement.daycareId, moduleId: entitlement.moduleId } },
+      update: { isEnabled: entitlement.isEnabled },
+      create: entitlement,
+    });
+  }
+
+  await prisma.businessUnitSetting.upsert({
+    where: { daycareId_businessUnit: { daycareId: DEMO_ID, businessUnit: BU.GROOMING } },
+    update: {},
+    create: { daycareId: DEMO_ID, businessUnit: BU.GROOMING, timezone: "America/Bogota" },
+  });
+
+  const demoAdmin = await prisma.user.findUnique({ where: { username: "demo_admin" } });
+  if (!demoAdmin) {
+    await prisma.user.create({
+      data: {
+        username: "demo_admin",
+        name: "Admin Demo",
+        passwordHash: bcrypt.hashSync("demo123", 10),
+        role: "admin",
+        businessUnit: BU.GROOMING,
+        daycareId: DEMO_ID,
+      },
+    });
+  }
+}
+
 async function main() {
-  const existing = await prisma.user.count();
+  await ensureDaycares();
+  await ensureSuperadmin();
+
+  const existing = await prisma.user.count({ where: { daycareId: PETHIJOS_ID } });
   if (existing > 0) {
     console.log("DB already seeded, skipping.");
     return;
@@ -88,62 +216,62 @@ async function main() {
   }
 
   const users = await prisma.user.createMany({
-    data: [
+    data: tenant([
       { username: "admin_global", passwordHash: hash("admin123"), name: "Admin Global", businessUnit: "GLOBAL", role: "admin" },
-      { username: "kinderdog_admin", passwordHash: hash("kinderdog123"), name: "Admin Kinderdog", businessUnit: BU.KINDERDOG, role: "kinderdog" },
-      { username: "pethijos_admin", passwordHash: hash("pethijos123"), name: "Admin Pethijos", businessUnit: BU.PETHIJOS, role: "pethijos" },
-    ],
+      { username: "kinderdog_admin", passwordHash: hash("kinderdog123"), name: "Admin Kinderdog", businessUnit: BU.DAYCARE, role: "daycare" },
+      { username: "pethijos_admin", passwordHash: hash("pethijos123"), name: "Admin Pethijos", businessUnit: BU.GROOMING, role: "grooming" },
+    ]),
   });
 
   const buSettings = await prisma.businessUnitSetting.createMany({
-    data: [
-      { businessUnit: BU.KINDERDOG, timezone: "America/Guayaquil" },
-      { businessUnit: BU.PETHIJOS, timezone: "America/Bogota" },
-    ],
+    data: tenant([
+      { businessUnit: BU.DAYCARE, timezone: "America/Guayaquil" },
+      { businessUnit: BU.GROOMING, timezone: "America/Bogota" },
+    ]),
   });
 
   const roomData = [
-    { name: "Recepción KD", businessUnit: BU.KINDERDOG, capacity: 2, type: "reception" },
-    { name: "Patio Principal KD", businessUnit: BU.KINDERDOG, capacity: 24, type: "daycare" },
-    { name: "Zona Cachorros KD", businessUnit: BU.KINDERDOG, capacity: 10, type: "daycare" },
-    { name: "Sala Grooming KD", businessUnit: BU.KINDERDOG, capacity: 3, type: "grooming" },
-    { name: "Transporte KD", businessUnit: BU.KINDERDOG, capacity: 2, type: "transport" },
-    { name: "Recepción PH", businessUnit: BU.PETHIJOS, capacity: 2, type: "reception" },
-    { name: "Guardería PH", businessUnit: BU.PETHIJOS, capacity: 16, type: "daycare" },
-    { name: "Sala Peluquería Canina PH", businessUnit: BU.PETHIJOS, capacity: 4, type: "grooming" },
-    { name: "Sala Peluquería Felina PH", businessUnit: BU.PETHIJOS, capacity: 2, type: "grooming" },
+    { name: "Recepción Guardería", businessUnit: BU.DAYCARE, capacity: 2, type: "reception" },
+    { name: "Patio Principal Guardería", businessUnit: BU.DAYCARE, capacity: 24, type: "daycare" },
+    { name: "Zona Cachorros Guardería", businessUnit: BU.DAYCARE, capacity: 10, type: "daycare" },
+    { name: "Sala Grooming Guardería", businessUnit: BU.DAYCARE, capacity: 3, type: "grooming" },
+    { name: "Transporte Guardería", businessUnit: BU.DAYCARE, capacity: 2, type: "transport" },
+    { name: "Recepción Peluquería", businessUnit: BU.GROOMING, capacity: 2, type: "reception" },
+    { name: "Estancia Peluquería", businessUnit: BU.GROOMING, capacity: 16, type: "daycare" },
+    { name: "Sala Peluquería Canina", businessUnit: BU.GROOMING, capacity: 4, type: "grooming" },
+    { name: "Sala Peluquería Felina", businessUnit: BU.GROOMING, capacity: 2, type: "grooming" },
   ];
-  await prisma.room.createMany({ data: roomData });
-  const rooms = await prisma.room.findMany();
+  await prisma.room.createMany({ data: tenant(roomData) });
+  const rooms = await prisma.room.findMany({ where: { daycareId: PETHIJOS_ID } });
   const getRoom = (businessUnit: string, type: string) =>
     rooms.find((r) => r.businessUnit === businessUnit && r.type === type)!;
 
   const providers = await prisma.provider.createMany({
-    data: [
+    data: tenant([
       { name: "NutriPet Andina", product: "Alimentos", city: "Quito", province: "Pichincha", phone: "022345600", isActive: true },
       { name: "VetSupply Norte", product: "Medicinas", city: "Quito", province: "Pichincha", isActive: true },
       { name: "LimpioMascotas", product: "Higiene", city: "Guayaquil", province: "Guayas", isActive: true },
       { name: "TransInsumos PH", product: "Transporte", city: "Bogotá", province: "Cundinamarca", isActive: false },
-    ],
+    ]),
   });
 
   const veterinarians = await prisma.veterinarian.createMany({
-    data: [
+    data: tenant([
       { name: "Dra. Verónica Mena", phone: "0995550001", clinic: "Clínica Animal Norte", isActive: true },
       { name: "Dr. Pablo Cedeño", phone: "0995550002", clinic: "VetCenter Sur", isActive: true },
       { name: "Dra. Lina Forero", phone: "3001112211", clinic: "Pets Care PH", isActive: false },
-    ],
+    ]),
   });
 
   const clients = await prisma.client.createManyAndReturn({
-    data: [
-      { firstName: "María", lastName: "González", phone: "0991234567", email: "maria.gonzalez@email.com", city: "Quito", province: "Pichincha", firstServiceDate: daysFromNow(-30), notes: "Cliente frecuente KD" },
+    data: tenant([
+      { firstName: "María", lastName: "González", phone: "0991234567", email: "maria.gonzalez@email.com", city: "Quito", province: "Pichincha", firstServiceDate: daysFromNow(-30), notes: "Cliente frecuente guardería" },
       { firstName: "Juan", lastName: "Pérez", phone: "0987654321", whatsapp: "0987654321", city: "Quito", province: "Pichincha", firstServiceDate: daysFromNow(-20) },
       { firstName: "Camila", lastName: "Rosero", email: "camila.rosero@email.com", address: "La Carolina", city: "Quito", firstServiceDate: daysFromNow(-10) },
       { firstName: "Santiago", lastName: "Mejía", phone: "3001230001", email: "santiago.mejia@email.com", city: "Bogotá", province: "Cundinamarca", firstServiceDate: daysFromNow(-18) },
       { firstName: "Valentina", lastName: "Ruiz", phone: "3001230002", address: "Usaquén", city: "Bogotá", firstServiceDate: daysFromNow(-8) },
       { firstName: "Andrés", lastName: "Salas", email: "andres.salas@email.com", city: "Bogotá", province: "Cundinamarca", firstServiceDate: daysFromNow(-5) },
-    ],
+    ]),
   });
 
   const c = {
@@ -156,7 +284,7 @@ async function main() {
   };
 
   const pets = await prisma.pet.createManyAndReturn({
-    data: [
+    data: tenant([
       { clientId: c.maria.id, name: "Max", species: "dog", breed: "Labrador", sex: "M", color: "Negro", weight: 25, isNeutered: true, photoUrl: photoByPetName.get("max") },
       { clientId: c.maria.id, name: "Nina", species: "dog", breed: "Beagle", sex: "F", color: "Tricolor", weight: 12, isNeutered: false, photoUrl: photoByPetName.get("nina") },
       { clientId: c.juan.id, name: "Buddy", species: "dog", breed: "Golden Retriever", sex: "M", color: "Dorado", weight: 28.5, isNeutered: true, photoUrl: photoByPetName.get("buddy") },
@@ -165,7 +293,7 @@ async function main() {
       { clientId: c.santiago.id, name: "Mora", species: "cat", breed: "Siamés", sex: "F", color: "Crema", weight: 3.8, isNeutered: true, photoUrl: photoByPetName.get("mora") },
       { clientId: c.valentina.id, name: "Coco", species: "dog", breed: "Poodle", sex: "M", color: "Blanco", weight: 7.4, isNeutered: false, photoUrl: photoByPetName.get("coco") },
       { clientId: c.andres.id, name: "Kiara", species: "dog", breed: "Pastor Alemán", sex: "F", color: "Café", weight: 24, isNeutered: true, photoUrl: photoByPetName.get("kiara") },
-    ],
+    ]),
   });
 
   const p = Object.fromEntries(pets.map((pet) => [pet.name.toLowerCase(), pet])) as Record<string, (typeof pets)[number]>;
@@ -210,6 +338,7 @@ async function main() {
 
     const reservation = await prisma.reservation.create({
       data: {
+        daycareId: PETHIJOS_ID,
         businessUnit: data.businessUnit,
         clientId: data.clientId,
         roomId: data.roomId,
@@ -238,16 +367,16 @@ async function main() {
     return reservation;
   };
 
-  const kdDaycare = getRoom(BU.KINDERDOG, "daycare");
-  const kdGroom = getRoom(BU.KINDERDOG, "grooming");
-  const kdTransport = getRoom(BU.KINDERDOG, "transport");
-  const phDaycare = getRoom(BU.PETHIJOS, "daycare");
-  const phGroom = getRoom(BU.PETHIJOS, "grooming");
+  const kdDaycare = getRoom(BU.DAYCARE, "daycare");
+  const kdGroom = getRoom(BU.DAYCARE, "grooming");
+  const kdTransport = getRoom(BU.DAYCARE, "transport");
+  const phDaycare = getRoom(BU.GROOMING, "daycare");
+  const phGroom = getRoom(BU.GROOMING, "grooming");
 
   const recurringPlans = await prisma.recurringPlan.createManyAndReturn({
-    data: [
+    data: tenant([
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         clientId: c.maria.id,
         startDate: daysFromNow(-14),
         endDate: daysFromNow(45),
@@ -261,7 +390,7 @@ async function main() {
         isActive: true,
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         clientId: c.santiago.id,
         startDate: daysFromNow(-7),
         endDate: daysFromNow(30),
@@ -275,7 +404,7 @@ async function main() {
         isActive: true,
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         clientId: c.valentina.id,
         startDate: daysFromNow(-40),
         endDate: daysFromNow(-3),
@@ -288,24 +417,24 @@ async function main() {
         notes: "Plan inactivo histórico",
         isActive: false,
       },
-    ],
+    ]),
   });
 
   const rpKd = recurringPlans[0];
   const rpPh = recurringPlans[1];
 
   const reservations = await Promise.all([
-    createReservation({ businessUnit: BU.KINDERDOG, clientId: c.maria.id, petIds: [p.max.id, p.nina.id], service: SERVICES.DAYCARE, status: RES_STATUS.CONFIRMED, dayOffset: 1, inHour: 8, outHour: 18, roomId: kdDaycare.id, basePrice: 40, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Guardería doble - María", recurringPlanId: rpKd.id }),
-    createReservation({ businessUnit: BU.KINDERDOG, clientId: c.juan.id, petIds: [p.buddy.id], service: SERVICES.DAYCARE, status: RES_STATUS.PENDING, dayOffset: 2, inHour: 9, outHour: 17, roomId: kdDaycare.id, basePrice: 25, vatPercent: 15, paymentMethod: "TRANSFERENCIA", concept: "Guardería - Buddy" }),
+    createReservation({ businessUnit: BU.DAYCARE, clientId: c.maria.id, petIds: [p.max.id, p.nina.id], service: SERVICES.DAYCARE, status: RES_STATUS.CONFIRMED, dayOffset: 1, inHour: 8, outHour: 18, roomId: kdDaycare.id, basePrice: 40, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Guardería doble - María", recurringPlanId: rpKd.id }),
+    createReservation({ businessUnit: BU.DAYCARE, clientId: c.juan.id, petIds: [p.buddy.id], service: SERVICES.DAYCARE, status: RES_STATUS.PENDING, dayOffset: 2, inHour: 9, outHour: 17, roomId: kdDaycare.id, basePrice: 25, vatPercent: 15, paymentMethod: "TRANSFERENCIA", concept: "Guardería - Buddy" }),
     // Peluquería felina cancelada (Luna es gata)
-    createReservation({ businessUnit: BU.KINDERDOG, clientId: c.camila.id, petIds: [p.luna.id], service: SERVICES.GROOMING_FELINE, status: RES_STATUS.CANCELED, dayOffset: -1, inHour: 11, outHour: 13, roomId: kdGroom.id, basePrice: 18, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Peluquería felina - Luna", notes: "Cancelada por cliente" }),
-    createReservation({ businessUnit: BU.KINDERDOG, clientId: c.juan.id, petIds: [p.buddy.id], service: SERVICES.TRANSPORT, status: RES_STATUS.ACTIVE, dayOffset: 0, inHour: 7, outHour: 10, roomId: kdTransport.id, basePrice: 15, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Transporte ida - Buddy", needsTransport: true, transportType: "pickup" }),
-    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.santiago.id, petIds: [p.rocky.id], service: SERVICES.DAYCARE, status: RES_STATUS.CONFIRMED, dayOffset: 3, inHour: 8, outHour: 16, roomId: phDaycare.id, basePrice: 30, vatPercent: 15, paymentMethod: "TARJETA", concept: "Guardería - Rocky", recurringPlanId: rpPh.id }),
+    createReservation({ businessUnit: BU.DAYCARE, clientId: c.camila.id, petIds: [p.luna.id], service: SERVICES.GROOMING_FELINE, status: RES_STATUS.CANCELED, dayOffset: -1, inHour: 11, outHour: 13, roomId: kdGroom.id, basePrice: 18, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Peluquería felina - Luna", notes: "Cancelada por cliente" }),
+    createReservation({ businessUnit: BU.DAYCARE, clientId: c.juan.id, petIds: [p.buddy.id], service: SERVICES.TRANSPORT, status: RES_STATUS.ACTIVE, dayOffset: 0, inHour: 7, outHour: 10, roomId: kdTransport.id, basePrice: 15, vatPercent: 0, paymentMethod: "EFECTIVO", concept: "Transporte ida - Buddy", needsTransport: true, transportType: "pickup" }),
+    createReservation({ businessUnit: BU.GROOMING, clientId: c.santiago.id, petIds: [p.rocky.id], service: SERVICES.DAYCARE, status: RES_STATUS.CONFIRMED, dayOffset: 3, inHour: 8, outHour: 16, roomId: phDaycare.id, basePrice: 30, vatPercent: 15, paymentMethod: "TARJETA", concept: "Guardería - Rocky", recurringPlanId: rpPh.id }),
     // Peluquería canina en proceso (Coco es perro) – status grooming para poblar el Kanban
-    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.valentina.id, petIds: [p.coco.id], service: SERVICES.GROOMING_CANINE, status: "EN_PROCESO", dayOffset: 0, inHour: 10, outHour: 12, roomId: phGroom.id, basePrice: 22, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Baño y corte - Coco" }),
-    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.andres.id, petIds: [p.kiara.id], service: SERVICES.OTHER, status: RES_STATUS.PENDING, dayOffset: -2, inHour: 9, outHour: 11, roomId: phDaycare.id, basePrice: 12, vatPercent: 0, paymentMethod: "TRANSFERENCIA", concept: "Sesión evaluación - Kiara" }),
+    createReservation({ businessUnit: BU.GROOMING, clientId: c.valentina.id, petIds: [p.coco.id], service: SERVICES.GROOMING_CANINE, status: "EN_PROCESO", dayOffset: 0, inHour: 10, outHour: 12, roomId: phGroom.id, basePrice: 22, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Baño y corte - Coco" }),
+    createReservation({ businessUnit: BU.GROOMING, clientId: c.andres.id, petIds: [p.kiara.id], service: SERVICES.OTHER, status: RES_STATUS.PENDING, dayOffset: -2, inHour: 9, outHour: 11, roomId: phDaycare.id, basePrice: 12, vatPercent: 0, paymentMethod: "TRANSFERENCIA", concept: "Sesión evaluación - Kiara" }),
     // Peluquería felina cancelada (Mora es gata)
-    createReservation({ businessUnit: BU.PETHIJOS, clientId: c.santiago.id, petIds: [p.mora.id], service: SERVICES.GROOMING_FELINE, status: RES_STATUS.CANCELED, dayOffset: 4, inHour: 13, outHour: 15, roomId: phGroom.id, basePrice: 19, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Peluquería felina - Mora" }),
+    createReservation({ businessUnit: BU.GROOMING, clientId: c.santiago.id, petIds: [p.mora.id], service: SERVICES.GROOMING_FELINE, status: RES_STATUS.CANCELED, dayOffset: 4, inHour: 13, outHour: 15, roomId: phGroom.id, basePrice: 19, vatPercent: 15, paymentMethod: "EFECTIVO", concept: "Peluquería felina - Mora" }),
   ]);
 
   const [kdFutureMulti, , kdCanceledPast, kdActiveToday, phFuture, phActiveToday, phPastPending] = reservations;
@@ -314,9 +443,9 @@ async function main() {
   const adminPh = await prisma.user.findUniqueOrThrow({ where: { username: "pethijos_admin" } });
 
   await prisma.checkInOut.createMany({
-    data: [
+    data: tenant([
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         petId: p.buddy.id,
         clientId: c.juan.id,
         roomId: kdTransport.id,
@@ -327,7 +456,7 @@ async function main() {
         notes: "Recogido en domicilio",
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         petId: p.coco.id,
         clientId: c.valentina.id,
         roomId: phGroom.id,
@@ -337,7 +466,7 @@ async function main() {
         performedByUserId: adminPh.id,
       },
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         petId: p.luna.id,
         clientId: c.camila.id,
         roomId: kdGroom.id,
@@ -348,7 +477,7 @@ async function main() {
         performedByUserId: adminKd.id,
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         petId: p.kiara.id,
         clientId: c.andres.id,
         roomId: phDaycare.id,
@@ -358,13 +487,13 @@ async function main() {
         isActive: false,
         performedByUserId: adminPh.id,
       },
-    ],
+    ]),
   });
 
   const incomes = await prisma.income.createMany({
-    data: [
+    data: tenant([
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         reservationId: kdFutureMulti.id,
         type: "RESERVA",
         concept: "Abono guardería María",
@@ -377,7 +506,7 @@ async function main() {
         date: daysFromNow(-1),
       },
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         reservationId: kdActiveToday.id,
         type: "RESERVA",
         concept: "Servicio transporte Buddy",
@@ -390,7 +519,7 @@ async function main() {
         date: daysFromNow(0),
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         reservationId: phFuture.id,
         type: "RESERVA",
         concept: "Reserva Rocky con IVA",
@@ -403,7 +532,7 @@ async function main() {
         date: daysFromNow(0),
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         type: "OTRO",
         concept: "Venta de snacks",
         amount: 8,
@@ -414,7 +543,7 @@ async function main() {
         invoiceStatus: "PENDIENTE",
         date: daysFromNow(-4),
       },
-    ],
+    ]),
   });
 
   const allProviders = await prisma.provider.findMany({ orderBy: { createdAt: "asc" } });
@@ -426,7 +555,8 @@ async function main() {
 
   const payable1 = await prisma.payable.create({
     data: {
-      businessUnit: BU.KINDERDOG,
+      daycareId: PETHIJOS_ID,
+      businessUnit: BU.DAYCARE,
       providerId: prov1?.id,
       type: "GASTO",
       category: "ALIMENTOS",
@@ -446,7 +576,8 @@ async function main() {
 
   const payable2 = await prisma.payable.create({
     data: {
-      businessUnit: BU.PETHIJOS,
+      daycareId: PETHIJOS_ID,
+      businessUnit: BU.GROOMING,
       providerId: prov2?.id,
       type: "GASTO",
       category: "SERVICIOS",
@@ -467,7 +598,8 @@ async function main() {
 
   const payable3 = await prisma.payable.create({
     data: {
-      businessUnit: BU.KINDERDOG,
+      daycareId: PETHIJOS_ID,
+      businessUnit: BU.DAYCARE,
       providerId: prov3?.id,
       type: "GASTO",
       category: "HIGIENE",
@@ -495,12 +627,12 @@ async function main() {
   });
 
   const inventoryItems = await prisma.inventoryItem.createManyAndReturn({
-    data: [
-      { businessUnit: BU.KINDERDOG, name: "Concentrado Premium", category: "alimentos", unit: "kg", minStock: 8, currentStock: 25, unitCost: 4.5 },
-      { businessUnit: BU.KINDERDOG, name: "Shampoo Canino", category: "higiene", unit: "lt", minStock: 3, currentStock: 8, unitCost: 8 },
-      { businessUnit: BU.PETHIJOS, name: "Tijeras de corte", category: "herramientas", unit: "unidad", minStock: 2, currentStock: 5, unitCost: 35 },
-      { businessUnit: BU.PETHIJOS, name: "Arena sanitaria", category: "higiene", unit: "kg", minStock: 4, currentStock: 12, unitCost: 2.5 },
-    ],
+    data: tenant([
+      { businessUnit: BU.DAYCARE, name: "Concentrado Premium", category: "alimentos", unit: "kg", minStock: 8, currentStock: 25, unitCost: 4.5 },
+      { businessUnit: BU.DAYCARE, name: "Shampoo Canino", category: "higiene", unit: "lt", minStock: 3, currentStock: 8, unitCost: 8 },
+      { businessUnit: BU.GROOMING, name: "Tijeras de corte", category: "herramientas", unit: "unidad", minStock: 2, currentStock: 5, unitCost: 35 },
+      { businessUnit: BU.GROOMING, name: "Arena sanitaria", category: "higiene", unit: "kg", minStock: 4, currentStock: 12, unitCost: 2.5 },
+    ]),
   });
 
   const itemByName = Object.fromEntries(inventoryItems.map((i) => [i.name, i])) as Record<string, (typeof inventoryItems)[number]>;
@@ -521,9 +653,9 @@ async function main() {
   await prisma.inventoryItem.update({ where: { id: itemByName["Arena sanitaria"].id }, data: { currentStock: 10 } });
 
   await prisma.alert.createMany({
-    data: [
+    data: tenant([
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         petId: p.nina.id,
         type: "SALUD",
         severity: "ALTA",
@@ -532,7 +664,7 @@ async function main() {
         isResolved: false,
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         petId: p.rocky.id,
         type: "COMPORTAMIENTO",
         severity: "MEDIA",
@@ -541,13 +673,13 @@ async function main() {
         isResolved: true,
         resolvedAt: daysFromNow(-3),
       },
-    ],
+    ]),
   });
 
   await prisma.contract.createMany({
-    data: [
+    data: tenant([
       {
-        businessUnit: BU.KINDERDOG,
+        businessUnit: BU.DAYCARE,
         clientId: c.maria.id,
         petId: p.max.id,
         name: "Contrato guardería anual Max",
@@ -556,7 +688,7 @@ async function main() {
         endDate: daysFromNow(305),
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         clientId: c.santiago.id,
         petId: p.rocky.id,
         name: "Consentimiento grooming Rocky",
@@ -564,7 +696,7 @@ async function main() {
         startDate: daysFromNow(-1),
       },
       {
-        businessUnit: BU.PETHIJOS,
+        businessUnit: BU.GROOMING,
         clientId: c.valentina.id,
         petId: p.coco.id,
         name: "Contrato transporte Coco",
@@ -572,7 +704,7 @@ async function main() {
         startDate: daysFromNow(-120),
         endDate: daysFromNow(-5),
       },
-    ],
+    ]),
   });
 
   const [

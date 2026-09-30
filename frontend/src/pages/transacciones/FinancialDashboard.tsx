@@ -110,7 +110,7 @@ export function FinancialDashboard() {
 
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -244,7 +244,7 @@ export function FinancialDashboard() {
       {occupancy && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Información de Ocupación</h2>
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="border border-gray-200 rounded-lg px-4 py-2">
               <div className="text-sm text-gray-600">Total de Salas</div>
               <div className="text-2xl font-bold text-gray-900">{occupancy.totalRooms}</div>

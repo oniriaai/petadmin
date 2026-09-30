@@ -5,6 +5,7 @@ import { fmtTime } from "../../lib/utils";
 import { PageLoader } from "../../components/ui/Spinner";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface TransportReservation {
   id: string;
@@ -72,19 +73,19 @@ export function TransportePage() {
   }, [date]);
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Transporte</h1>
-          <p className="text-gray-500 text-sm mt-1">Recogidas y entregas del día</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader
+          title="Transporte"
+          subtitle="Recogidas y entregas del día"
+          actions={
+            <div className="flex items-center gap-2">
           <button onClick={() => setDate(d => subDays(d, 1))} className="btn-secondary p-2"><ChevronLeft size={16} /></button>
           <span className="font-medium text-gray-800 min-w-44 text-center">{format(date, "EEEE d 'de' MMMM", { locale: es })}</span>
           <button onClick={() => setDate(d => addDays(d, 1))} className="btn-secondary p-2"><ChevronRight size={16} /></button>
           <button onClick={() => setDate(new Date())} className="btn-secondary text-xs">Hoy</button>
-        </div>
-      </div>
+            </div>
+          }
+        />
 
       {loading ? <PageLoader /> : (
         <div className="grid lg:grid-cols-2 gap-6">

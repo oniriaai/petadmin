@@ -8,8 +8,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// A customer daycare business. Owns every operational record below.
+model Daycare {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  legalName String?
+  timezone  String   @default("America/Guayaquil")
+  /// Comma-separated business-unit slots this daycare bought, e.g. "DAYCARE,GROOMING".
+  units     String   @default("DAYCARE,GROOMING")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  alerts         Alert[]
+  checkInOuts    CheckInOut[]
+  clients        Client[]
+  contracts      Contract[]
+  incomes        Income[]
+  inventoryItems InventoryItem[]
+  modules        DaycareModule[]
+  payables       Payable[]
+  pets           Pet[]
+  providers      Provider[]
+  recurringPlans RecurringPlan[]
+  reservations   Reservation[]
+  rooms          Room[]
+  unitSettings   BusinessUnitSetting[]
+  users          User[]
+  veterinarians  Veterinarian[]
+
+  @@map("daycares")
+}
+
+/// Per-daycare entitlement for one PRODUCT module id (see platform/product-modules.ts),
+/// not a backend module id. Absence of a row means "not enabled".
+model DaycareModule {
+  id        String   @id @default(cuid())
+  daycareId String
+  moduleId  String
+  isEnabled Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  daycare   Daycare  @relation(fields: [daycareId], references: [id], onDelete: Cascade)
+
+  @@unique([daycareId, moduleId])
+  @@index([daycareId])
+  @@map("daycare_modules")
+}
+
+/// Append-only record of vendor-console actions.
+model PlatformAuditLog {
+  id            String   @id @default(cuid())
+  actorUserId   String
+  actorUsername String
+  action        String
+  daycareId     String?
+  targetType    String?
+  targetId      String?
+  detail        String?
+  createdAt     DateTime @default(now())
+
+  @@index([daycareId, createdAt])
+  @@index([createdAt])
+  @@map("platform_audit_logs")
+}
+
 model User {
   id           String       @id @default(cuid())
+  daycareId    String?
   username     String       @unique
   passwordHash String
   name         String
@@ -19,11 +85,15 @@ model User {
   createdAt    DateTime     @default(now())
   checkInOuts  CheckInOut[]
 
+  daycare Daycare? @relation(fields: [daycareId], references: [id], onDelete: Restrict)
+
+  @@index([daycareId])
   @@map("users")
 }
 
 model Client {
   id               String          @id @default(cuid())
+  daycareId        String
   firstName        String
   lastName         String
   idNumber         String?
@@ -46,11 +116,15 @@ model Client {
   recurringPlans   RecurringPlan[]
   reservations     Reservation[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("clients")
 }
 
 model Pet {
   id              String           @id @default(cuid())
+  daycareId       String
   clientId        String
   name            String
   species         String           @default("dog")
@@ -78,6 +152,9 @@ model Pet {
   client          Client           @relation(fields: [clientId], references: [id])
   reservationPets ReservationPet[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("pets")
 }
 
@@ -107,6 +184,7 @@ model PetDocument {
 
 model Provider {
   id        String    @id @default(cuid())
+  daycareId String
   bannerId  String?
   name      String
   idNumber  String?
@@ -121,11 +199,15 @@ model Provider {
   updatedAt DateTime  @updatedAt
   payables  Payable[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("providers")
 }
 
 model Veterinarian {
   id        String   @id @default(cuid())
+  daycareId String
   name      String
   phone     String?
   email     String?
@@ -133,11 +215,15 @@ model Veterinarian {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("veterinarians")
 }
 
 model Room {
   id             String          @id @default(cuid())
+  daycareId      String
   name           String
   businessUnit   String
   capacity       Int             @default(1)
@@ -147,11 +233,15 @@ model Room {
   recurringPlans RecurringPlan[]
   reservations   Reservation[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("rooms")
 }
 
 model RecurringPlan {
   id           String        @id @default(cuid())
+  daycareId    String
   businessUnit String
   clientId     String
   startDate    DateTime
@@ -169,21 +259,32 @@ model RecurringPlan {
   room         Room?         @relation(fields: [roomId], references: [id])
   reservations Reservation[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("recurring_plans")
 }
 
 model BusinessUnitSetting {
   id           String   @id @default(cuid())
-  businessUnit String   @unique
+  daycareId    String
+  businessUnit String
   timezone     String
+  /// Default VAT applied to new reservations and appointments in this unit.
+  vatPercent   Float    @default(15)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@unique([daycareId, businessUnit])
+  @@index([daycareId])
   @@map("business_unit_settings")
 }
 
 model Reservation {
   id               String           @id @default(cuid())
+  daycareId        String
   businessUnit     String
   clientId         String
   roomId           String?
@@ -214,8 +315,11 @@ model Reservation {
   client           Client           @relation(fields: [clientId], references: [id])
   recurringPlan    RecurringPlan?   @relation(fields: [recurringPlanId], references: [id])
   room             Room?            @relation(fields: [roomId], references: [id])
+  daycare          Daycare          @relation(fields: [daycareId], references: [id])
 
   @@unique([recurringPlanId, checkIn])
+  @@index([daycareId])
+  @@index([daycareId, businessUnit])
   @@map("reservations")
 }
 
@@ -232,6 +336,7 @@ model ReservationPet {
 
 model CheckInOut {
   id                String       @id @default(cuid())
+  daycareId         String
   businessUnit      String
   petId             String
   clientId          String
@@ -249,18 +354,21 @@ model CheckInOut {
   pet               Pet          @relation(fields: [petId], references: [id])
   reservation       Reservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   room              Room         @relation(fields: [roomId], references: [id])
+  daycare           Daycare      @relation(fields: [daycareId], references: [id])
 
   @@index([reservationId])
   @@index([petId])
   @@index([roomId])
-  @@index([businessUnit])
+  @@index([daycareId, businessUnit])
   @@index([checkInTime])
   @@index([checkOutTime])
+  @@index([daycareId])
   @@map("check_in_outs")
 }
 
 model Income {
   id            String       @id @default(cuid())
+  daycareId     String
   businessUnit  String
   reservationId String?
   type          String       @default("RESERVA")
@@ -278,11 +386,16 @@ model Income {
   isActive      Boolean      @default(true)
   reservation   Reservation? @relation(fields: [reservationId], references: [id])
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
+  @@index([daycareId, businessUnit])
   @@map("incomes")
 }
 
 model Payable {
   id            String    @id @default(cuid())
+  daycareId     String
   businessUnit  String
   providerId    String?
   type          String
@@ -306,6 +419,9 @@ model Payable {
   provider      Provider? @relation(fields: [providerId], references: [id])
   payments      Payment[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("payables")
 }
 
@@ -326,6 +442,7 @@ model Payment {
 
 model InventoryItem {
   id           String              @id @default(cuid())
+  daycareId    String
   businessUnit String
   name         String
   category     String
@@ -337,6 +454,9 @@ model InventoryItem {
   createdAt    DateTime            @default(now())
   movements    InventoryMovement[]
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("inventory_items")
 }
 
@@ -356,6 +476,7 @@ model InventoryMovement {
 
 model Alert {
   id           String    @id @default(cuid())
+  daycareId    String
   businessUnit String
   petId        String?
   type         String
@@ -367,11 +488,15 @@ model Alert {
   resolvedAt   DateTime?
   pet          Pet?      @relation(fields: [petId], references: [id])
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("alerts")
 }
 
 model Contract {
   id           String    @id @default(cuid())
+  daycareId    String
   businessUnit String
   clientId     String
   petId        String?
@@ -384,5 +509,8 @@ model Contract {
   client       Client    @relation(fields: [clientId], references: [id])
   pet          Pet?      @relation(fields: [petId], references: [id])
 
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+
+  @@index([daycareId])
   @@map("contracts")
 }

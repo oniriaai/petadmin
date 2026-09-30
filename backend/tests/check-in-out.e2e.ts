@@ -59,7 +59,7 @@ function createClient() {
 async function login(): Promise<void> {
   const client = axios.create({ baseURL: BASE_URL });
   const response = await client.post("/auth/login", {
-    businessUnit: "KINDERDOG",
+    businessUnit: "DAYCARE",
     username: "kinderdog_admin",
     password: "kinderdog123",
   });

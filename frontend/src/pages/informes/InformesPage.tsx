@@ -4,6 +4,7 @@ import { Download, TrendingUp, TrendingDown } from "lucide-react";
 import { api, downloadFile } from "../../lib/api";
 import { fmtCurrency } from "../../lib/utils";
 import { PageLoader } from "../../components/ui/Spinner";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface KPIs { ingresosMes: number; ingresosMesAnterior: number; gastosMes: number; utilidad: number; margenGanancia: number; crecimiento: number; reservacionesMes: number; ticketPromedio: number; ingresoPorReserva: number; totalClientes: number }
 interface IncomeReport { total: number; count: number; vatTotal: number; byService: Array<{ type: string; _sum: { total: number }; _count: number }>; byMethod: Array<{ paymentMethod: string; _sum: { total: number } }>; monthly: Array<{ month: string; total: number }> }
@@ -53,20 +54,19 @@ export function InformesPage() {
     finally { setDownloading(false); }
   }
 
-  if (loading) return <div className="p-6"><PageLoader /></div>;
+  if (loading) return <div className="p-4 sm:p-6"><PageLoader /></div>;
 
   const monthlyData = income?.monthly.map(m => ({ name: m.month.slice(5), total: Number(m.total) })) ?? [];
   const pieData = income?.byService.map(s => ({ name: SVC_LABEL[s.type] ?? s.type, value: Number(s._sum.total) })) ?? [];
   const categoryData = expense?.byCategory.map(c => ({ name: c.category, value: Number(c._sum.total) })).sort((a, b) => b.value - a.value) ?? [];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Informes y Gráficos</h1>
-          <p className="text-gray-500 text-sm mt-1">Análisis financiero y KPIs</p>
-        </div>
-        <div className="flex gap-2">
+    <div className="p-4 sm:p-6 space-y-6">
+      <PageHeader
+          title="Informes y Gráficos"
+          subtitle="Análisis financiero y KPIs"
+          actions={
+            <div className="flex gap-2">
           <button onClick={() => exportFile("/export/incomes", "ingresos.xlsx")} disabled={downloading} className="btn-secondary btn-sm">
             <Download size={14} /> Ingresos Excel
           </button>
@@ -76,8 +76,9 @@ export function InformesPage() {
           <button onClick={() => exportFile("/export/clients", "clientes.xlsx")} disabled={downloading} className="btn-secondary btn-sm">
             <Download size={14} /> Clientes Excel
           </button>
-        </div>
-      </div>
+            </div>
+          }
+        />
 
       {kpis && (
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">

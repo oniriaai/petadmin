@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../../middleware/auth";
+import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
+import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
+import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
 
 export const reservationsRouter = Router();
-reservationsRouter.use(requireAuth);
 
 const reservationSchema = z.object({
   clientId: z.string(),
@@ -30,7 +31,7 @@ reservationsRouter.get("/", async (req, res) => {
   try {
   const { status, date, search } = req.query as Record<string, string>;
 
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (status) where.status = status;
   if (date) {
     const d = new Date(date);
@@ -75,7 +76,7 @@ reservationsRouter.get("/:id", async (req, res) => {
     },
   });
   if (!r) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
-  assertBusinessUnitAccess(req, r.businessUnit);
+  assertRecordAccess(req, r);
   res.json(r);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
@@ -89,7 +90,11 @@ reservationsRouter.post("/", async (req, res) => {
   const parsed = reservationSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() }); return; }
   const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
-  const { petIds, checkIn, checkOut, roomId, clientId, vatPercent = 15, basePrice = 0, discountAmount = 0, advanceAmount = 0, ...rest } = parsed.data;
+  const { petIds, checkIn, checkOut, roomId, clientId, basePrice = 0, discountAmount = 0, advanceAmount = 0, ...rest } = parsed.data;
+  // The VAT default is the unit's configured rate, not a literal. It was hard-coded as 15 here,
+  // in peluqueria.router.ts and in appointments.service.ts, while the settings screen pretended
+  // to edit it.
+  const vatPercent = parsed.data.vatPercent ?? (await getUnitVatPercent(getRequiredDaycareId(req), bu));
 
   // Validate all pets belong to the client
   const pets = await prisma.pet.findMany({
@@ -145,12 +150,14 @@ reservationsRouter.post("/", async (req, res) => {
   const pendingAmount = totalAmount - advanceAmount;
 
   try {
+    const daycareId = getRequiredDaycareId(req);
     const reservation = await prisma.$transaction(async (tx) => {
       // Create reservation
       const res = await tx.reservation.create({
         data: {
           ...rest,
           businessUnit: bu,
+          daycareId,
           clientId,
           roomId: roomId || null,
           checkIn: checkIn ? new Date(checkIn) : null,
@@ -177,6 +184,7 @@ reservationsRouter.post("/", async (req, res) => {
               roomId: roomId || '',
               reservationId: res.id,
               businessUnit: bu,
+              daycareId,
               isActive: true,
             },
           })
@@ -205,7 +213,7 @@ reservationsRouter.put("/:id", async (req, res) => {
 
   const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, include: { pets: true } });
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
 
   // Validate pets belong to client if changing
   if (petIds && clientId) {
@@ -312,7 +320,7 @@ reservationsRouter.post("/:id/checkin", async (req, res) => {
     include: { pets: { include: { pet: true } }, room: true },
   });
   if (!reservation) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
-  assertBusinessUnitAccess(req, reservation.businessUnit);
+  assertRecordAccess(req, reservation);
 
   const checkInTime = req.body.time ? new Date(req.body.time) : new Date();
 
@@ -359,9 +367,9 @@ reservationsRouter.post("/:id/checkout", async (req, res) => {
   const { time, createIncome, paymentMethod } = req.body;
   const checkOutTime = time ? new Date(time) : new Date();
 
-  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
 
   const r = await prisma.reservation.update({
     where: { id: req.params.id },
@@ -379,6 +387,7 @@ reservationsRouter.post("/:id/checkout", async (req, res) => {
     await prisma.income.create({
       data: {
         businessUnit: r.businessUnit,
+        daycareId: r.daycareId,
         reservationId: r.id,
         type: "RESERVA",
         concept: `Reserva ${r.service} - ${r.client.firstName} ${r.client.lastName}`,
@@ -402,9 +411,9 @@ reservationsRouter.post("/:id/checkout", async (req, res) => {
 reservationsRouter.patch("/:id/status", async (req, res) => {
   try {
   const { status } = req.body;
-  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   const r = await prisma.reservation.update({ where: { id: req.params.id }, data: { status } });
   res.json(r);
   } catch (error) {
@@ -416,9 +425,9 @@ reservationsRouter.patch("/:id/status", async (req, res) => {
 
 reservationsRouter.delete("/:id", async (req, res) => {
   try {
-  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.reservation.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   await prisma.reservation.update({ where: { id: req.params.id }, data: { status: "CANCELADA" } });
   res.json({ ok: true });
   } catch (error) {

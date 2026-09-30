@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { CalendarDays, Users, DollarSign, AlertTriangle, ArrowRight, Clock, PawPrint, Scissors, Car, CheckCircle2, CircleAlert, CalendarPlus, UserPlus, BarChart3, BriefcaseBusiness } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
-import { fmtCurrency, fmt, fmtTime, STATUSES } from "../lib/utils";
+import { fmtCurrency, fmt, fmtTime, fmtDayLabel, STATUSES } from "../lib/utils";
 import { Badge } from "../components/ui/Badge";
 import { PageLoader } from "../components/ui/Spinner";
+import { PageHeader } from "../components/layout/PageHeader";
 
 interface Summary {
   reservasHoy: number;
@@ -56,23 +57,18 @@ export function Dashboard() {
   if (!summary) return <p className="text-red-600 p-6">Error cargando dashboard</p>;
 
   const dashboardLabel = user?.role === "admin"
-    ? activeBusinessUnit === "KINDERDOG"
-      ? "Kinderdog"
-      : activeBusinessUnit === "PETHIJOS"
-        ? "Pethijos"
+    ? activeBusinessUnit === "DAYCARE"
+      ? "Guardería"
+      : activeBusinessUnit === "GROOMING"
+        ? "Peluquería"
         : "Consolidado"
-    : user?.businessUnit === "KINDERDOG"
-      ? "Kinderdog"
-      : "Pethijos";
+    : user?.businessUnit === "DAYCARE"
+      ? "Guardería"
+      : "Peluquería";
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="page-title">
-          {dashboardLabel} — Dashboard
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">{fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}</p>
-      </div>
+    <div className="p-4 sm:p-6 space-y-6">
+      <PageHeader title={<>{dashboardLabel} — Dashboard</>} subtitle={<>{fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}</>} />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard label="Reservas hoy" value={summary.reservasHoy} sub={`${summary.activas} activas`} icon={CalendarDays} color="bg-blue-500" />
@@ -84,13 +80,13 @@ export function Dashboard() {
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800">Próximas reservas de hoy</h2>
+            <h2 className="font-semibold text-gray-800">Próximas reservas</h2>
             <Link to="/operaciones" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
               Ver todas <ArrowRight size={14} />
             </Link>
           </div>
           {summary.proximasReservas.length === 0 ? (
-            <p className="text-center text-gray-400 py-10">Sin reservas programadas para hoy</p>
+            <p className="text-center text-gray-400 py-10">Sin reservas programadas</p>
           ) : (
             <div className="divide-y divide-gray-100">
               {summary.proximasReservas.map(r => {
@@ -105,7 +101,10 @@ export function Dashboard() {
                       <p className="text-xs text-gray-500 truncate">{r.mascotas} · {r.sala ?? r.servicio}</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm font-medium text-gray-700">{fmtTime(r.checkIn)}</p>
+                      <p className="text-sm font-medium text-gray-700">
+                        <span className="text-gray-500 font-normal">{fmtDayLabel(r.checkIn)}</span>{" "}
+                        {fmtTime(r.checkIn)}
+                      </p>
                       <Badge color={st.color}>{st.label}</Badge>
                     </div>
                   </div>

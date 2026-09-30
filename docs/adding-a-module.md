@@ -1,8 +1,13 @@
 # Adding a Module
 
 This project uses a modular monolith. A module owns its business workflow while
-reusing public Core contracts for authentication, business-unit scope, clients,
-pets, storage, and other shared capabilities.
+reusing public Core contracts for authentication, tenancy, business-unit scope,
+clients, pets, storage, and other shared capabilities.
+
+The system is multi-tenant: every operational row belongs to a `Daycare`, and every
+backend module is governed by a **product module** that a daycare either bought or
+did not. Both are enforced at the registry, so wiring a module in correctly is what
+makes it scoped and gated — there is nothing to remember per route.
 
 ## Backend checklist
 
@@ -13,16 +18,45 @@ pets, storage, and other shared capabilities.
 4. Add one `BackendModule` entry to
    `backend/src/platform/module-registry.ts`, including its path, description,
    roles, and business units.
-5. Do not import another module's internal files. Use Core contracts or a
-   documented public module interface.
-6. Add a representative workflow test and an authorization/isolation test.
-7. Run:
+5. **Claim the module in the product catalog.** Add its id to a `ProductModule`'s
+   `backendModuleIds` in `backend/src/platform/product-modules.ts` — either an
+   existing sellable module, or `nucleo` if it must be available to every daycare
+   regardless of what they bought. This is not optional: `validateBackendModules()`
+   refuses to boot when a mounted module belongs to no product module, precisely so
+   a new module cannot ship ungated.
 
-   ```bash
-   cd backend
-   npm run build
-   npm run test:architecture
-   ```
+   Decide by what the module *is*, not by which page uses it. Rooms, attendance and
+   recurring plans live in `reservas` rather than `guarderia` because grooming
+   reservations occupy rooms and record check-in/out too; putting them under
+   `guarderia` left a grooming-only tenant unable to list its own rooms.
+
+   If you add a new `ProductModule`, also add its id to `PRODUCT_MODULE_IDS` in
+   `frontend/src/modules/shared/contracts.ts` — unless it is `platformOnly`, which no
+   tenant can hold and which therefore never appears in a session's `enabledModules`.
+6. **Do not add `requireAuth` to the router.** The registry mounts
+   `requireAuth → requireModuleAccess(module) → router` for every non-public module;
+   a second copy in the router would verify the same JWT twice and imply that
+   authentication lives somewhere it no longer does.
+7. **Scope every query.** Derive the tenant from `backend/src/core/tenancy/scope.ts`
+   (`buildScopeWhere`, `buildDaycareWhere`, `getRequiredDaycareId`,
+   `assertRecordAccess`), never from the request body. Prefer
+   `findFirst({ where: { id, ...buildScopeWhere(req) } })` over `findUnique` plus a
+   check: a row from another tenant must read as **absent** (404), not forbidden.
+   A model with no `daycareId` of its own inherits tenancy through its parent —
+   use `buildChildScopeWhere(req, relation)`.
+8. Do not import another module's internal files. Use Core contracts or a
+   documented public module interface.
+9. Add a representative workflow test, an authorization test, and a **cross-tenant
+   isolation test** in `backend/tests/tenant-isolation.e2e.ts`. Inherited tenancy is
+   an invariant, not a schema constraint, so it only holds if something asserts it.
+10. Run:
+
+    ```bash
+    cd backend
+    npm run build
+    npm run test:architecture
+    npm run test:tenancy
+    ```
 
 ## Frontend checklist
 
@@ -30,13 +64,27 @@ pets, storage, and other shared capabilities.
    components, and API types close to the module.
 2. Add the module routes and navigation metadata to
    `frontend/src/modules/registry.tsx`.
-3. Consume shared domain operations through
+3. **Declare `requires` on every route and navigation item** whose page calls an API
+   outside the core. The value is the product module id owning that API, and the
+   semantics are AND — list all of them. Derive it from the endpoints the page
+   actually calls, not from the section it appears under: `/transporte` sits in the
+   Guardería group but reads `/reports/transport`, so it requires
+   `["guarderia", "informes"]`.
+
+   A route with no `requires` is claiming to be free for every daycare.
+   `module-gating.test.tsx` pins that list to an explicit array, so adding a route
+   without the field fails the suite rather than silently making it free.
+4. If the product module has **no page of its own** — its surface is a tab, a panel
+   or a single control — gate it in place with `hasModule(id)` from `useAuth()`, and
+   make sure the UI gives way if the module is switched off mid-session.
+5. Consume shared domain operations through
    `frontend/src/modules/shared/api.ts` and shared types through
    `frontend/src/modules/shared/contracts.ts`.
-4. Keep role and unit metadata in the module manifest so route protection and
+6. Keep role and unit metadata in the module manifest so route protection and
    navigation filtering use the same source.
-5. Add module registry and UI authorization tests.
-6. Run:
+7. Add module registry and UI authorization tests, including one that the navigation
+   item disappears when its product module is absent.
+8. Run:
 
    ```bash
    cd frontend
@@ -59,3 +107,11 @@ pets, storage, and other shared capabilities.
 - New endpoint paths should be registered through the backend module registry.
 - New frontend routes and navigation items should be registered through the
   frontend module registry.
+- Only the `auth` module may be `public: true`; everything else is mounted behind
+  authentication and the entitlement gate.
+- `superadmin` is the vendor role and belongs to no daycare. Never add it to a
+  module's `access.roles` — the gate lets it through before the role check — and
+  never make it assignable: `ASSIGNABLE_TENANT_ROLES` is the only allowlist, and the
+  `users_superadmin_untenanted` CHECK constraint backs it in the database.
+- Anything that writes entitlements must call `invalidate(daycareId)` from
+  `backend/src/platform/module-access.ts`, or the change waits out the 30s cache.

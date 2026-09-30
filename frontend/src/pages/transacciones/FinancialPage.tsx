@@ -9,6 +9,7 @@ import { PayModal } from "./PayModal";
 import { FinancialDashboard } from "./FinancialDashboard";
 import { Badge } from "../../components/ui/Badge";
 import { fmt, fmtCurrency, EXPENSE_CATEGORIES } from "../../lib/utils";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface IncomeEntry {
   id: string;
@@ -136,32 +137,28 @@ export function FinancialPage() {
   const pendingEgresos = filteredPayables.reduce((sum, p) => sum + p.balance, 0);
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Gestión Financiera</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {activeTab === "dashboard" ? "Resumen y analítica" :
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader
+          title="Gestión Financiera"
+          subtitle={<>{activeTab === "dashboard" ? "Resumen y analítica" :
              activeTab === "income" ? "Ingresos y recaudación" : 
-             activeTab === "egresos" ? "Gastos, compras y pagos" : "Directorio de proveedores"}
-          </p>
-        </div>
-        {activeTab !== "dashboard" && (
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                if (activeTab === "income") { setEditingIncome(null); setShowIncomeForm(true); }
-                else if (activeTab === "egresos") { setEditingPayable(null); setShowPayableForm(true); }
-                else if (activeTab === "providers") { setEditingProvider(null); setShowProviderForm(true); }
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            >
-              <Plus size={20} />
-              Nuevo {activeTab === "providers" ? "Proveedor" : activeTab === "egresos" ? "Egreso" : "Ingreso"}
-            </button>
-          </div>
-        )}
-      </div>
+             activeTab === "egresos" ? "Gastos, compras y pagos" : "Directorio de proveedores"}</>}
+          actions={
+            activeTab !== "dashboard" && (
+              <button
+                onClick={() => {
+                  if (activeTab === "income") { setEditingIncome(null); setShowIncomeForm(true); }
+                  else if (activeTab === "egresos") { setEditingPayable(null); setShowPayableForm(true); }
+                  else if (activeTab === "providers") { setEditingProvider(null); setShowProviderForm(true); }
+                }}
+                className="btn-primary"
+              >
+                <Plus size={16} />
+                Nuevo {activeTab === "providers" ? "Proveedor" : activeTab === "egresos" ? "Egreso" : "Ingreso"}
+              </button>
+            )
+          }
+        />
 
       {/* Tabs */}
       <div className="flex gap-2 border-b border-gray-200">
@@ -192,7 +189,7 @@ export function FinancialPage() {
       </div>
 
       {activeTab !== "providers" && activeTab !== "dashboard" && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {activeTab === "income" ? (
             <>
               <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -315,47 +312,49 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
         <div className="p-8 text-center text-gray-500">No hay ingresos registrados</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="table-th">Concepto</th>
-                <th className="table-th text-right">Monto Base</th>
-                <th className="table-th text-right">IVA</th>
-                <th className="table-th text-right">Total</th>
-                <th className="table-th">Pago</th>
-                <th className="table-th">Estado</th>
-                <th className="table-th">Fecha</th>
-                <th className="table-th text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {incomes.map((income: any) => (
-                <tr key={income.id} className="table-tr">
-                  <td className="table-td font-medium">{income.concept}</td>
-                  <td className="table-td text-right font-mono">{fmtCurrency(income.amount)}</td>
-                  <td className="table-td text-right font-mono text-gray-600">
-                    {fmtCurrency((income.vatPercent / 100) * income.amount)}
-                  </td>
-                  <td className="table-td text-right font-bold text-green-600">
-                    {fmtCurrency(income.total || income.amount + (income.vatPercent / 100) * income.amount)}
-                  </td>
-                  <td className="table-td text-xs uppercase">{income.paymentMethod}</td>
-                  <td className="table-td">
-                    <Badge color={income.invoiceStatus === "PAGADO" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
-                      {income.invoiceStatus}
-                    </Badge>
-                  </td>
-                  <td className="table-td text-xs">{fmt(income.date)}</td>
-                  <td className="table-td text-right">
-                    <div className="flex gap-2 justify-end">
-                      <button onClick={() => { onEdit(income); onOpenForm(); }} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition"><Edit2 size={14} /></button>
-                      <button onClick={() => onDelete(income.id, income.concept)} className="p-1.5 hover:bg-red-50 text-red-600 rounded transition"><Trash2 size={14} /></button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="table-th">Concepto</th>
+                  <th className="table-th text-right">Monto Base</th>
+                  <th className="table-th text-right">IVA</th>
+                  <th className="table-th text-right">Total</th>
+                  <th className="table-th">Pago</th>
+                  <th className="table-th">Estado</th>
+                  <th className="table-th">Fecha</th>
+                  <th className="table-th text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {incomes.map((income: any) => (
+                  <tr key={income.id} className="table-tr">
+                    <td className="table-td font-medium">{income.concept}</td>
+                    <td className="table-td text-right font-mono">{fmtCurrency(income.amount)}</td>
+                    <td className="table-td text-right font-mono text-gray-600">
+                      {fmtCurrency((income.vatPercent / 100) * income.amount)}
+                    </td>
+                    <td className="table-td text-right font-bold text-green-600">
+                      {fmtCurrency(income.total || income.amount + (income.vatPercent / 100) * income.amount)}
+                    </td>
+                    <td className="table-td text-xs uppercase">{income.paymentMethod}</td>
+                    <td className="table-td">
+                      <Badge color={income.invoiceStatus === "PAGADO" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}>
+                        {income.invoiceStatus}
+                      </Badge>
+                    </td>
+                    <td className="table-td text-xs">{fmt(income.date)}</td>
+                    <td className="table-td text-right">
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => { onEdit(income); onOpenForm(); }} className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition"><Edit2 size={14} /></button>
+                        <button onClick={() => onDelete(income.id, income.concept)} className="p-1.5 hover:bg-red-50 text-red-600 rounded transition"><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
@@ -368,44 +367,46 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
       {payables.length === 0 ? (
         <p className="text-center text-gray-400 py-12">Sin documentos registrados</p>
       ) : (
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="table-th">Descripción</th>
-              <th className="table-th">Proveedor</th>
-              <th className="table-th">Categoría</th>
-              <th className="table-th text-right">Total</th>
-              <th className="table-th text-right">Pagado</th>
-              <th className="table-th text-right">Saldo</th>
-              <th className="table-th">Estado</th>
-              <th className="table-th text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {payables.map((p: any) => (
-              <tr key={p.id} className="table-tr">
-                <td className="table-td">
-                  <p className="font-medium text-gray-900 text-sm">{p.description}</p>
-                  <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">{p.type} · {p.invoiceNumber ?? "Sin factura"}</p>
-                </td>
-                <td className="table-td text-xs font-medium text-indigo-600">{p.provider?.name ?? "—"}</td>
-                <td className="table-td text-xs capitalize">{EXPENSE_CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</td>
-                <td className="table-td text-right font-medium">{fmtCurrency(p.total)}</td>
-                <td className="table-td text-right text-green-600">{fmtCurrency(p.paid)}</td>
-                <td className="table-td text-right font-semibold text-red-600">{fmtCurrency(p.balance)}</td>
-                <td className="table-td"><Badge color={STATUS_COLOR[p.status] ?? "bg-gray-100 text-gray-700"}>{p.status}</Badge></td>
-                <td className="table-td text-right">
-                  <div className="flex gap-1 justify-end">
-                    {p.status !== "PAGADO" && (
-                      <button onClick={() => onPay(p)} className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition" title="Registrar pago"><CreditCard size={14} /></button>
-                    )}
-                    <button onClick={() => onDelete(p.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"><Trash2 size={14} /></button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="table-th">Descripción</th>
+                <th className="table-th">Proveedor</th>
+                <th className="table-th">Categoría</th>
+                <th className="table-th text-right">Total</th>
+                <th className="table-th text-right">Pagado</th>
+                <th className="table-th text-right">Saldo</th>
+                <th className="table-th">Estado</th>
+                <th className="table-th text-right">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {payables.map((p: any) => (
+                <tr key={p.id} className="table-tr">
+                  <td className="table-td">
+                    <p className="font-medium text-gray-900 text-sm">{p.description}</p>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">{p.type} · {p.invoiceNumber ?? "Sin factura"}</p>
+                  </td>
+                  <td className="table-td text-xs font-medium text-indigo-600">{p.provider?.name ?? "—"}</td>
+                  <td className="table-td text-xs capitalize">{EXPENSE_CATEGORIES.find(c => c.value === p.category)?.label ?? p.category}</td>
+                  <td className="table-td text-right font-medium">{fmtCurrency(p.total)}</td>
+                  <td className="table-td text-right text-green-600">{fmtCurrency(p.paid)}</td>
+                  <td className="table-td text-right font-semibold text-red-600">{fmtCurrency(p.balance)}</td>
+                  <td className="table-td"><Badge color={STATUS_COLOR[p.status] ?? "bg-gray-100 text-gray-700"}>{p.status}</Badge></td>
+                  <td className="table-td text-right">
+                    <div className="flex gap-1 justify-end">
+                      {p.status !== "PAGADO" && (
+                        <button onClick={() => onPay(p)} className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition" title="Registrar pago"><CreditCard size={14} /></button>
+                      )}
+                      <button onClick={() => onDelete(p.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"><Trash2 size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -423,41 +424,43 @@ function ProvidersTable({ providers, onEdit, load }: any) {
       {providers.length === 0 ? (
         <p className="text-center text-gray-400 py-12">Sin proveedores</p>
       ) : (
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="table-th">Nombre</th>
-              <th className="table-th">Producto</th>
-              <th className="table-th">Contacto</th>
-              <th className="table-th">Localidad</th>
-              <th className="table-th">Estado</th>
-              <th className="table-th text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {providers.map((p: any) => (
-              <tr key={p.id} className="table-tr">
-                <td className="table-td">
-                  <p className="font-semibold">{p.name}</p>
-                  <p className="text-[10px] text-gray-400">{p.idNumber ?? "—"}</p>
-                </td>
-                <td className="table-td text-xs">{p.product ?? "—"}</td>
-                <td className="table-td text-xs">
-                  {p.phone && <p>{p.phone}</p>}
-                  {p.email && <p className="text-gray-400 truncate max-w-32">{p.email}</p>}
-                </td>
-                <td className="table-td text-xs">{[p.city, p.province].filter(Boolean).join(", ") || "—"}</td>
-                <td className="table-td"><Badge color={p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>{p.isActive ? "Activo" : "Inactivo"}</Badge></td>
-                <td className="table-td text-right">
-                  <div className="flex gap-1 justify-end">
-                    <button onClick={() => onEdit(p)} className="p-1.5 hover:bg-gray-100 rounded transition">✏️</button>
-                    {p.isActive && <button onClick={() => deactivate(p.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"><Trash2 size={13} /></button>}
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="table-th">Nombre</th>
+                <th className="table-th">Producto</th>
+                <th className="table-th">Contacto</th>
+                <th className="table-th">Localidad</th>
+                <th className="table-th">Estado</th>
+                <th className="table-th text-right">Acciones</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {providers.map((p: any) => (
+                <tr key={p.id} className="table-tr">
+                  <td className="table-td">
+                    <p className="font-semibold">{p.name}</p>
+                    <p className="text-[10px] text-gray-400">{p.idNumber ?? "—"}</p>
+                  </td>
+                  <td className="table-td text-xs">{p.product ?? "—"}</td>
+                  <td className="table-td text-xs">
+                    {p.phone && <p>{p.phone}</p>}
+                    {p.email && <p className="text-gray-400 truncate max-w-32">{p.email}</p>}
+                  </td>
+                  <td className="table-td text-xs">{[p.city, p.province].filter(Boolean).join(", ") || "—"}</td>
+                  <td className="table-td"><Badge color={p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>{p.isActive ? "Activo" : "Inactivo"}</Badge></td>
+                  <td className="table-td text-right">
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => onEdit(p)} className="p-1.5 hover:bg-gray-100 rounded transition">✏️</button>
+                      {p.isActive && <button onClick={() => deactivate(p.id)} className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"><Trash2 size={13} /></button>}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

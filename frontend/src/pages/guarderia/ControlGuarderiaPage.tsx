@@ -169,7 +169,7 @@ export function ControlGuarderiaPage() {
   if (loading && occupancy.length === 0) return <PageLoader />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -178,7 +178,7 @@ export function ControlGuarderiaPage() {
               <Home size={24} />
             </span>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Control de Guardería (Kinderdog)</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Control de Guardería</h1>
               <p className="text-sm text-gray-500">Ocupación física de salas, asistencia diaria y rutas de transporte</p>
             </div>
           </div>
@@ -619,7 +619,7 @@ export function ControlGuarderiaPage() {
         </form>
       </Modal>
 
-      {/* Modal: Check-Out Guardería con Cobro Kinderdog */}
+      {/* Modal: Check-Out Guardería con cobro de la unidad de Guardería */}
       <Modal open={showCheckOutModal} onClose={() => setShowCheckOutModal(false)} title="Registrar Salida de Guardería (Check-Out)">
         <form onSubmit={handleCheckOutSubmit} className="space-y-4">
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl space-y-1">
@@ -635,7 +635,7 @@ export function ControlGuarderiaPage() {
                 onChange={(e) => setCheckOutIncome(e.target.checked)}
                 className="w-4 h-4 text-amber-600 rounded border-gray-300"
               />
-              <span className="text-xs font-bold text-gray-800">Registrar cobro independiente para Kinderdog</span>
+              <span className="text-xs font-bold text-gray-800">Registrar cobro independiente para Guardería</span>
             </label>
 
             {checkOutIncome && (

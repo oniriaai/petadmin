@@ -1,6 +1,33 @@
 const BASE = (import.meta.env.VITE_API_URL as string) ?? "http://localhost:3001/api/v1";
 export type { BusinessUnit, ClientSummary, ClientWithPets, PetSummary, UserRole } from "../modules/shared/contracts";
 let onUnauthorized: (() => void) | null = null;
+let onModuleDisabled: ((moduleId: string | undefined) => void) | null = null;
+
+/**
+ * An HTTP failure that keeps the status and the server's `code`.
+ *
+ * `request()` used to collapse every non-2xx into `new Error(message)`, which meant a caller
+ * could not tell a 404 from a 403 from a validation error, and the `MODULE_DISABLED` code the
+ * entitlement gate returns was unreachable. Callers that only read `.message` keep working.
+ */
+export class ApiError extends Error {
+  status: number;
+  code?: string;
+  details?: unknown;
+
+  constructor(status: number, message: string, code?: string, details?: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+  }
+
+  /** The daycare does not have this product module enabled. */
+  get isModuleDisabled(): boolean {
+    return this.code === "MODULE_DISABLED";
+  }
+}
 
 function getToken() {
   return localStorage.getItem("token");
@@ -8,33 +35,66 @@ function getToken() {
 
 function getActiveBusinessUnit() {
   const value = localStorage.getItem("activeBusinessUnit");
-  if (value === "KINDERDOG" || value === "PETHIJOS") return value;
+  if (value === "DAYCARE" || value === "GROOMING") return value;
   return null;
+}
+
+/**
+ * The tenant a superadmin is operating inside. Only ever set from the platform console; a
+ * daycare user has none, and sending its own id would be refused anyway.
+ */
+export function getPinnedDaycareId(): string | null {
+  return localStorage.getItem("pinnedDaycareId");
+}
+
+export function setPinnedDaycareId(daycareId: string | null) {
+  if (daycareId) localStorage.setItem("pinnedDaycareId", daycareId);
+  else localStorage.removeItem("pinnedDaycareId");
 }
 
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+/**
+ * Called when the server reports a module is no longer enabled, so the session can be
+ * re-fetched and the navigation re-rendered rather than leaving a dead route on screen.
+ */
+export function setModuleDisabledHandler(handler: ((moduleId: string | undefined) => void) | null) {
+  onModuleDisabled = handler;
+}
+
+/** The one endpoint whose 401 is an answer rather than an expiry. */
+function isAuthenticationAttempt(path: string): boolean {
+  return path === "/auth/login";
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const activeBusinessUnit = getActiveBusinessUnit();
+  const pinnedDaycareId = getPinnedDaycareId();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(activeBusinessUnit ? { "X-Business-Unit": activeBusinessUnit } : {}),
+      ...(pinnedDaycareId ? { "X-Daycare-Id": pinnedDaycareId } : {}),
       ...options.headers,
     },
   });
   if (!res.ok) {
-    if (res.status === 401) {
+    // A 401 from signing in means the credentials were refused, not that a session lapsed.
+    // Treating them alike told someone mistyping a password on the login screen that their
+    // "session expired", and ran the session-clearing handler for a user who had no session.
+    if (res.status === 401 && !isAuthenticationAttempt(path)) {
       onUnauthorized?.();
-      throw new Error("Sesion expirada. Inicia sesion nuevamente.");
+      throw new ApiError(401, "Sesión expirada. Inicia sesión nuevamente.");
     }
     const err = await res.json().catch(() => ({ message: "Error de red" }));
-    throw new Error(err.message ?? "Error del servidor");
+    const error = new ApiError(res.status, err.message ?? "Error del servidor", err.code, err.errors);
+    if (error.isModuleDisabled) onModuleDisabled?.(err.module);
+    throw error;
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -130,10 +190,14 @@ export const checkInOutApi = {
 export async function downloadFile(path: string, filename: string) {
   const token = getToken();
   const activeBusinessUnit = getActiveBusinessUnit();
+  // The tenant pin has to travel here too: without it a superadmin's export would be scoped to
+  // every tenant at once rather than the one it is operating inside.
+  const pinnedDaycareId = getPinnedDaycareId();
   const res = await fetch(`${BASE}${path}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(activeBusinessUnit ? { "X-Business-Unit": activeBusinessUnit } : {}),
+      ...(pinnedDaycareId ? { "X-Daycare-Id": pinnedDaycareId } : {}),
     },
   });
   if (!res.ok) throw new Error("Error al descargar");
@@ -147,7 +211,7 @@ export async function downloadFile(path: string, filename: string) {
 }
 
 // ==========================================
-// MÓDULO PELUQUERÍA (Pethijos)
+// MÓDULO PELUQUERÍA
 // ==========================================
 export interface GroomingService {
   id: string;
@@ -210,7 +274,7 @@ export const peluqueriaApi = {
 };
 
 // ==========================================
-// MÓDULO GUARDERÍA (Kinderdog)
+// MÓDULO GUARDERÍA
 // ==========================================
 export interface DaycareRoomOccupancy {
   id: string;

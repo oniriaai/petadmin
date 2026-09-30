@@ -4,18 +4,25 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.seed.json",
     "start": "node dist/main.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:setup": "prisma db push && tsx prisma/seed.ts",
+    "db:setup": "prisma migrate deploy && tsx prisma/seed.ts",
     "seed:photos:upload": "tsx scripts/upload-seed-pet-photos.ts",
     "seed:photos:replace": "tsx scripts/upload-seed-pet-photos.ts --replace",
     "test:financial": "tsx tests/financial.e2e.ts",
     "test:checkin": "tsx tests/check-in-out.e2e.ts",
     "test:modular": "tsx tests/modular-domains.e2e.ts",
-    "test:architecture": "tsx tests/module-registry.ts && tsx tests/reservas-module.ts"
+    "test:architecture": "tsx tests/module-registry.ts && tsx tests/reservas-module.ts && tsx tests/operaciones-module.ts && tsx tests/storage-keys.ts && tsx tests/product-modules.ts && tsx tests/module-access.ts && tsx tests/platform-admin-module.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "typecheck:aux": "tsc -p tsconfig.seed.json",
+    "test:tenancy": "tsx tests/tenant-isolation.e2e.ts",
+    "test:platform": "tsx tests/platform-console.e2e.ts",
+    "test:scheduler": "tsx tests/recurring-plans-idempotency.e2e.ts",
+    "test:settings": "tsx tests/settings.e2e.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1040.0",

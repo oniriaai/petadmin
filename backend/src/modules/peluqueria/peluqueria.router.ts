@@ -1,20 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../../middleware/auth";
+import { handleAuthzError } from "../../middleware/auth";
+import { getRequiredDaycareId } from "../../core/tenancy/scope";
 import { DEFAULT_GROOMING_SERVICES } from "./services";
 import { GroomingAppointmentsService } from "./appointments.service";
 
 export const peluqueriaRouter = Router();
-peluqueriaRouter.use(requireAuth);
-
-// Access check: only admin and pethijos role can access this module
-peluqueriaRouter.use((req, res, next) => {
-  if (req.user?.role !== "admin" && req.user?.role !== "pethijos") {
-    res.status(403).json({ message: "No tienes permiso para acceder al módulo de Peluquería" });
-    return;
-  }
-  next();
-});
 
 // Services Catalog
 peluqueriaRouter.get("/services", (_req, res) => {
@@ -25,9 +16,10 @@ peluqueriaRouter.get("/services", (_req, res) => {
 peluqueriaRouter.get("/appointments", async (req, res) => {
   try {
     const { date, status, search } = req.query as Record<string, string>;
-    const list = await GroomingAppointmentsService.listAppointments({ date, status, search });
+    const list = await GroomingAppointmentsService.listAppointments(getRequiredDaycareId(req), { date, status, search });
     res.json(list);
   } catch (error: any) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error listing appointments:", error);
     res.status(500).json({ message: error.message || "Error obteniendo citas de peluquería" });
   }
@@ -36,13 +28,14 @@ peluqueriaRouter.get("/appointments", async (req, res) => {
 // Get Appointment Detail
 peluqueriaRouter.get("/appointments/:id", async (req, res) => {
   try {
-    const appt = await GroomingAppointmentsService.getAppointment(req.params.id);
+    const appt = await GroomingAppointmentsService.getAppointment(getRequiredDaycareId(req), req.params.id);
     if (!appt) {
       res.status(404).json({ message: "Cita no encontrada" });
       return;
     }
     res.json(appt);
   } catch (error: any) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error getting appointment:", error);
     res.status(500).json({ message: error.message || "Error al obtener cita" });
   }
@@ -58,7 +51,7 @@ const createSchema = z.object({
   durationMinutes: z.number().min(10).max(480).default(60),
   notes: z.string().optional(),
   basePrice: z.number().min(0).optional(),
-  vatPercent: z.number().min(0).default(15),
+  vatPercent: z.number().min(0).optional(),
   discountAmount: z.number().min(0).default(0),
   advanceAmount: z.number().min(0).default(0),
   paymentMethod: z.string().default("EFECTIVO"),
@@ -72,9 +65,10 @@ peluqueriaRouter.post("/appointments", async (req, res) => {
       return;
     }
 
-    const created = await GroomingAppointmentsService.createAppointment(parsed.data);
+    const created = await GroomingAppointmentsService.createAppointment({ ...parsed.data, daycareId: getRequiredDaycareId(req) });
     res.status(201).json(created);
   } catch (error: any) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error creating appointment:", error);
     res.status(400).json({ message: error.message || "Error al agendar cita de peluquería" });
   }
@@ -94,9 +88,10 @@ peluqueriaRouter.patch("/appointments/:id/status", async (req, res) => {
       return;
     }
 
-    const updated = await GroomingAppointmentsService.updateStatus(req.params.id, parsed.data);
+    const updated = await GroomingAppointmentsService.updateStatus(getRequiredDaycareId(req), req.params.id, parsed.data);
     res.json(updated);
   } catch (error: any) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error updating appointment status:", error);
     res.status(400).json({ message: error.message || "Error al actualizar estado de cita" });
   }
@@ -117,9 +112,10 @@ peluqueriaRouter.post("/appointments/:id/complete", async (req, res) => {
       return;
     }
 
-    const completed = await GroomingAppointmentsService.completeAndCollect(req.params.id, parsed.data);
+    const completed = await GroomingAppointmentsService.completeAndCollect(getRequiredDaycareId(req), req.params.id, parsed.data);
     res.json(completed);
   } catch (error: any) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error completing appointment:", error);
     res.status(400).json({ message: error.message || "Error al completar y cobrar cita" });
   }
@@ -128,9 +124,10 @@ peluqueriaRouter.post("/appointments/:id/complete", async (req, res) => {
 // Delete Appointment
 peluqueriaRouter.delete("/appointments/:id", async (req, res) => {
   try {
-    await GroomingAppointmentsService.deleteAppointment(req.params.id);
+    await GroomingAppointmentsService.deleteAppointment(getRequiredDaycareId(req), req.params.id);
     res.json({ ok: true, message: "Cita eliminada" });
   } catch (error: any) {
+    if (handleAuthzError(res, error)) return;
     console.error("Error deleting appointment:", error);
     res.status(400).json({ message: error.message || "Error al eliminar cita" });
   }

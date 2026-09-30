@@ -1,4 +1,4 @@
-import { format, parseISO, isValid, formatDistanceToNow } from "date-fns";
+import { format, parseISO, isValid, formatDistanceToNow, isToday, isTomorrow } from "date-fns";
 import { es } from "date-fns/locale";
 
 export function fmt(date: string | Date | null | undefined, pattern = "dd/MM/yyyy") {
@@ -12,6 +12,21 @@ export function fmtRelativeTime(date: string | Date | null | undefined) {
   const d = typeof date === "string" ? parseISO(date) : date;
   if (!isValid(d)) return "";
   return formatDistanceToNow(d, { locale: es, addSuffix: true });
+}
+
+/**
+ * A short day label for a future timestamp: "Hoy", "Mañana", or "lun 5 oct".
+ *
+ * The dashboard's upcoming list is not bounded to today, so a bare time is ambiguous — 08:30 on
+ * Friday read exactly like 08:30 today.
+ */
+export function fmtDayLabel(date: string | Date | null | undefined) {
+  if (!date) return "";
+  const d = typeof date === "string" ? parseISO(date) : date;
+  if (!isValid(d)) return "";
+  if (isToday(d)) return "Hoy";
+  if (isTomorrow(d)) return "Mañana";
+  return format(d, "EEE d MMM", { locale: es });
 }
 
 export function fmtTime(date: string | Date | null | undefined) {

@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { PageHeader } from "../components/layout/PageHeader";
 
 const sections = [
   {
     id: "inicio", title: "🚀 Primeros pasos",
-    content: `El sistema Pethijos Admin está dividido en dos unidades de negocio: **Kinderdog** (guardería canina) y **Pethijos** (peluquería). Al iniciar sesión, selecciona tu unidad para acceder al dashboard correspondiente.`
+    content: `El sistema Pethijos Admin está dividido en dos unidades de negocio: **Guardería** (estancia diaria) y **Peluquería** (estética y baño). Al iniciar sesión, selecciona tu unidad para acceder al dashboard correspondiente.`
   },
   {
     id: "reservas", title: "Crear una Reserva",
@@ -79,11 +80,8 @@ export function GuidePage() {
   const [open, setOpen] = useState<string | null>("inicio");
 
   return (
-    <div className="p-6 space-y-5 max-w-3xl">
-      <div>
-        <h1 className="page-title">Guía de Uso</h1>
-        <p className="text-gray-500 text-sm mt-1">Manual de operación del sistema Pethijos Admin</p>
-      </div>
+    <div className="p-4 sm:p-6 space-y-5 max-w-3xl">
+      <PageHeader title="Guía de Uso" subtitle="Manual de operación del sistema Pethijos Admin" />
 
       <div className="space-y-3">
         {sections.map(s => (

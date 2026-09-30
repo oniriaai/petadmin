@@ -1,7 +1,16 @@
 import { prisma } from "../../db";
+import type { BusinessUnit } from "../../middleware/auth";
+
+/**
+ * The accounting/brand slot this module books under. Declared once here so the per-tenant
+ * scoping work has a single place to replace with a request-derived value.
+ */
+export const PELUQUERIA_BUSINESS_UNIT: BusinessUnit = "GROOMING";
 import { DEFAULT_GROOMING_SERVICES } from "./services";
+import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
 
 export interface CreateAppointmentDTO {
+  daycareId: string;
   clientId: string;
   petIds: string[];
   serviceId?: string;
@@ -28,9 +37,10 @@ export interface CompleteAppointmentDTO {
 }
 
 export class GroomingAppointmentsService {
-  static async listAppointments(query: { date?: string; status?: string; search?: string }) {
+  static async listAppointments(daycareId: string, query: { date?: string; status?: string; search?: string }) {
     const where: any = {
-      businessUnit: "PETHIJOS",
+      daycareId,
+      businessUnit: PELUQUERIA_BUSINESS_UNIT,
     };
 
     if (query.status && query.status !== "ALL") {
@@ -90,7 +100,7 @@ export class GroomingAppointmentsService {
     });
   }
 
-  static async getAppointment(id: string) {
+  static async getAppointment(daycareId: string, id: string) {
     const r = await prisma.reservation.findUnique({
       where: { id },
       include: {
@@ -100,7 +110,7 @@ export class GroomingAppointmentsService {
       },
     });
 
-    if (!r || r.businessUnit !== "PETHIJOS") {
+    if (!r || r.daycareId !== daycareId || r.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
       return null;
     }
 
@@ -116,17 +126,20 @@ export class GroomingAppointmentsService {
 
   static async createAppointment(dto: CreateAppointmentDTO) {
     const {
+      daycareId,
       clientId,
       petIds,
       serviceId,
       startTime,
       durationMinutes,
       notes,
-      vatPercent = 15,
       discountAmount = 0,
       advanceAmount = 0,
       paymentMethod = "EFECTIVO",
     } = dto;
+
+    // The unit's configured rate, not a literal. Grooming appointments belong to GROOMING.
+    const vatPercent = dto.vatPercent ?? (await getUnitVatPercent(daycareId, "GROOMING"));
 
     const matchedService = DEFAULT_GROOMING_SERVICES.find(s => s.id === serviceId);
     const serviceName = dto.serviceName || matchedService?.name || "Servicio de Peluquería";
@@ -153,7 +166,8 @@ export class GroomingAppointmentsService {
     return await prisma.$transaction(async (tx) => {
       const reservation = await tx.reservation.create({
         data: {
-          businessUnit: "PETHIJOS",
+          daycareId,
+          businessUnit: PELUQUERIA_BUSINESS_UNIT,
           clientId,
           service: serviceName,
           status: "PENDIENTE",
@@ -183,7 +197,8 @@ export class GroomingAppointmentsService {
       if (advanceAmount > 0) {
         await tx.income.create({
           data: {
-            businessUnit: "PETHIJOS",
+            daycareId,
+            businessUnit: PELUQUERIA_BUSINESS_UNIT,
             reservationId: reservation.id,
             type: "ANTICIPO_PELUQUERIA",
             concept: `Anticipo: ${concept}`,
@@ -202,12 +217,12 @@ export class GroomingAppointmentsService {
     });
   }
 
-  static async updateStatus(id: string, dto: UpdateAppointmentStatusDTO) {
+  static async updateStatus(daycareId: string, id: string, dto: UpdateAppointmentStatusDTO) {
     const existing = await prisma.reservation.findUnique({
       where: { id },
       include: { client: true, pets: true },
     });
-    if (!existing || existing.businessUnit !== "PETHIJOS") {
+    if (!existing || existing.daycareId !== daycareId || existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
       throw new Error("Cita de peluquería no encontrada");
     }
 
@@ -221,23 +236,24 @@ export class GroomingAppointmentsService {
     });
   }
 
-  static async completeAndCollect(id: string, dto: CompleteAppointmentDTO) {
+  static async completeAndCollect(daycareId: string, id: string, dto: CompleteAppointmentDTO) {
     const existing = await prisma.reservation.findUnique({
       where: { id },
       include: { client: true, pets: { include: { pet: true } } },
     });
-    if (!existing || existing.businessUnit !== "PETHIJOS") {
+    if (!existing || existing.daycareId !== daycareId || existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
       throw new Error("Cita de peluquería no encontrada");
     }
 
     const amountToCollect = dto.amount ?? existing.pendingAmount;
 
     return await prisma.$transaction(async (tx) => {
-      // 1. Record Income for PETHIJOS unit
+      // 1. Record Income for the grooming unit
       if (amountToCollect > 0) {
         await tx.income.create({
           data: {
-            businessUnit: "PETHIJOS",
+            daycareId,
+            businessUnit: PELUQUERIA_BUSINESS_UNIT,
             reservationId: existing.id,
             type: "PELUQUERIA",
             concept: `Cobro Cita: ${existing.concept || existing.service}`,
@@ -267,9 +283,9 @@ export class GroomingAppointmentsService {
     });
   }
 
-  static async deleteAppointment(id: string) {
+  static async deleteAppointment(daycareId: string, id: string) {
     const existing = await prisma.reservation.findUnique({ where: { id } });
-    if (!existing || existing.businessUnit !== "PETHIJOS") {
+    if (!existing || existing.daycareId !== daycareId || existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
       throw new Error("Cita de peluquería no encontrada");
     }
 

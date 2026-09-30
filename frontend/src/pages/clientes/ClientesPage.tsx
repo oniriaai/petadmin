@@ -7,6 +7,7 @@ import { Modal } from "../../components/ui/Modal";
 import { PageLoader } from "../../components/ui/Spinner";
 import { ClienteForm } from "./ClienteForm";
 import { PetForm } from "./PetForm";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface Pet { id: string; name: string; species: string; breed?: string; sex: string; isActive: boolean }
 interface Client {
@@ -51,16 +52,16 @@ export function ClientesPage() {
   }
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Perfil del Cliente</h1>
-          <p className="text-gray-500 text-sm mt-1">{clients.length} clientes</p>
-        </div>
-        <button onClick={() => { setEditClient(null); setShowForm(true); }} className="btn-primary">
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader
+          title="Perfil del Cliente"
+          subtitle={<>{clients.length} clientes</>}
+          actions={
+            <button onClick={() => { setEditClient(null); setShowForm(true); }} className="btn-primary">
           <Plus size={16} /> Nuevo Cliente
         </button>
-      </div>
+          }
+        />
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
@@ -78,56 +79,58 @@ export function ClientesPage() {
         {loading ? <PageLoader /> : clients.length === 0 ? (
           <p className="text-center text-gray-400 py-16">Sin clientes. ¡Registra el primero!</p>
         ) : (
-          <table className="w-full">
-            <thead>
-              <tr>
-                <th className="table-th">Cliente</th>
-                <th className="table-th">Contacto</th>
-                <th className="table-th">Localidad</th>
-                <th className="table-th">Mascotas</th>
-                <th className="table-th">Estado</th>
-                <th className="table-th">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map(c => (
-                <tr key={c.id} className="table-tr">
-                  <td className="table-td">
-                    <p className="font-semibold text-gray-900">{c.lastName}, {c.firstName}</p>
-                    {c.idNumber && <p className="text-xs text-gray-400">CI: {c.idNumber}</p>}
-                  </td>
-                  <td className="table-td">
-                    {c.phone && <p className="text-xs flex items-center gap-1"><Phone size={11} />{c.phone}</p>}
-                    {c.email && <p className="text-xs text-gray-400 truncate max-w-36">{c.email}</p>}
-                  </td>
-                  <td className="table-td text-xs">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
-                  <td className="table-td">
-                    <div className="flex flex-wrap gap-1">
-                      {c.pets.slice(0, 3).map(p => (
-                        <span key={p.id} className="badge bg-indigo-50 text-indigo-700">
-                          {p.species === "dog" ? <Dog size={14} /> : <Cat size={14} />} {p.name}
-                        </span>
-                      ))}
-                      {c.pets.length > 3 && <span className="badge bg-gray-100 text-gray-500">+{c.pets.length - 3}</span>}
-                    </div>
-                  </td>
-                  <td className="table-td">
-                    <Badge color={c.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
-                      {c.isActive ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </td>
-                  <td className="table-td">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setSelectedClient(c)} className="btn-ghost btn-sm p-1.5" title="Ver detalle"><Eye size={14} /></button>
-                      <button onClick={() => { setEditClient(c); setShowForm(true); }} className="btn-ghost btn-sm p-1.5" title="Editar"><Edit2 size={14} /></button>
-                      <button onClick={() => openNewPet(c)} className="btn-ghost btn-sm p-1.5 text-indigo-600" title="Agregar mascota"><PawPrint size={14} /></button>
-                      {c.isActive && <button onClick={() => deactivate(c.id)} className="btn-ghost btn-sm p-1.5 text-red-500" title="Desactivar"><UserX size={14} /></button>}
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  <th className="table-th">Cliente</th>
+                  <th className="table-th">Contacto</th>
+                  <th className="table-th">Localidad</th>
+                  <th className="table-th">Mascotas</th>
+                  <th className="table-th">Estado</th>
+                  <th className="table-th">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {clients.map(c => (
+                  <tr key={c.id} className="table-tr">
+                    <td className="table-td">
+                      <p className="font-semibold text-gray-900">{c.lastName}, {c.firstName}</p>
+                      {c.idNumber && <p className="text-xs text-gray-400">CI: {c.idNumber}</p>}
+                    </td>
+                    <td className="table-td">
+                      {c.phone && <p className="text-xs flex items-center gap-1"><Phone size={11} />{c.phone}</p>}
+                      {c.email && <p className="text-xs text-gray-400 truncate max-w-36">{c.email}</p>}
+                    </td>
+                    <td className="table-td text-xs">{[c.city, c.province].filter(Boolean).join(", ") || "—"}</td>
+                    <td className="table-td">
+                      <div className="flex flex-wrap gap-1">
+                        {c.pets.slice(0, 3).map(p => (
+                          <span key={p.id} className="badge bg-indigo-50 text-indigo-700">
+                            {p.species === "dog" ? <Dog size={14} /> : <Cat size={14} />} {p.name}
+                          </span>
+                        ))}
+                        {c.pets.length > 3 && <span className="badge bg-gray-100 text-gray-500">+{c.pets.length - 3}</span>}
+                      </div>
+                    </td>
+                    <td className="table-td">
+                      <Badge color={c.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
+                        {c.isActive ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </td>
+                    <td className="table-td">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setSelectedClient(c)} className="btn-ghost btn-sm p-1.5" title="Ver detalle"><Eye size={14} /></button>
+                        <button onClick={() => { setEditClient(c); setShowForm(true); }} className="btn-ghost btn-sm p-1.5" title="Editar"><Edit2 size={14} /></button>
+                        <button onClick={() => openNewPet(c)} className="btn-ghost btn-sm p-1.5 text-indigo-600" title="Agregar mascota"><PawPrint size={14} /></button>
+                        {c.isActive && <button onClick={() => deactivate(c.id)} className="btn-ghost btn-sm p-1.5 text-red-500" title="Desactivar"><UserX size={14} /></button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

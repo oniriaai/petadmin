@@ -14,6 +14,8 @@ export interface PetListRecord extends PetSummary {
 
 export const clientsApi = {
   list: (query = "") => api.get<ClientListRecord[]>(`/clients${query}`),
+  /** One tutor with its pets. Needed wherever a pet picker must be scoped to its owner. */
+  get: (id: string) => api.get<ClientListRecord>(`/clients/${id}`),
   create: (body: unknown) => api.post<ClientListRecord>("/clients", body),
   update: (id: string, body: unknown) => api.put<ClientListRecord>(`/clients/${id}`, body),
 };

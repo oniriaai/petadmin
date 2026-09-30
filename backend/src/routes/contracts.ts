@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 
 export const contractsRouter = Router();
-contractsRouter.use(requireAuth);
 
 const schema = z.object({
   clientId: z.string(),
@@ -19,7 +19,7 @@ const schema = z.object({
 contractsRouter.get("/", async (req, res) => {
   try {
   const { status } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (status) where.status = status;
   const contracts = await prisma.contract.findMany({
     where,
@@ -47,6 +47,7 @@ contractsRouter.post("/", async (req, res) => {
     data: {
       ...rest,
       businessUnit: bu,
+      daycareId: getRequiredDaycareId(req),
       startDate: startDate ? new Date(startDate) : null,
       endDate: endDate ? new Date(endDate) : null,
     },
@@ -63,9 +64,9 @@ contractsRouter.post("/", async (req, res) => {
 contractsRouter.patch("/:id/status", async (req, res) => {
   try {
   const { status } = req.body;
-  const current = await prisma.contract.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.contract.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Contrato no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   const contract = await prisma.contract.update({ where: { id: req.params.id }, data: { status } });
   res.json(contract);
   } catch (error) {
@@ -77,9 +78,9 @@ contractsRouter.patch("/:id/status", async (req, res) => {
 
 contractsRouter.delete("/:id", async (req, res) => {
   try {
-  const current = await prisma.contract.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.contract.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Contrato no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   await prisma.contract.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
   } catch (error) {

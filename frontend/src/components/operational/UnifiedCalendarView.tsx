@@ -28,7 +28,7 @@ function getStatusLabel(status: OperationalEventStatus) {
 }
 
 function getUnitConfig(unit: string) {
-  if (unit === "KINDERDOG") {
+  if (unit === "DAYCARE") {
     return { label: "Guardería", color: "border-amber-500", bg: "bg-amber-50" };
   }
   return { label: "Peluquería", color: "border-violet-500", bg: "bg-violet-50" };

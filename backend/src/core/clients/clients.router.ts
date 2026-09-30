@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth } from "../../middleware/auth";
+import { handleAuthzError } from "../../middleware/auth";
+import { buildDaycareWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
 import { prisma } from "../../db";
 
 export const clientsRouter = Router();
-clientsRouter.use(requireAuth);
 
 const clientSchema = z.object({
   firstName: z.string().min(1),
@@ -23,8 +23,9 @@ const clientSchema = z.object({
 });
 
 clientsRouter.get("/", async (req, res) => {
+  try {
   const { search, status } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { ...buildDaycareWhere(req) };
   if (status === "active") where.isActive = true;
   else if (status === "inactive") where.isActive = false;
   if (search) {
@@ -41,11 +42,17 @@ clientsRouter.get("/", async (req, res) => {
     orderBy: { lastName: "asc" },
   });
   res.json(clients);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 clientsRouter.get("/:id", async (req, res) => {
-  const client = await prisma.client.findUnique({
-    where: { id: req.params.id },
+  try {
+  const client = await prisma.client.findFirst({
+    where: { id: req.params.id, ...buildDaycareWhere(req) },
     include: {
       pets: { include: { vaccinations: true, documents: true } },
       reservations: {
@@ -61,9 +68,15 @@ clientsRouter.get("/:id", async (req, res) => {
     return;
   }
   res.json(client);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 clientsRouter.post("/", async (req, res) => {
+  try {
   const parsed = clientSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() });
@@ -73,23 +86,38 @@ clientsRouter.post("/", async (req, res) => {
   const client = await prisma.client.create({
     data: {
       ...rest,
+      daycareId: getRequiredDaycareId(req),
       email: email || null,
       birthdate: birthdate ? new Date(birthdate) : null,
       firstServiceDate: firstServiceDate ? new Date(firstServiceDate) : null,
     },
   });
   res.status(201).json(client);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 clientsRouter.put("/:id", async (req, res) => {
+  try {
   const parsed = clientSchema.partial().safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ message: "Datos inválidos" });
     return;
   }
+  const existing = await prisma.client.findFirst({
+    where: { id: req.params.id, ...buildDaycareWhere(req) },
+    select: { id: true },
+  });
+  if (!existing) {
+    res.status(404).json({ message: "Cliente no encontrado" });
+    return;
+  }
   const { birthdate, firstServiceDate, email, ...rest } = parsed.data;
   const client = await prisma.client.update({
-    where: { id: req.params.id },
+    where: { id: existing.id },
     data: {
       ...rest,
       email: email !== undefined ? (email || null) : undefined,
@@ -98,9 +126,28 @@ clientsRouter.put("/:id", async (req, res) => {
     },
   });
   res.json(client);
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 clientsRouter.delete("/:id", async (req, res) => {
-  await prisma.client.update({ where: { id: req.params.id }, data: { isActive: false } });
-  res.json({ ok: true });
+  try {
+    const existing = await prisma.client.findFirst({
+      where: { id: req.params.id, ...buildDaycareWhere(req) },
+      select: { id: true },
+    });
+    if (!existing) {
+      res.status(404).json({ message: "Cliente no encontrado" });
+      return;
+    }
+    await prisma.client.update({ where: { id: existing.id }, data: { isActive: false } });
+    res.json({ ok: true });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });

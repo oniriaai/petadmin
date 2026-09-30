@@ -154,7 +154,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
               <div className="text-gray-600">IVA ({vatPercent}%)</div>
               <div className="text-lg font-semibold text-blue-600">${vatAmount.toLocaleString()}</div>

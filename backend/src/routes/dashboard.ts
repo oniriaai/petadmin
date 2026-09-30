@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { buildBusinessUnitWhere, handleAuthzError, requireAuth } from "../middleware/auth";
+import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
 
 export const dashboardRouter = Router();
-dashboardRouter.use(requireAuth);
 
 dashboardRouter.get("/summary", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date(); todayEnd.setHours(23, 59, 59, 999);
 
@@ -28,7 +28,7 @@ dashboardRouter.get("/summary", async (req, res) => {
 
   const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
   const ingresosMes = await prisma.income.aggregate({ where: { ...buWhere, date: { gte: monthStart } }, _sum: { total: true } });
-  const totalClientes = await prisma.client.count({ where: { isActive: true } });
+  const totalClientes = await prisma.client.count({ where: { isActive: true, ...buildDaycareWhere(req) } });
 
   res.json({
     reservasHoy,
@@ -59,7 +59,7 @@ dashboardRouter.get("/summary", async (req, res) => {
 // Financial Summary: Income vs Expenses for a date range
 dashboardRouter.get("/financial/summary", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const { startDate, endDate } = req.query;
   
   const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
@@ -97,7 +97,7 @@ dashboardRouter.get("/financial/summary", async (req, res) => {
 // Monthly financial data for last 6 months
 dashboardRouter.get("/financial/trends", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const months = [];
   const now = new Date();
 
@@ -134,7 +134,7 @@ dashboardRouter.get("/financial/trends", async (req, res) => {
 // Expense breakdown by category
 dashboardRouter.get("/financial/expense-categories", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const { startDate, endDate } = req.query;
   
   const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
@@ -162,7 +162,7 @@ dashboardRouter.get("/financial/expense-categories", async (req, res) => {
 // Top clients by revenue
 dashboardRouter.get("/financial/top-clients", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
   const { startDate, endDate, limit = "10" } = req.query;
   
   const start = startDate ? new Date(startDate as string) : new Date(new Date().getFullYear(), 0, 1);
@@ -192,7 +192,7 @@ dashboardRouter.get("/financial/top-clients", async (req, res) => {
 // Occupancy analytics
 dashboardRouter.get("/analytics/occupancy", async (req, res) => {
   try {
-  const buWhere = buildBusinessUnitWhere(req);
+  const buWhere = buildScopeWhere(req);
 
   const [rooms, totalCapacity, activeReservations] = await Promise.all([
     prisma.room.findMany({ where: { ...buWhere, isActive: true } }),

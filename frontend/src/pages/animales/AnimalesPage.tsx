@@ -6,6 +6,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { PetForm } from "../clientes/PetForm";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface Pet {
   id: string; name: string; species: string; breed?: string; variety?: string; color?: string; sex: string;
@@ -107,12 +108,9 @@ export function AnimalesPage() {
   }, [pets, safePage]);
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">Animales</h1>
-          <p className="text-gray-500 text-sm mt-1">{pets.length} mascotas registradas</p>
-        </div>
+        <PageHeader title="Animales" subtitle={<>{pets.length} mascotas registradas</>} />
         {isRefreshing && (
           <div className="text-xs text-gray-500 flex items-center gap-2">
             <Spinner size={14} />
@@ -138,59 +136,61 @@ export function AnimalesPage() {
           <p className="text-center text-gray-400 py-16">Sin animales encontrados</p>
         ) : (
           <>
-            <table className="w-full">
-              <thead>
-                <tr>
-                  <th className="table-th">Animal</th>
-                  <th className="table-th">Dueño</th>
-                  <th className="table-th">Raza / Color</th>
-                  <th className="table-th">Datos</th>
-                  <th className="table-th">Microchip</th>
-                  <th className="table-th">Estado</th>
-                  <th className="table-th">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedPets.map(p => (
-                  <tr key={p.id} className="table-tr">
-                    <td className="table-td">
-                      <div className="flex items-center gap-2">
-                        <PetAvatar pet={p} size="small" />
-                        <div>
-                          <p className="font-semibold text-gray-900">{p.name}</p>
-                          <p className="text-xs text-gray-400">{p.sex === "M" ? "Macho" : "Hembra"}{p.isNeutered ? " · Esterilizado" : ""}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="table-td">
-                      <p className="text-sm font-medium">{p.client.firstName} {p.client.lastName}</p>
-                      <p className="text-xs text-gray-400">{p.client.phone ?? ""}</p>
-                    </td>
-                    <td className="table-td text-xs">
-                      <p>{p.breed ?? "—"}</p>
-                      {p.color && <p className="text-gray-400">{p.color}</p>}
-                    </td>
-                    <td className="table-td text-xs">
-                      {p.weight && <p>Peso: {p.weight} kg</p>}
-                      {p.birthdate && <p>Nac: {fmt(p.birthdate)}</p>}
-                    </td>
-                    <td className="table-td text-xs">{p.microchip ?? "—"}</td>
-                    <td className="table-td">
-                      <Badge color={p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
-                        {p.isActive ? "Activo" : "Inactivo"}
-                      </Badge>
-                      {p.allergies && <Badge color="bg-red-100 text-red-700" className="ml-1">Alergia</Badge>}
-                    </td>
-                    <td className="table-td">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setSelected(p)} className="btn-ghost btn-sm p-1.5" title="Ver ficha"><Eye size={14} /></button>
-                        <button onClick={() => { setEditPet(p); setShowPetForm(true); }} className="btn-ghost btn-sm p-1.5" title="Editar"><Edit2 size={14} /></button>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    <th className="table-th">Animal</th>
+                    <th className="table-th">Dueño</th>
+                    <th className="table-th">Raza / Color</th>
+                    <th className="table-th">Datos</th>
+                    <th className="table-th">Microchip</th>
+                    <th className="table-th">Estado</th>
+                    <th className="table-th">Acciones</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedPets.map(p => (
+                    <tr key={p.id} className="table-tr">
+                      <td className="table-td">
+                        <div className="flex items-center gap-2">
+                          <PetAvatar pet={p} size="small" />
+                          <div>
+                            <p className="font-semibold text-gray-900">{p.name}</p>
+                            <p className="text-xs text-gray-400">{p.sex === "M" ? "Macho" : "Hembra"}{p.isNeutered ? " · Esterilizado" : ""}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="table-td">
+                        <p className="text-sm font-medium">{p.client.firstName} {p.client.lastName}</p>
+                        <p className="text-xs text-gray-400">{p.client.phone ?? ""}</p>
+                      </td>
+                      <td className="table-td text-xs">
+                        <p>{p.breed ?? "—"}</p>
+                        {p.color && <p className="text-gray-400">{p.color}</p>}
+                      </td>
+                      <td className="table-td text-xs">
+                        {p.weight && <p>Peso: {p.weight} kg</p>}
+                        {p.birthdate && <p>Nac: {fmt(p.birthdate)}</p>}
+                      </td>
+                      <td className="table-td text-xs">{p.microchip ?? "—"}</td>
+                      <td className="table-td">
+                        <Badge color={p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}>
+                          {p.isActive ? "Activo" : "Inactivo"}
+                        </Badge>
+                        {p.allergies && <Badge color="bg-red-100 text-red-700" className="ml-1">Alergia</Badge>}
+                      </td>
+                      <td className="table-td">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setSelected(p)} className="btn-ghost btn-sm p-1.5" title="Ver ficha"><Eye size={14} /></button>
+                          <button onClick={() => { setEditPet(p); setShowPetForm(true); }} className="btn-ghost btn-sm p-1.5" title="Editar"><Edit2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
               <p className="text-xs text-gray-500">
@@ -240,7 +240,7 @@ export function AnimalesPage() {
                 <p className="text-sm mt-1">Dueño: <strong>{selected.client.firstName} {selected.client.lastName}</strong> · {selected.client.phone}</p>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
               {[
                 ["Color", selected.color], ["Variedad", selected.variety], ["Microchip", selected.microchip],
                 ["Peso", selected.weight ? `${selected.weight} kg` : null], ["Talla", selected.height ? `${selected.height} cm` : null],

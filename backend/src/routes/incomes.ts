@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 
 export const incomesRouter = Router();
-incomesRouter.use(requireAuth);
 
 const schema = z.object({
   reservationId: z.string().optional(),
@@ -22,7 +22,7 @@ const schema = z.object({
 incomesRouter.get("/", async (req, res) => {
   try {
   const { type, status, from, to } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (type) where.type = type;
   if (status) where.invoiceStatus = status;
   if (from || to) {
@@ -52,7 +52,7 @@ incomesRouter.post("/", async (req, res) => {
   const vatAmount = amount * (vatPercent / 100);
   const total = amount + vatAmount;
   const income = await prisma.income.create({
-    data: { ...rest, businessUnit: bu, amount, vatPercent, vatAmount, total, date: date ? new Date(date) : new Date() },
+    data: { ...rest, businessUnit: bu, daycareId: getRequiredDaycareId(req), amount, vatPercent, vatAmount, total, date: date ? new Date(date) : new Date() },
   });
   res.status(201).json(income);
   } catch (error) {
@@ -69,7 +69,7 @@ incomesRouter.put("/:id", async (req, res) => {
   const { date, amount, vatPercent, ...rest } = parsed.data;
   const current = await prisma.income.findUnique({ where: { id: req.params.id } });
   if (!current) { res.status(404).json({ message: "Ingreso no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   const a = amount ?? current.amount;
   const vp = vatPercent ?? current.vatPercent;
   const vatAmount = a * (vp / 100);
@@ -88,9 +88,9 @@ incomesRouter.put("/:id", async (req, res) => {
 
 incomesRouter.delete("/:id", async (req, res) => {
   try {
-  const current = await prisma.income.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.income.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Ingreso no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   await prisma.income.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
   } catch (error) {

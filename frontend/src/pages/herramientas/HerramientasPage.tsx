@@ -1,34 +1,57 @@
 import { useEffect, useState, useCallback } from "react";
-import { Plus, CheckCircle, AlertTriangle, Bell, BarChart3, PawPrint } from "lucide-react";
+import { Plus, CheckCircle, AlertTriangle, Bell, BarChart3, FileText, PawPrint } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
+import { ContratosTab } from "./ContratosTab";
 import { SEVERITY_COLOR } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
+import { PageHeader } from "../../components/layout/PageHeader";
 
-type Tab = "alertas" | "estimador";
+type Tab = "alertas" | "contratos" | "estimador";
 interface Alert { id: string; type: string; severity: string; title: string; description: string; isResolved: boolean; createdAt: string; pet?: { id: string; name: string; client: { firstName: string; lastName: string } } }
 interface Pet { id: string; name: string; client: { firstName: string; lastName: string } }
 
 const ALERT_TYPES = ["COMPORTAMIENTO", "SALUD", "ENTRENAMIENTO", "SOCIAL", "ALIMENTACION", "OTRO"];
 
 export function HerramientasPage() {
-  const [tab, setTab] = useState<Tab>("alertas");
+  // `cumplimiento` has no page of its own -- the alerts tab is its only daycare-facing surface,
+  // so entitlement is checked here rather than on the route. The estimator is a local
+  // calculator with no API behind it and is always available, which is why this page is not
+  // gated as a whole.
+  const { hasModule, fullAccess } = useAuth();
+  // `cumplimiento` grants both alerts and contracts; neither has a route of its own.
+  const canSeeCumplimiento = fullAccess || hasModule("cumplimiento");
+  const [tab, setTab] = useState<Tab>(canSeeCumplimiento ? "alertas" : "estimador");
+
+  // If the module is turned off mid-session the open tab has to give way, otherwise the page
+  // keeps rendering a tab whose requests now 403.
+  useEffect(() => {
+    if (!canSeeCumplimiento && (tab === "alertas" || tab === "contratos")) setTab("estimador");
+  }, [canSeeCumplimiento, tab]);
+
+  const tabs = ([
+    ...(canSeeCumplimiento
+      ? ([["alertas", "Alertas y Avisos", Bell], ["contratos", "Contratos", FileText]] as const)
+      : []),
+    ["estimador", "Estimaciones", BarChart3] as const,
+  ]);
 
   return (
-    <div className="p-6 space-y-5">
-      <div>
-        <h1 className="page-title">Herramientas</h1>
-        <p className="text-gray-500 text-sm mt-1">Alertas, avisos y estimaciones</p>
-      </div>
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {([["alertas", "Alertas y Avisos", Bell], ["estimador", "Estimaciones", BarChart3]] as const).map(([t, label, Icon]) => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-            <Icon size={15} className="inline-block mr-1.5" />{label}
-          </button>
-        ))}
-      </div>
-      {tab === "alertas" && <AlertasTab />}
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader title="Herramientas" subtitle={<>{canSeeCumplimiento ? "Alertas, contratos y estimaciones" : "Estimaciones"}</>} />
+      {tabs.length > 1 && (
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          {tabs.map(([t, label, Icon]) => (
+            <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+              <Icon size={15} className="inline-block mr-1.5" />{label}
+            </button>
+          ))}
+        </div>
+      )}
+      {tab === "alertas" && canSeeCumplimiento && <AlertasTab />}
+      {tab === "contratos" && canSeeCumplimiento && <ContratosTab />}
       {tab === "estimador" && <EstimadorTab />}
     </div>
   );

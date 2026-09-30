@@ -1,10 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../middleware/auth";
+import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 
 export const payablesRouter = Router();
-payablesRouter.use(requireAuth);
 
 const schema = z.object({
   providerId: z.string().optional(),
@@ -24,7 +24,7 @@ const schema = z.object({
 payablesRouter.get("/", async (req, res) => {
   try {
   const { type, status, category } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (type) where.type = type;
   if (status) where.status = status;
   if (category) where.category = category;
@@ -48,7 +48,7 @@ payablesRouter.get("/:id", async (req, res) => {
     include: { provider: true, payments: { orderBy: { date: "desc" } } },
   });
   if (!p) { res.status(404).json({ message: "Documento no encontrado" }); return; }
-  assertBusinessUnitAccess(req, p.businessUnit);
+  assertRecordAccess(req, p);
   res.json(p);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
@@ -69,6 +69,7 @@ payablesRouter.post("/", async (req, res) => {
     data: {
       ...rest,
       businessUnit: bu,
+      daycareId: getRequiredDaycareId(req),
       subtotal,
       vatPercent,
       vatAmount,
@@ -96,7 +97,7 @@ payablesRouter.put("/:id", async (req, res) => {
 
   const current = await prisma.payable.findUnique({ where: { id: req.params.id } });
   if (!current) { res.status(404).json({ message: "Documento no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
 
   const sb = subtotal ?? current.subtotal;
   const vp = vatPercent ?? current.vatPercent;
@@ -125,9 +126,9 @@ payablesRouter.put("/:id", async (req, res) => {
 
 payablesRouter.delete("/:id", async (req, res) => {
   try {
-  const current = await prisma.payable.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.payable.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Documento no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   await prisma.payable.delete({ where: { id: req.params.id } });
   res.json({ ok: true });
   } catch (error) {
@@ -153,7 +154,7 @@ payablesRouter.post("/:id/payments", async (req, res) => {
 
   const payable = await prisma.payable.findUnique({ where: { id: req.params.id } });
   if (!payable) { res.status(404).json({ message: "Documento no encontrado" }); return; }
-  assertBusinessUnitAccess(req, payable.businessUnit);
+  assertRecordAccess(req, payable);
 
   const payment = await prisma.payment.create({
     data: { payableId: req.params.id, date: date ? new Date(date) : new Date(), registeredBy: req.user!.username, ...rest },
@@ -178,11 +179,15 @@ payablesRouter.post("/:id/payments", async (req, res) => {
 
 payablesRouter.delete("/:id/payments/:pid", async (req, res) => {
   try {
-  const payment = await prisma.payment.findUnique({ where: { id: req.params.pid } });
-  if (!payment) { res.status(404).json({ message: "Pago no encontrado" }); return; }
   const payable = await prisma.payable.findUnique({ where: { id: req.params.id } });
   if (!payable) { res.status(404).json({ message: "Documento no encontrado" }); return; }
-  assertBusinessUnitAccess(req, payable.businessUnit);
+  assertRecordAccess(req, payable);
+  // The payment must belong to THIS payable. Without the payableId check, deleting a payment
+  // by id adjusted the balance of whichever payable was named in the path.
+  const payment = await prisma.payment.findFirst({
+    where: { id: req.params.pid, payableId: payable.id },
+  });
+  if (!payment) { res.status(404).json({ message: "Pago no encontrado" }); return; }
   await prisma.payment.delete({ where: { id: req.params.pid } });
   if (payable) {
     const newPaid = payable.paid - payment.amount;

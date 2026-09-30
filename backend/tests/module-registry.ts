@@ -14,14 +14,14 @@ for (const module of backendModules) {
 
 const guarderia = backendModules.find((module) => module.id === "guarderia");
 assert.deepEqual(guarderia?.access, {
-  roles: ["admin", "kinderdog"],
-  businessUnits: ["KINDERDOG"],
+  roles: ["admin", "daycare"],
+  businessUnits: ["DAYCARE"],
 });
 
 const peluqueria = backendModules.find((module) => module.id === "peluqueria");
 assert.deepEqual(peluqueria?.access, {
-  roles: ["admin", "pethijos"],
-  businessUnits: ["PETHIJOS"],
+  roles: ["admin", "grooming"],
+  businessUnits: ["GROOMING"],
 });
 
 console.log(`✓ backend module registry (${backendModules.length} modules)`);

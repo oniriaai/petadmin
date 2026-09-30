@@ -1,7 +1,9 @@
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
+import { isProductModuleId } from "./shared/contracts";
+import type { ProductModuleId, TenantRole } from "./shared/contracts";
 import {
-  BarChart3, BookOpen, CalendarDays, DollarSign, Grid3X3, Home, PawPrint,
+  BarChart3, BookOpen, CalendarDays, DollarSign, Grid3X3, Home, Package, PawPrint,
   Repeat, Scissors, Settings, Truck, Users, Wrench,
 } from "lucide-react";
 import { Dashboard } from "../pages/Dashboard";
@@ -17,16 +19,33 @@ import { GuidePage } from "../pages/GuidePage";
 import { RoomsPage } from "../pages/salas/RoomsPage";
 import { RecurringPlansPage } from "../pages/planes/RecurringPlansPage";
 import { FinancialPage } from "../pages/transacciones/FinancialPage";
+import { InventarioPage } from "../pages/inventario/InventarioPage";
 import { AgendaPeluqueriaPage } from "../pages/peluqueria/AgendaPeluqueriaPage";
 import { ControlGuarderiaPage } from "../pages/guarderia/ControlGuarderiaPage";
 
-export type FrontendRole = "admin" | "kinderdog" | "pethijos";
-export type FrontendUnit = "KINDERDOG" | "PETHIJOS";
+export type FrontendRole = TenantRole;
+export type FrontendUnit = "DAYCARE" | "GROOMING";
 
 export interface ModuleRoute {
   path: string;
   component: ComponentType;
   roles?: FrontendRole[];
+  /**
+   * Product modules the daycare must have enabled for this route to work, ALL of them.
+   *
+   * The four frontend module ids below (`dashboard`, `guarderia`, `peluqueria`, `shared`) are
+   * presentational groupings and do not line up with product modules, so entitlements are
+   * declared per route. Each value is the product module owning an API the page actually
+   * calls -- `/transporte` reads `/reports/transport`, for instance, so it needs `informes`
+   * as well as `guarderia`.
+   */
+  requires?: ProductModuleId[];
+  /**
+   * The business unit this route belongs to, mirroring the backend module's
+   * `access.businessUnits`. The backend now refuses a module that does not serve the unit the
+   * caller narrowed to, so the route has to say the same thing or the page loads and then 403s.
+   */
+  unit?: FrontendUnit;
 }
 
 export interface ModuleNavigationItem {
@@ -35,6 +54,7 @@ export interface ModuleNavigationItem {
   icon: LucideIcon;
   roles?: FrontendRole[];
   unit?: FrontendUnit;
+  requires?: ProductModuleId[];
 }
 
 export interface FrontendModule {
@@ -59,32 +79,32 @@ export const frontendModules: readonly FrontendModule[] = [
     id: "guarderia",
     label: "Guardería",
     routes: [
-      { path: "/guarderia", component: ControlGuarderiaPage, roles: ["admin", "kinderdog"] },
-      { path: "/salas", component: RoomsPage, roles: ["admin", "kinderdog"] },
-      { path: "/planes", component: RecurringPlansPage, roles: ["admin", "kinderdog"] },
-      { path: "/transporte", component: TransportePage, roles: ["admin", "kinderdog"] },
-      { path: "/disponibilidad", component: DisponibilidadPage, roles: ["admin", "kinderdog"] },
+      { path: "/guarderia", component: ControlGuarderiaPage, roles: ["admin", "daycare"], requires: ["guarderia"], unit: "DAYCARE" },
+      { path: "/salas", component: RoomsPage, roles: ["admin", "daycare"], requires: ["reservas"] },
+      { path: "/planes", component: RecurringPlansPage, roles: ["admin", "daycare"], requires: ["reservas"] },
+      { path: "/transporte", component: TransportePage, roles: ["admin", "daycare"], requires: ["guarderia", "informes"], unit: "DAYCARE" },
+      { path: "/disponibilidad", component: DisponibilidadPage, roles: ["admin", "daycare"], requires: ["reservas"] },
     ],
     navigation: {
       label: "Guardería",
       icon: Home,
       items: [
-        { to: "/guarderia", label: "Control Guardería", icon: Home, roles: ["admin", "kinderdog"], unit: "KINDERDOG" },
-        { to: "/salas", label: "Salas & Cupos", icon: Grid3X3, roles: ["admin", "kinderdog"], unit: "KINDERDOG" },
-        { to: "/planes", label: "Planes Recurrentes", icon: Repeat, roles: ["admin", "kinderdog"], unit: "KINDERDOG" },
-        { to: "/transporte", label: "Transporte", icon: Truck, roles: ["admin", "kinderdog"], unit: "KINDERDOG" },
-        { to: "/disponibilidad", label: "Disponibilidad", icon: CalendarDays, roles: ["admin", "kinderdog"], unit: "KINDERDOG" },
+        { to: "/guarderia", label: "Control Guardería", icon: Home, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["guarderia"] },
+        { to: "/salas", label: "Salas & Cupos", icon: Grid3X3, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["reservas"] },
+        { to: "/planes", label: "Planes Recurrentes", icon: Repeat, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["reservas"] },
+        { to: "/transporte", label: "Transporte", icon: Truck, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["guarderia", "informes"] },
+        { to: "/disponibilidad", label: "Disponibilidad", icon: CalendarDays, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["reservas"] },
       ],
     },
   },
   {
     id: "peluqueria",
     label: "Peluquería",
-    routes: [{ path: "/peluqueria", component: AgendaPeluqueriaPage, roles: ["admin", "pethijos"] }],
+    routes: [{ path: "/peluqueria", component: AgendaPeluqueriaPage, roles: ["admin", "grooming"], requires: ["peluqueria"], unit: "GROOMING" }],
     navigation: {
       label: "Peluquería",
       icon: Scissors,
-      items: [{ to: "/peluqueria", label: "Agenda Peluquería", icon: Scissors, roles: ["admin", "pethijos"], unit: "PETHIJOS" }],
+      items: [{ to: "/peluqueria", label: "Agenda Peluquería", icon: Scissors, roles: ["admin", "grooming"], unit: "GROOMING", requires: ["peluqueria"] }],
     },
   },
   {
@@ -93,9 +113,10 @@ export const frontendModules: readonly FrontendModule[] = [
     routes: [
       { path: "/clientes", component: ClientesPage },
       { path: "/animales", component: AnimalesPage },
-      { path: "/operaciones", component: OperacionesPage },
-      { path: "/transacciones", component: FinancialPage },
-      { path: "/informes", component: InformesPage },
+      { path: "/operaciones", component: OperacionesPage, requires: ["reservas"] },
+      { path: "/transacciones", component: FinancialPage, requires: ["finanzas"] },
+      { path: "/inventario", component: InventarioPage, requires: ["inventario"] },
+      { path: "/informes", component: InformesPage, requires: ["informes"] },
       { path: "/herramientas", component: HerramientasPage },
       { path: "/configuracion", component: ConfiguracionPage, roles: ["admin"] },
       { path: "/guia", component: GuidePage },
@@ -104,11 +125,12 @@ export const frontendModules: readonly FrontendModule[] = [
       label: "Gestión Transversal",
       icon: Users,
       items: [
-        { to: "/operaciones", label: "Operaciones (General)", icon: CalendarDays },
+        { to: "/operaciones", label: "Operaciones (General)", icon: CalendarDays, requires: ["reservas"] },
         { to: "/clientes", label: "Perfil del Cliente", icon: Users },
         { to: "/animales", label: "Animales", icon: PawPrint },
-        { to: "/transacciones", label: "Gestión Financiera", icon: DollarSign },
-        { to: "/informes", label: "Informes y Gráficos", icon: BarChart3 },
+        { to: "/transacciones", label: "Gestión Financiera", icon: DollarSign, requires: ["finanzas"] },
+        { to: "/inventario", label: "Inventario", icon: Package, requires: ["inventario"] },
+        { to: "/informes", label: "Informes y Gráficos", icon: BarChart3, requires: ["informes"] },
         { to: "/herramientas", label: "Herramientas", icon: Wrench },
         { to: "/configuracion", label: "Configuración", icon: Settings, roles: ["admin"] },
         { to: "/guia", label: "Guía de Uso", icon: BookOpen },
@@ -127,6 +149,23 @@ export function validateFrontendModules(modules: readonly FrontendModule[] = fro
     for (const route of module.routes) {
       if (paths.has(route.path)) throw new Error(`Duplicate frontend route path: ${route.path}`);
       paths.add(route.path);
+      assertRequiresAreKnown(route.requires, `route ${route.path}`);
+    }
+    for (const item of module.navigation?.items ?? []) {
+      assertRequiresAreKnown(item.requires, `nav item ${item.to}`);
+    }
+  }
+}
+
+/**
+ * Product module ids live in two code bases and can drift. A `requires` value that is not in
+ * the catalog would silently never match `enabledModules`, hiding the route from everyone, so
+ * it fails at boot instead.
+ */
+function assertRequiresAreKnown(requires: readonly string[] | undefined, where: string): void {
+  for (const id of requires ?? []) {
+    if (!isProductModuleId(id)) {
+      throw new Error(`Unknown product module '${id}' required by ${where}`);
     }
   }
 }

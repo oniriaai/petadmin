@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, buildBusinessUnitWhere, getRequiredBusinessUnit, handleAuthzError, requireAuth } from "../../middleware/auth";
+import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
+import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
 import {
   cancelFuturePendingReservationsForPlan,
   syncFuturePendingReservationsForPlan,
 } from "./recurring-plans.service";
 
 export const recurringPlansRouter = Router();
-recurringPlansRouter.use(requireAuth);
 
 const recurringPlanSchema = z.object({
   clientId: z.string().min(1),
@@ -27,7 +27,7 @@ recurringPlansRouter.get("/", async (req, res) => {
   try {
   const { status, clientId } = req.query as Record<string, string>;
 
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (status === "active") where.isActive = true;
   else if (status === "inactive") where.isActive = false;
   if (clientId) where.clientId = clientId;
@@ -60,7 +60,7 @@ recurringPlansRouter.get("/:id", async (req, res) => {
     },
   });
   if (!plan) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertBusinessUnitAccess(req, plan.businessUnit);
+  assertRecordAccess(req, plan);
   res.json(plan);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
@@ -95,6 +95,7 @@ recurringPlansRouter.post("/", async (req, res) => {
   const plan = await prisma.recurringPlan.create({
     data: {
       businessUnit: bu,
+      daycareId: getRequiredDaycareId(req),
       clientId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
@@ -127,7 +128,7 @@ recurringPlansRouter.put("/:id", async (req, res) => {
 
   const plan = await prisma.recurringPlan.findUnique({ where: { id: req.params.id } });
   if (!plan) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertBusinessUnitAccess(req, plan.businessUnit);
+  assertRecordAccess(req, plan);
 
   const { roomId, clientId, startDate, endDate, startTime, endTime, ...rest } = parsed.data;
   const effectiveStartTime = startTime ?? plan.startTime;
@@ -180,9 +181,9 @@ recurringPlansRouter.put("/:id", async (req, res) => {
 recurringPlansRouter.patch("/:id/status", async (req, res) => {
   try {
   const { isActive } = req.body;
-  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   const plan = await prisma.recurringPlan.update({
     where: { id: req.params.id },
     data: { isActive },
@@ -200,9 +201,9 @@ recurringPlansRouter.patch("/:id/status", async (req, res) => {
 
 recurringPlansRouter.delete("/:id", async (req, res) => {
   try {
-  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true } });
+  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
   if (!current) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertBusinessUnitAccess(req, current.businessUnit);
+  assertRecordAccess(req, current);
   await cancelFuturePendingReservationsForPlan(req.params.id);
   // Soft delete by marking as inactive
   await prisma.recurringPlan.update({

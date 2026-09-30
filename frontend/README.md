@@ -1,6 +1,7 @@
-# Frontend — Aplicación Web Modular Pethijos & Kinderdog
+# Frontend — Aplicación Web Modular
 
-Aplicación React 18 con Vite, TypeScript y Tailwind CSS diseñada para la operación diaria y modular de **Guardería (Kinderdog)** y **Peluquería (Pethijos)**.
+Aplicación React 18 con Vite, TypeScript y Tailwind CSS para la operación diaria de **Guardería** y
+**Peluquería**, más la **consola de plataforma** del proveedor.
 
 ---
 
@@ -12,113 +13,184 @@ Aplicación React 18 con Vite, TypeScript y Tailwind CSS diseñada para la opera
 
 ---
 
-## Nuevos Módulos y Páginas Especializadas
+## Sesión y módulos contratados
 
-### 1. Módulo de Peluquería (`src/pages/peluqueria/AgendaPeluqueriaPage.tsx`)
-Accesible en la ruta `/peluqueria` (exclusivo para `admin` y `pethijos`):
-- **KPIs del Día**: Citas agendadas, perrhijos en salón/baño, listos para entrega, entregados y total facturado.
-- **Tablero Kanban de Flujo de Atención**:
-  - `Agendadas`: Citas con hora de inicio y duración estimada en minutos.
-  - `En Salón`: Recepción de la mascota por el tutor.
-  - `En Baño / Corte`: Proceso de estilismo activo.
-  - `Listo para Entrega`: Mascota terminada en espera de retiro.
-  - `Entregadas / Cobradas`: Cierre y confirmación de cobro.
-- **Modal de Agendamiento Ágil**:
-  - Búsqueda en vivo de clientes.
-  - Selección de mascota(s).
-  - Selector de servicio con duración (minutos) y tarifa base automática.
-  - Fecha y hora con cálculo automático de horario de fin.
-  - Anticipo opcional con medio de pago.
-- **Modal de Cobro Directo**: Registro de ingreso contable independiente a nombre de **Pethijos**.
+La sesión es **autoritativa desde el servidor**. `src/lib/auth-context.tsx` llama a `GET /auth/me`
+al montar y después de iniciar sesión, y expone:
 
-### 2. Módulo de Guardería (`src/pages/guarderia/ControlGuarderiaPage.tsx`)
-Accesible en la ruta `/guarderia` (exclusivo para `admin` y `kinderdog`):
-- **Semáforo de Cupos en Vivo por Salas**:
-  - Tarjetas visuales por cada sala física con capacidad total, perrhijos presentes y cupos disponibles.
-  - Barra de progreso porcentual coloreada (verde si hay disponibilidad, amarillo si supera el 75%, rojo si está llena).
-  - Lista de perrhijos en estancia con foto, nombre, raza, tutor y hora de ingreso.
-  - Bloqueo de entrada automático cuando la sala alcanza su capacidad máxima.
-- **Lista de Asistencia Diaria**:
-  - Monitoreo de todas las mascotas con check-in activo.
-  - Botón de Check-out rápido con opción de registro de cobro independiente a nombre de **Kinderdog**.
-- **Rutas de Transporte**:
-  - Segmentación de *Recogidas* y *Entregas* del día con hora, tutor, teléfono y dirección.
+```ts
+const { user, daycare, enabledModules, units, fullAccess,
+        hasModule, hasModules, pinnedDaycareId, setPinnedDaycare } = useAuth();
+```
+
+`localStorage` es solo una **caché de render**: el usuario guardado pinta el primer fotograma para
+que recargar no se sienta como un arranque en frío, y `/auth/me` lo corrige acto seguido. Un módulo
+desactivado en la consola llega al navegador **sin volver a iniciar sesión**: `src/lib/api.ts`
+detecta `code: "MODULE_DISABLED"` y vuelve a leer la sesión, de modo que la navegación y los guards
+se ponen al día en lugar de dejar una ruta muerta en pantalla.
+
+`src/lib/api.ts` conserva el estado HTTP y el `code` del servidor en un `ApiError`
+(`status`, `code`, `details`). Antes colapsaba cualquier respuesta no-2xx en `new Error(message)`,
+lo que hacía imposible distinguir un 404 de un 403 y dejaba `MODULE_DISABLED` fuera de alcance.
+
+Cabeceras que envía automáticamente: `Authorization`, `X-Business-Unit` (unidad activa) y
+`X-Daycare-Id` (inquilino fijado por un superadmin). `downloadFile` también las envía; sin la
+segunda, una exportación del proveedor saldría del alcance equivocado.
 
 ---
 
-## Navegación Contextual (`src/components/layout/Sidebar.tsx`)
+## Gating de módulos
 
-La composición de rutas y navegación vive en `src/modules/registry.tsx`. Cada
-`FrontendModule` declara sus rutas, roles, unidad de negocio y elementos de navegación;
-`App.tsx` y `Sidebar.tsx` consumen el mismo registro para evitar que una ruta protegida
-quede visible o autorizada con reglas distintas.
+La composición de rutas y navegación vive en `src/modules/registry.tsx`. Cada `ModuleRoute` y cada
+`ModuleNavigationItem` declara `requires?: ProductModuleId[]`, con semántica **Y**: hacen falta
+todos.
 
-Los contratos compartidos de autenticación, unidades de negocio, clientes y mascotas
-viven en `src/modules/shared/contracts.ts`; los clientes de API pueden reexportarlos,
-pero las nuevas APIs deben importar los contratos desde ese módulo compartido.
+Los cuatro ids de módulo del frontend (`dashboard`, `guarderia`, `peluqueria`, `shared`) son
+agrupaciones de presentación y **no** se corresponden con los módulos de producto, por eso la
+contratación se declara por ruta. Cada valor es el módulo dueño de una API que la página llama de
+verdad:
 
-Las operaciones compartidas de Clientes y Mascotas se exponen mediante
-`src/modules/shared/api.ts`. Los módulos de negocio deben consumir ese contrato
-(`clientsApi` / `petsApi`) en lugar de construir URLs de esos dominios directamente.
+| Ruta | Requiere | Motivo |
+|---|---|---|
+| `/guarderia` | `guarderia` | |
+| `/salas`, `/planes`, `/disponibilidad` | `reservas` | Salas y planes son primitivos compartidos |
+| `/transporte` | `guarderia` + `informes` | La página lee `/reports/transport`, no `/guarderia/transport` |
+| `/operaciones` | `reservas` | |
+| `/peluqueria` | `peluqueria` | |
+| `/transacciones` | `finanzas` | Sus cuatro pestañas pertenecen al mismo módulo |
+| `/inventario` | `inventario` | |
+| `/informes` | `informes` | |
+| `/`, `/clientes`, `/animales`, `/herramientas`, `/configuracion`, `/guia` | — | Núcleo |
 
-Consulta [docs/adding-a-module.md](../docs/adding-a-module.md) para el checklist
-completo de incorporación de módulos.
+`validateFrontendModules()` rechaza un `requires` que no esté en el catálogo de
+`src/modules/shared/contracts.ts`: los ids viven en dos bases de código y uno desconocido no
+coincidiría con nada, ocultando la ruta para todo el mundo en silencio.
 
-El Sidebar organiza la navegación en dominios claros, evitando la sobrecarga de pestañas planas:
+**Gating por pestaña**: `cumplimiento` no tiene ruta propia — sus dos pantallas son las pestañas
+de Alertas y Contratos en `HerramientasPage`, así que se comprueba ahí; el estimador es una
+calculadora local sin API y sigue disponible. Si el módulo se desactiva a mitad de sesión, la
+pestaña abierta cede.
 
-1. **Dashboard Principal (`/`)**: Resumen del día y accesos directos.
-2. **Sección Guardería (🐶)**:
-   - Control Guardería (`/guarderia`)
-   - Salas & Cupos (`/salas`)
-   - Planes Recurrentes (`/planes`)
-   - Transporte (`/transporte`)
-   - Disponibilidad (`/disponibilidad`)
-3. **Sección Peluquería (✂️)**:
-   - Agenda de Peluquería (`/peluqueria`)
-4. **Gestión Transversal (💼)**:
-   - Clientes (`/clientes`), Perrhijos (`/animales`), Operaciones (`/operaciones`), Finanzas (`/transacciones`), Informes (`/informes`), Herramientas (`/herramientas`), Configuración (`/configuracion`), Guía (`/guia`).
+**Gating por unidad**: una ruta puede declarar `unit`. El backend rechaza un módulo que no sirve a
+la unidad acotada, así que `/guarderia`, `/transporte` y `/peluqueria` lo declaran y el guard
+explica el desajuste ofreciendo cambiar de unidad, en vez de montar una página que se llena de 403.
 
-### Reglas de Visualización según Rol
-- **Rol `kinderdog`**: Solo visualiza la sección de Guardería y la Gestión Transversal. Las rutas de peluquería están ocultas y protegidas.
-- **Rol `pethijos`**: Solo visualiza la sección de Peluquería y la Gestión Transversal. Las rutas de guardería están ocultas y protegidas.
-- **Rol `admin`**: Dispone de un selector de workspace en la cabecera del Sidebar para filtrar la vista en:
-  - *Consolidado (Ambos)*
-  - *Kinderdog (Guardería)*
-  - *Pethijos (Peluquería)*
+### Guards (`src/App.tsx`)
+
+- `GuardedRoute` comprueba **rol y contratación**. Si bloquea, **explica** el motivo nombrando el
+  módulo que falta en lugar de redirigir a `/`: un salto silencioso es indistinguible de un enlace
+  roto. Un `superadmin` no queda limitado por la contratación, igual que en el backend.
+- `enabledModules` está vacío hasta que responde el primer `/auth/me`, así que el guard espera a
+  `isSessionLoading` en vez de anunciar "módulo no disponible" en cada carga de página.
+- `SuperAdminRoute` protege `/platform/*`; un usuario de guardería vuelve a `/`, y un superadmin sin
+  inquilino fijado que aterrice en el workspace va a `/platform`.
+- `Sidebar.shouldShowItem` filtra por rol, unidad activa y contratación. Ya no trata a un usuario
+  indefinido como administrador.
 
 ---
 
-## Clientes API Modulares (`src/lib/api.ts`)
+## Consola de plataforma
 
-Se exportan clientes tipados para consumir los nuevos endpoints:
+`src/pages/platform/`, montada en `/platform/*` con **carga diferida**. El límite `React.lazy` es un
+requisito, no una optimización: empaquetada de forma normal, cada usuario de guardería recibiría el
+código de la consola y con él un mapa completo de la API `/platform`. No es un agujero de
+autorización —el backend es quien decide— pero no hay razón para repartirlo.
+
+La consola se distingue con un bloque de tokens `[data-theme="platform"]` en `src/styles.css` que
+reescribe las variables de `:root`. Las clases compartidas (`.btn`, `.card`, `.input`, `.table-*`)
+se vuelven oscuras e índigo ahí **sin duplicar un solo componente**.
+
+Pantallas: resumen, listado de guarderías, detalle (matriz de módulos, usuarios y auditoría), alta
+de guardería y auditoría general.
+
+"Operar como esta guardería" fija el inquilino y entra al workspace. El shell del inquilino muestra
+entonces un banner **no descartable** (`PlatformBanner`): es lo único que distingue al proveedor
+dentro del workspace de un cliente del administrador de ese cliente, así que no puede cerrarse.
+Entrar a la consola libera el inquilino fijado, e iniciar sesión también, para que una sesión no
+arrastre el pin a la siguiente.
+
+---
+
+## Módulos y páginas
+
+### Guardería (`src/pages/guarderia/ControlGuarderiaPage.tsx`)
+Ruta `/guarderia`, roles `admin` y `daycare`:
+- Semáforo de cupos en vivo por sala, con barra de ocupación y bloqueo al alcanzar el aforo.
+- Lista de asistencia diaria y check-out con cobro opcional a nombre de `DAYCARE`.
+- Rutas de transporte del día (recogidas y entregas).
+
+### Peluquería (`src/pages/peluqueria/AgendaPeluqueriaPage.tsx`)
+Ruta `/peluqueria`, roles `admin` y `grooming`:
+- KPIs del día y tablero kanban (`Agendadas` → `En Salón` → `En Baño/Corte` → `Listo` → `Entregadas`).
+- Modal de agendamiento con búsqueda de clientes, selección de servicio, duración y anticipo.
+- Cobro directo como ingreso contable de `GROOMING`.
+
+### Navegación
+
+El Sidebar agrupa en Guardería, Peluquería y Gestión Transversal. Un `admin` dispone de un selector
+de workspace (Consolidado / Guardería / Peluquería); los roles `daycare` y `grooming` solo ven su
+sección y la gestión transversal.
+
+Los contratos compartidos viven en `src/modules/shared/contracts.ts` y las operaciones compartidas
+de clientes y mascotas en `src/modules/shared/api.ts`. Consulta
+[docs/adding-a-module.md](../docs/adding-a-module.md) para el checklist completo.
+
+---
+
+## Clientes API
 
 ```typescript
-// Peluquería
-import { peluqueriaApi } from "./lib/api";
+import { peluqueriaApi, guarderiaApi } from "./lib/api";
+import { platformApi } from "./lib/platform-api";   // solo en el bundle de la consola
 
-const services = await peluqueriaApi.getServices();
-const appointments = await peluqueriaApi.getAppointments({ date: "2026-09-22" });
-await peluqueriaApi.createAppointment({ ... });
-await peluqueriaApi.updateStatus(id, { status: "LISTO" });
-await peluqueriaApi.completeAndCollect(id, { paymentMethod: "EFECTIVO", amount: 25 });
-
-// Guardería
-import { guarderiaApi } from "./lib/api";
-
-const occupancy = await guarderiaApi.getOccupancy();
-const attendance = await guarderiaApi.getTodayAttendance();
+await peluqueriaApi.getAppointments({ date: "2026-09-22" });
 await guarderiaApi.checkIn({ clientId, petId, roomId });
-await guarderiaApi.checkOut({ checkInOutId, createIncome: true, amount: 20 });
-const transport = await guarderiaApi.getTransport();
+await platformApi.setModules(daycareId, [{ moduleId: "finanzas", isEnabled: true }]);
 ```
+
+`platform-api.ts` se mantiene fuera de `lib/api.ts` para que solo entre en el bundle diferido.
 
 ---
 
-## Scripts Disponibles
+## Scripts
 
 ```bash
-npm run dev                  # Servidor de desarrollo Vite (puerto 5173 o 5174 en Docker)
-npm run build                # Compilación estática TypeScript + Vite
-npm run preview              # Vista previa del build generado
-npm run test                 # Pruebas con Vitest (route-guards.test.tsx)
+npm run dev                  # Vite (5173, o 5174 en Docker)
+npm run build                # tsc -b && vite build
+npm run preview              # Vista previa del build
+npm run test -- --run        # Vitest
 ```
+
+Suites: `route-guards`, `module-gating` (gating de rutas y navegación, rutas del superadmin y
+validación del registro), `app-shell` (topbar, cajón móvil, colapso, selector de unidad, menú de
+usuario y banner de plataforma), `module-registry` y `shared-contracts`.
+
+---
+
+## Shell de la aplicación
+
+`src/components/layout/AppShell.tsx` compone la navegación, la topbar y la página:
+
+- **Topbar** con el nombre de la guardería, el selector de unidad y el menú de usuario. Antes no
+  había cabecera alguna.
+- **Sidebar colapsable** en escritorio (se reduce a iconos y recuerda la preferencia) y **cajón
+  lateral** por debajo de `lg`. Antes era un `w-64` fijo sin clases responsivas, así que la
+  aplicación no se podía usar por debajo de ~768px.
+- El banner de modo plataforma vive dentro de la topbar fija, para que no se pueda dejar atrás al
+  hacer scroll.
+
+`PageHeader` sustituye el bloque de título/subtítulo/acciones que estaba copiado en 13 páginas;
+ahora las acciones se envuelven bajo el título en pantallas estrechas en lugar de comprimirlo. Los
+contenedores de página usan `p-4 sm:p-6`, las rejillas de 3 y 4 columnas se apilan, y las tablas
+van dentro de un contenedor con scroll horizontal en vez de recortarse.
+
+Los tokens de `src/styles.css` están expuestos a Tailwind (`bg-surface`, `text-muted`, `border-line`,
+`bg-shell`…) como variables CSS, así que `[data-theme="platform"]` sigue retematizando la consola sin
+duplicar clases.
+
+## Configuración
+
+`ConfiguracionPage` era una pantalla simulada; ahora lee y escribe `/settings`. Muestra los datos de
+la guardería en solo lectura (los gestiona el proveedor) y, por cada unidad contratada, el IVA por
+defecto y la zona horaria. El selector de idioma se **eliminó**: la interfaz es solo en español y
+nada consumía ese valor, así que era un control que no hacía nada.

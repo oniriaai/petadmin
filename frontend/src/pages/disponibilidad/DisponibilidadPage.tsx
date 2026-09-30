@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
 import { format, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 interface Reservation {
   id: string;
@@ -45,19 +46,19 @@ export function DisponibilidadPage() {
   const withoutRoom = reservations.filter(r => !r.room && r.status !== "CANCELADA");
 
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Disponibilidad</h1>
-          <p className="text-gray-500 text-sm mt-1">Ocupación por sala</p>
-        </div>
-        <div className="flex items-center gap-2">
+    <div className="p-4 sm:p-6 space-y-5">
+      <PageHeader
+          title="Disponibilidad"
+          subtitle="Ocupación por sala"
+          actions={
+            <div className="flex items-center gap-2">
           <button onClick={() => setDate(d => subDays(d, 1))} className="btn-secondary p-2"><ChevronLeft size={16} /></button>
           <span className="font-medium text-gray-800 min-w-40 text-center">{format(date, "EEEE d 'de' MMMM", { locale: es })}</span>
           <button onClick={() => setDate(d => addDays(d, 1))} className="btn-secondary p-2"><ChevronRight size={16} /></button>
           <button onClick={() => setDate(new Date())} className="btn-secondary text-xs">Hoy</button>
-        </div>
-      </div>
+            </div>
+          }
+        />
 
       {loading ? <PageLoader /> : (
         <div className="space-y-4">
@@ -115,7 +116,7 @@ export function DisponibilidadPage() {
 
           <div className="card p-4">
             <h3 className="font-semibold text-gray-800 mb-3">Resumen del día</h3>
-            <div className="grid grid-cols-4 gap-4 text-center text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center text-sm">
               {[
                 { label: "Total reservas", value: reservations.filter(r => r.status !== "CANCELADA").length },
                 { label: "Activas ahora", value: reservations.filter(r => r.status === "ACTIVA").length, color: "text-green-600" },

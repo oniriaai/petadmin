@@ -36,7 +36,7 @@ services:
         apk add --no-cache openssl &&
         npm install &&
         npx prisma generate &&
-        npx prisma db push --accept-data-loss &&
+        npx prisma migrate deploy &&
         npx tsx prisma/seed.ts;
         npm run dev
       "
@@ -44,6 +44,9 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       BACKEND_PORT: ${BACKEND_PORT}
       JWT_SECRET: ${JWT_SECRET}
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+      SUPERADMIN_NAME: ${SUPERADMIN_NAME}
       VAT_PERCENT: ${VAT_PERCENT}
       B2_KEY_ID: ${B2_KEY_ID}
       B2_APPLICATION_KEY: ${B2_APPLICATION_KEY}

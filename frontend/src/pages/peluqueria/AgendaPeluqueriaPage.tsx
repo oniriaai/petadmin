@@ -228,7 +228,7 @@ export function AgendaPeluqueriaPage() {
   if (loading && appointments.length === 0) return <PageLoader />;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -237,7 +237,7 @@ export function AgendaPeluqueriaPage() {
               <Scissors size={24} />
             </span>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Agenda de Peluquería (Pethijos)</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Agenda de Peluquería</h1>
               <p className="text-sm text-gray-500">Gestión de turnos por duración, flujo de estilismo y cobro directo</p>
             </div>
           </div>
@@ -524,7 +524,7 @@ export function AgendaPeluqueriaPage() {
       )}
 
       {/* Modal: Agendar Nueva Cita de Peluquería */}
-      <Modal open={showNewModal} onClose={() => setShowNewModal(false)} title="Agendar Cita de Peluquería (Pethijos)" size="lg">
+      <Modal open={showNewModal} onClose={() => setShowNewModal(false)} title="Agendar Cita de Peluquería" size="lg">
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           {formError && (
             <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2">
@@ -737,7 +737,7 @@ export function AgendaPeluqueriaPage() {
         </form>
       </Modal>
 
-      {/* Modal: Entregar y Cobrar Cita (Independiente Pethijos) */}
+      {/* Modal: Entregar y Cobrar Cita (independiente de la unidad de Peluquería) */}
       <Modal open={showCollectModal} onClose={() => setShowCollectModal(false)} title="Cobro y Entrega de Peluquería">
         <form onSubmit={handleCollect} className="space-y-4">
           <div className="p-3 bg-violet-50 border border-violet-100 rounded-xl space-y-1">
@@ -760,7 +760,7 @@ export function AgendaPeluqueriaPage() {
               required
             />
             <p className="text-[11px] text-gray-400 mt-1">
-              Se registrará un ingreso contable independiente a nombre de <strong>Pethijos</strong>.
+              Se registrará un ingreso contable independiente a nombre de <strong>Peluquería</strong>.
             </p>
           </div>
 

@@ -14,6 +14,7 @@ import {
 import { NuevaReservaModal } from "../reservas/NuevaReservaModal";
 import { ReservationDetailModal } from "../reservas/ReservationDetailModal";
 import { Modal } from "../../components/ui/Modal";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 export function OperacionesPage() {
   const { events, loading, error, refresh } = useOperacionesData();
@@ -114,14 +115,13 @@ export function OperacionesPage() {
   }, [events, statusFilter, search]);
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Operaciones</h1>
-          <p className="text-gray-500 text-sm mt-1">Gestión Unificada de Reservas y Visitas Ad-hoc</p>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+          title="Operaciones"
+          subtitle="Gestión Unificada de Reservas y Visitas Ad-hoc"
+          actions={
+            <div className="flex gap-2">
           <button onClick={refresh} disabled={loading || actionLoading} className="btn-ghost">
             <RefreshCw size={16} /> Actualizar
           </button>
@@ -131,8 +131,9 @@ export function OperacionesPage() {
           <button onClick={() => setShowNewReserva(true)} className="btn-primary">
             <Plus size={16} /> Nueva Reserva
           </button>
-        </div>
-      </div>
+            </div>
+          }
+        />
 
       {/* Controls */}
       <div className="card p-4 flex flex-wrap gap-3">

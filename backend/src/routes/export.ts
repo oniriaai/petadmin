@@ -1,10 +1,10 @@
 import { Response, Router } from "express";
 import ExcelJS from "exceljs";
-import { buildBusinessUnitWhere, handleAuthzError, requireAuth } from "../middleware/auth";
+import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { buildScopeWhere } from "../core/tenancy/scope";
 
 export const exportRouter = Router();
-exportRouter.use(requireAuth);
 
 async function sendWorkbook(res: Response, wb: ExcelJS.Workbook, filename: string) {
   res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -31,7 +31,7 @@ exportRouter.get("/clients", async (req, res) => {
 exportRouter.get("/reservations", async (req, res) => {
   try {
   const { from, to } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (from || to) {
     where.checkIn = {};
     if (from) (where.checkIn as Record<string, unknown>).gte = new Date(from);
@@ -61,7 +61,7 @@ exportRouter.get("/reservations", async (req, res) => {
 exportRouter.get("/incomes", async (req, res) => {
   try {
   const { from, to } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = buildBusinessUnitWhere(req);
+  const where: Record<string, unknown> = buildScopeWhere(req);
   if (from || to) {
     where.date = {};
     if (from) (where.date as Record<string, unknown>).gte = new Date(from);
@@ -87,7 +87,7 @@ exportRouter.get("/incomes", async (req, res) => {
 exportRouter.get("/expenses", async (req, res) => {
   try {
   const payables = await prisma.payable.findMany({
-    where: buildBusinessUnitWhere(req),
+    where: buildScopeWhere(req),
     include: { provider: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
   });

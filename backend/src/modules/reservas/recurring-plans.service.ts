@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { validateNoReservationConflicts, validateRoomCapacity } from "../../utils/validation";
-import { getBusinessUnitTimezone } from "../../services/business-unit-settings";
+import { getUnitTimezone } from "../../core/tenancy/unit-settings";
 
 const HORIZON_DAYS = 30;
 
@@ -11,7 +11,16 @@ type GenerationStats = {
   createdReservations: number;
   skippedExisting: number;
   failed: number;
+  /** Why occurrences failed, counted by message. An empty object means a clean run. */
+  failures: Record<string, number>;
 };
+
+/**
+ * Generating one occurrence either writes a reservation or finds the one a previous run already
+ * wrote. "Already there" is the normal outcome of the daily re-run over a 30-day horizon, not a
+ * failure, so it is a return value rather than an exception.
+ */
+type OccurrenceOutcome = "created" | "exists";
 
 function parsePetIds(petIds: string): string[] {
   return petIds
@@ -118,6 +127,7 @@ function toOccurrenceTimes(
 
 async function createReservationFromPlan(plan: {
   id: string;
+  daycareId: string;
   businessUnit: string;
   clientId: string;
   roomId: string | null;
@@ -126,7 +136,7 @@ async function createReservationFromPlan(plan: {
   petIds: string;
   startTime: string;
   endTime: string;
-}, checkIn: Date, checkOut: Date) {
+}, checkIn: Date, checkOut: Date): Promise<OccurrenceOutcome> {
   if (!plan.roomId) {
     throw new Error("Plan sin sala asignada: no se puede generar reserva");
   }
@@ -144,6 +154,19 @@ async function createReservationFromPlan(plan: {
     throw new Error("Plan contiene mascotas que no pertenecen al cliente");
   }
 
+  // Has a previous run already created this occurrence?
+  //
+  // This has to come BEFORE the conflict check. The reservation this plan wrote yesterday
+  // overlaps the slot it is about to write, so `validateNoReservationConflicts` sees the plan's
+  // own row and throws "Conflicto de horario" -- which meant every idempotent re-run was counted
+  // as a failure instead of a skip. The unique key is the same one the database enforces, so the
+  // check and the constraint cannot disagree.
+  const existing = await prisma.reservation.findUnique({
+    where: { recurringPlanId_checkIn: { recurringPlanId: plan.id, checkIn } },
+    select: { id: true },
+  });
+  if (existing) return "exists";
+
   const conflictValidation = await validateNoReservationConflicts(plan.roomId, checkIn, checkOut);
   if (!conflictValidation.valid) {
     throw new Error(conflictValidation.message || "Conflicto de horario");
@@ -157,6 +180,7 @@ async function createReservationFromPlan(plan: {
   await prisma.$transaction(async (tx) => {
     const reservation = await tx.reservation.create({
       data: {
+        daycareId: plan.daycareId,
         businessUnit: plan.businessUnit,
         clientId: plan.clientId,
         roomId: plan.roomId,
@@ -172,6 +196,7 @@ async function createReservationFromPlan(plan: {
 
     await tx.checkInOut.createMany({
       data: petIds.map((petId) => ({
+        daycareId: plan.daycareId,
         businessUnit: plan.businessUnit,
         petId,
         clientId: plan.clientId,
@@ -181,6 +206,8 @@ async function createReservationFromPlan(plan: {
       })),
     });
   });
+
+  return "created";
 }
 
 export async function generateRecurringReservations(referenceDate = new Date()): Promise<GenerationStats> {
@@ -190,6 +217,12 @@ export async function generateRecurringReservations(referenceDate = new Date()):
     createdReservations: 0,
     skippedExisting: 0,
     failed: 0,
+    failures: {},
+  };
+
+  const recordFailure = (reason: string) => {
+    stats.failed += 1;
+    stats.failures[reason] = (stats.failures[reason] ?? 0) + 1;
   };
 
   const start = new Date(referenceDate);
@@ -217,6 +250,7 @@ export async function generateRecurringReservations(referenceDate = new Date()):
       endDate: true,
       startTime: true,
       endTime: true,
+      daycareId: true,
     },
   });
 
@@ -228,7 +262,7 @@ export async function generateRecurringReservations(referenceDate = new Date()):
       continue;
     }
 
-    const timezone = await getBusinessUnitTimezone(plan.businessUnit);
+    const timezone = await getUnitTimezone(plan.daycareId, plan.businessUnit);
     const windowStartUtc = new Date(Math.max(plan.startDate.getTime(), start.getTime()));
     const windowEndUtc = new Date(Math.min(plan.endDate.getTime(), end.getTime()));
     const localStart = localDatePartsInTimezone(windowStartUtc, timezone);
@@ -241,22 +275,26 @@ export async function generateRecurringReservations(referenceDate = new Date()):
 
       const { checkIn, checkOut } = toOccurrenceTimes(localDay, plan.startTime, plan.endTime, timezone);
       if (checkOut <= checkIn) {
-        stats.failed += 1;
+        recordFailure("Horario inválido: la salida no es posterior a la entrada");
         continue;
       }
       stats.evaluatedOccurrences += 1;
 
       try {
-        await createReservationFromPlan(plan, checkIn, checkOut);
-        stats.createdReservations += 1;
+        if ((await createReservationFromPlan(plan, checkIn, checkOut)) === "created") {
+          stats.createdReservations += 1;
+        } else {
+          stats.skippedExisting += 1;
+        }
       } catch (error) {
         if (
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === "P2002"
         ) {
+          // Another run created it between the existence check and the insert. Still a skip.
           stats.skippedExisting += 1;
         } else {
-          stats.failed += 1;
+          recordFailure(error instanceof Error ? error.message : "Error desconocido");
         }
       }
     }
@@ -270,6 +308,7 @@ export async function syncFuturePendingReservationsForPlan(planId: string): Prom
     where: { id: planId },
     select: {
       id: true,
+      daycareId: true,
       businessUnit: true,
       clientId: true,
       roomId: true,
@@ -296,7 +335,7 @@ export async function syncFuturePendingReservationsForPlan(planId: string): Prom
 
   for (const reservation of reservations) {
     await prisma.$transaction(async (tx) => {
-      const timezone = await getBusinessUnitTimezone(plan.businessUnit);
+      const timezone = await getUnitTimezone(plan.daycareId, plan.businessUnit);
       if (!reservation.checkIn) return;
       const localDay = localDatePartsInTimezone(reservation.checkIn, timezone);
       const { checkIn, checkOut } = toOccurrenceTimes(localDay, plan.startTime, plan.endTime, timezone);
@@ -325,6 +364,7 @@ export async function syncFuturePendingReservationsForPlan(planId: string): Prom
       if (plan.roomId) {
         await tx.checkInOut.createMany({
           data: petIds.map((petId) => ({
+            daycareId: plan.daycareId,
             businessUnit: reservation.businessUnit,
             petId,
             clientId: plan.clientId,

@@ -7,8 +7,33 @@ Con la reestructuración hacia una **Arquitectura Modular (Modular Monolith)**, 
 - ✅ **Módulo de Guardería**: Salas con cálculo de ocupación y cupos en tiempo real, validación estricta contra sobrecupo, check-in/out, planes recurrentes con scheduler automático y transporte.
 - ✅ **Módulo de Peluquería**: Catálogo de servicios con duraciones estimadas, citas por franja horaria, tablero kanban de estados de atención y cobro directo.
 - ✅ **Core Compartido**: Tutores y perrhijos con historial médico, vacunas y fotos en Backblaze B2.
-- ✅ **Finanzas Segregadas**: Cobros e ingresos independientes por unidad contable (`KINDERDOG` y `PETHIJOS`).
-- ✅ **Aislamiento Multi-Tenancy**: Control de roles estricto con `403 Forbidden` entre dominios no autorizados.
+- ✅ **Finanzas Segregadas**: Cobros e ingresos independientes por unidad contable (`DAYCARE` y `GROOMING`).
+- ✅ **Multi-Inquilino**: Cada guardería cliente es un inquilino con sus propios datos y usuarios.
+  Un registro de otra guardería responde `404 Not Found` (no se confirma que exista) y un módulo no
+  contratado, `403 Forbidden` con `code: "MODULE_DISABLED"`.
+- ✅ **Contratación por Módulos**: Siete módulos vendibles sobre un núcleo común, aplicados en el
+  registro de módulos del backend y reflejados en la navegación del frontend.
+- ✅ **Consola de Plataforma**: Alta de guarderías, activación de módulos, provisión de usuarios y
+  auditoría, con el rol `superadmin` que ninguna guardería puede asignar.
+
+---
+
+## Deuda Saldada
+
+La deuda que quedaba tras el trabajo de plataforma está resuelta:
+
+- **`ConfiguracionPage` ya no es una simulación**: lee y escribe `/settings`, con IVA y zona horaria
+  por (guardería, unidad). El IVA configurado se aplica de verdad a reservas y citas nuevas, donde
+  antes había un `15` escrito a mano en tres sitios. El selector de idioma se eliminó en vez de
+  persistirse: la interfaz es solo en español y nada lo consumía.
+- **`access.businessUnits` ya se aplica**: el gate rechaza un módulo que no sirve a la unidad
+  acotada, con `code: "WRONG_BUSINESS_UNIT"`. Solo afecta a un rol que abarca ambas unidades; pedir
+  ocupación de Guardería estando en Peluquería devolvía datos de Guardería e ignoraba la cabecera.
+- **El planificador ya es idempotente**: comprueba la ocurrencia por su clave única antes de validar
+  conflictos, porque la reserva que él mismo creó ayer solapa la franja de hoy. Una reejecución
+  limpia informa `failed: 0` y las estadísticas incluyen un desglose de motivos.
+- **`inventario` y `cumplimiento` ya tienen interfaz**: pantalla de inventario con aviso de stock
+  mínimo y movimientos, y pestaña de contratos junto a la de alertas.
 
 ---
 
@@ -28,7 +53,7 @@ Con la reestructuración hacia una **Arquitectura Modular (Modular Monolith)**, 
    - Firma electrónica con archivo `.p12`.
    - Generación de RIDE (PDF) y envío automático del XML al correo del tutor.
 2. **Configuración Fiscal Multi-Unidad**:
-   - Asignación de puntos de emisión y secuenciales diferenciados para Kinderdog y Pethijos.
+   - Asignación de puntos de emisión y secuenciales diferenciados por guardería y por unidad de negocio.
 
 ### Fase 3: Analítica Avanzada y Business Intelligence
 1. **Plantilla Oficial de Power BI**:

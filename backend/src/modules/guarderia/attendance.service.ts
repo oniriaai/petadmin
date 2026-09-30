@@ -1,6 +1,14 @@
 import { prisma } from "../../db";
+import type { BusinessUnit } from "../../middleware/auth";
+
+/**
+ * The accounting/brand slot this module books under. Declared once here so the per-tenant
+ * scoping work has a single place to replace with a request-derived value.
+ */
+export const GUARDERIA_BUSINESS_UNIT: BusinessUnit = "DAYCARE";
 
 export interface DaycareCheckInDTO {
+  daycareId: string;
   petId: string;
   clientId: string;
   roomId: string;
@@ -11,6 +19,7 @@ export interface DaycareCheckInDTO {
 }
 
 export interface DaycareCheckOutDTO {
+  daycareId: string;
   checkInOutId: string;
   checkOutTime?: string;
   performedByUserId?: string;
@@ -22,11 +31,11 @@ export interface DaycareCheckOutDTO {
 
 export class DaycareAttendanceService {
   /**
-   * Obtiene la ocupación en tiempo real por cada sala de Guardería (Kinderdog)
+   * Obtiene la ocupación en tiempo real por cada sala de Guardería (unidad de guardería)
    */
-  static async getLiveOccupancy() {
+  static async getLiveOccupancy(daycareId: string) {
     const rooms = await prisma.room.findMany({
-      where: { businessUnit: "KINDERDOG", isActive: true },
+      where: { daycareId, businessUnit: GUARDERIA_BUSINESS_UNIT, isActive: true },
       include: {
         checkInOuts: {
           where: {
@@ -74,7 +83,7 @@ export class DaycareAttendanceService {
   /**
    * Lista la asistencia programada y activa del día
    */
-  static async getTodayAttendance() {
+  static async getTodayAttendance(daycareId: string) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
@@ -83,7 +92,8 @@ export class DaycareAttendanceService {
     // 1. Reservas de guardería para hoy
     const reservations = await prisma.reservation.findMany({
       where: {
-        businessUnit: "KINDERDOG",
+        daycareId,
+        businessUnit: GUARDERIA_BUSINESS_UNIT,
         checkIn: { gte: todayStart, lte: todayEnd },
         status: { not: "CANCELADA" },
       },
@@ -99,7 +109,8 @@ export class DaycareAttendanceService {
     // 2. Check-ins activos (incluyendo ad-hoc sin reserva)
     const activeCheckIns = await prisma.checkInOut.findMany({
       where: {
-        businessUnit: "KINDERDOG",
+        daycareId,
+        businessUnit: GUARDERIA_BUSINESS_UNIT,
         isActive: true,
         checkInTime: { not: null },
         checkOutTime: null,
@@ -123,14 +134,14 @@ export class DaycareAttendanceService {
    * Registra check-in en sala de Guardería con validación estricta de cupo
    */
   static async registerCheckIn(dto: DaycareCheckInDTO) {
-    const { petId, clientId, roomId, reservationId, performedByUserId, notes } = dto;
+    const { daycareId, petId, clientId, roomId, reservationId, performedByUserId, notes } = dto;
     const checkInDate = dto.checkInTime ? new Date(dto.checkInTime) : new Date();
 
-    // 1. Validar que la sala pertenezca a KINDERDOG y esté activa
+    // 1. Validar que la sala pertenezca a la unidad de guardería y esté activa
     const room = await prisma.room.findUnique({
       where: { id: roomId },
     });
-    if (!room || room.businessUnit !== "KINDERDOG" || !room.isActive) {
+    if (!room || room.daycareId !== daycareId || room.businessUnit !== GUARDERIA_BUSINESS_UNIT || !room.isActive) {
       throw new Error("Sala de guardería inválida o inactiva");
     }
 
@@ -138,7 +149,8 @@ export class DaycareAttendanceService {
     const alreadyCheckedIn = await prisma.checkInOut.findFirst({
       where: {
         petId,
-        businessUnit: "KINDERDOG",
+        daycareId,
+        businessUnit: GUARDERIA_BUSINESS_UNIT,
         isActive: true,
         checkOutTime: null,
       },
@@ -151,7 +163,8 @@ export class DaycareAttendanceService {
     const currentActiveInRoom = await prisma.checkInOut.count({
       where: {
         roomId,
-        businessUnit: "KINDERDOG",
+        daycareId,
+        businessUnit: GUARDERIA_BUSINESS_UNIT,
         isActive: true,
         checkOutTime: null,
       },
@@ -188,7 +201,8 @@ export class DaycareAttendanceService {
               clientId,
               roomId,
               reservationId,
-              businessUnit: "KINDERDOG",
+              daycareId,
+              businessUnit: GUARDERIA_BUSINESS_UNIT,
               checkInTime: checkInDate,
               performedByUserId,
               notes,
@@ -210,7 +224,8 @@ export class DaycareAttendanceService {
             petId,
             clientId,
             roomId,
-            businessUnit: "KINDERDOG",
+            daycareId,
+            businessUnit: GUARDERIA_BUSINESS_UNIT,
             checkInTime: checkInDate,
             performedByUserId,
             notes,
@@ -228,7 +243,7 @@ export class DaycareAttendanceService {
    * Registra check-out de Guardería con opción de cobro independiente para Kinderdog
    */
   static async registerCheckOut(dto: DaycareCheckOutDTO) {
-    const { checkInOutId, performedByUserId, createIncome, paymentMethod = "EFECTIVO", notes } = dto;
+    const { daycareId, checkInOutId, performedByUserId, createIncome, paymentMethod = "EFECTIVO", notes } = dto;
     const checkOutDate = dto.checkOutTime ? new Date(dto.checkOutTime) : new Date();
 
     const record = await prisma.checkInOut.findUnique({
@@ -236,7 +251,7 @@ export class DaycareAttendanceService {
       include: { pet: true, client: true, reservation: true },
     });
 
-    if (!record || record.businessUnit !== "KINDERDOG") {
+    if (!record || record.daycareId !== daycareId || record.businessUnit !== GUARDERIA_BUSINESS_UNIT) {
       throw new Error("Registro de asistencia no encontrado en Guardería");
     }
 
@@ -280,7 +295,8 @@ export class DaycareAttendanceService {
         if (amount > 0) {
           await tx.income.create({
             data: {
-              businessUnit: "KINDERDOG",
+              daycareId,
+              businessUnit: GUARDERIA_BUSINESS_UNIT,
               reservationId: record.reservationId || null,
               type: "GUARDERIA",
               concept: `Estancia Guardería: ${record.pet.name} (${record.client.firstName} ${record.client.lastName})`,
@@ -313,7 +329,7 @@ export class DaycareAttendanceService {
   /**
    * Rutas de transporte para el día
    */
-  static async getTodayTransport() {
+  static async getTodayTransport(daycareId: string) {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
@@ -321,7 +337,8 @@ export class DaycareAttendanceService {
 
     const transportReservations = await prisma.reservation.findMany({
       where: {
-        businessUnit: "KINDERDOG",
+        daycareId,
+        businessUnit: GUARDERIA_BUSINESS_UNIT,
         needsTransport: true,
         checkIn: { gte: todayStart, lte: todayEnd },
         status: { not: "CANCELADA" },

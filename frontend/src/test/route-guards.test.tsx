@@ -40,7 +40,7 @@ describe("route guards", () => {
 
   it("redirects authenticated user away from login to requested route", () => {
     mockUseAuth.mockReturnValue({
-      user: { id: "u1", username: "admin", name: "Admin", businessUnit: "KINDERDOG", role: "admin" },
+      user: { id: "u1", username: "admin", name: "Admin", businessUnit: "DAYCARE", role: "admin" },
       isLoading: false,
     });
 

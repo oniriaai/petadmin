@@ -1,6 +1,27 @@
-# Alcance del Sistema Modular Pethijos & Kinderdog
+# Alcance del Sistema Modular
 
-El sistema se estructura como un **Modular Monolith** enfocado en la operación de dos unidades de negocio con flujos especializados, soportadas por un núcleo de datos maestros compartidos.
+El sistema se estructura como un **Modular Monolith** multi-inquilino. Cada guardería cliente es un
+inquilino independiente que opera hasta dos unidades de negocio —`DAYCARE` ("Guardería") y
+`GROOMING` ("Peluquería")— sobre un núcleo de datos maestros compartidos, y accede únicamente a los
+módulos de producto que contrató.
+
+---
+
+## 0. Inquilinos y Módulos Contratados
+
+- ✅ **Aislamiento por guardería**: toda fila operativa pertenece a un inquilino. Pedir un registro
+  de otra guardería responde **404** (no se confirma que exista), no 403.
+- ✅ **Módulos de producto**: lo que se vende y se activa por cliente —`reservas`, `guarderia`,
+  `peluqueria`, `finanzas`, `inventario`, `informes`, `cumplimiento`— sobre un `nucleo` que toda
+  guardería recibe. Un módulo no contratado responde **403** con `code: "MODULE_DISABLED"`.
+- ✅ **Cumplimiento en la API, no solo en la interfaz**: el control vive en el registro de módulos
+  (`requireAuth → requireModuleAccess → router`), así que ocultar una pantalla nunca es suficiente
+  ni necesario para que el módulo quede cerrado.
+- ✅ **Integridad contable independiente de la contratación**: los cobros que genera cerrar una
+  estancia o una cita se registran siempre, aunque `finanzas` esté deshabilitado; lo que se
+  restringe es el acceso a la API y a la interfaz financiera.
+- ✅ **Consola de plataforma**: alta de guarderías con sus unidades y módulos, provisión de usuarios,
+  activación de módulos y auditoría. Exclusiva del proveedor (`superadmin`).
 
 ---
 
@@ -9,11 +30,13 @@ El sistema se estructura como un **Modular Monolith** enfocado en la operación 
 - ✅ **Clientes / Tutores (CRUD completo)**: Cédula, teléfono, WhatsApp, email, dirección, notas y estado activo.
 - ✅ **Mascotas / Perrhijos (CRUD completo)**: Nombre, especie, raza, sexo, fecha de nacimiento, microchip, notas médicas, alergias, foto y estado.
 - ✅ **Almacenamiento de Imágenes y Documentos**: Carga directa a Backblaze B2 mediante URLs presignadas sin sobrecargar la API.
-- ✅ **Autenticación y Control de Acceso**: JWT con roles `admin`, `kinderdog` y `pethijos`, con aislamiento estricto por unidad de negocio.
+- ✅ **Autenticación y Control de Acceso**: JWT con roles `admin`, `daycare` y `grooming` dentro de
+  cada guardería, más el rol `superadmin` del proveedor, que no pertenece a ninguna guardería y que
+  ninguna puede asignar. El aislamiento es estricto por **inquilino y por unidad de negocio**.
 
 ---
 
-## 2. Módulo de Guardería (Kinderdog)
+## 2. Módulo de Guardería
 
 Centrado en estancias físicas prolongadas (día completo o medio día) y ocupación de espacios:
 
@@ -21,14 +44,14 @@ Centrado en estancias físicas prolongadas (día completo o medio día) y ocupac
 - ✅ **Semáforo de Cupos en Vivo**: Monitoreo en tiempo real de cupos ocupados, cupos libres y porcentaje de saturación por sala.
 - ✅ **Control de Asistencia (Check-In / Check-Out)**:
   - Check-in con validación estricta de cupo disponible en sala (bloqueo automático ante sobrecupo).
-  - Check-out con registro de cobro contable independiente para `KINDERDOG`.
+  - Check-out con registro de cobro contable independiente para `DAYCARE`.
 - ✅ **Planes Recurrentes de Guardería**: Suscripciones por días semanales (2, 3, 4, 5 días) con generación automática de estancias para los próximos 30 días mediante scheduler diario.
 - ✅ **Rutas de Transporte**: Control de perrhijos con servicio de transporte, segmentado en ruta de recogida (mañana) y ruta de entrega (tarde).
 - ✅ **Finanzas de Guardería**: Registro de ingresos, gastos y compras separados estrictamente de Peluquería.
 
 ---
 
-## 3. Módulo de Peluquería (Pethijos)
+## 3. Módulo de Peluquería
 
 Centrado en citas y turnos individuales por servicio de estética:
 
@@ -40,15 +63,18 @@ Centrado en citas y turnos individuales por servicio de estética:
   - `En Baño / Corte`: Proceso activo de estética.
   - `Listo para Entrega`: Mascota lista esperando al tutor.
   - `Entregadas / Cobradas`: Confirmación de entrega.
-- ✅ **Cobro Directo e Independiente**: Registro de ingreso contable acreditado exclusivamente a `PETHIJOS`. Admite anticipo al agendar y cobro del saldo al entregar.
-- ✅ **Finanzas de Peluquería**: Registro de ingresos y gastos separados estrictamente de Kinderdog.
+- ✅ **Cobro Directo e Independiente**: Registro de ingreso contable acreditado exclusivamente a `GROOMING`. Admite anticipo al agendar y cobro del saldo al entregar.
+- ✅ **Finanzas de Peluquería**: Registro de ingresos y gastos separados estrictamente de Guardería.
 
 ---
 
 ## 4. Módulo de Administración y Finanzas
 
-- ✅ **Usuarios y Multi-Tenancy**: Control de roles y conmutación de contexto.
-- ✅ **Dashboard Consolidado**: Resumen diario de ingresos totales (Kinderdog + Pethijos), ocupación promedio y flujo de perrhijos.
+- ✅ **Usuarios y Multi-Inquilino**: Control de roles, conmutación de unidad de negocio y pertenencia
+  a una única guardería. El proveedor puede fijar un inquilino con la cabecera `X-Daycare-Id`; al
+  hacerlo, el workspace muestra un aviso permanente de "modo plataforma".
+- ✅ **Dashboard Consolidado**: Resumen diario de ingresos totales de la guardería (ambas unidades),
+  ocupación promedio y flujo de perrhijos.
 - ✅ **Gestión Contable Segregada**:
   - Dos cobros separados por unidad cuando una mascota recibe servicios de guardería y peluquería el mismo día.
   - Cuentas por pagar (`Payables`) y pagos parciales/totales categorizados por unidad.
