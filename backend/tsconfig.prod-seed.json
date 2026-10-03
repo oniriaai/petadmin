@@ -1,0 +1,10 @@
+{
+  "//": "Emits the seed for the production image. tsconfig.seed.json is typecheck-only (noEmit), so without this the image has no seed to run and the migrate step cannot provision the superadmin.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": "./dist-seed"
+  },
+  "include": ["prisma/seed.ts", "src/**/*.ts"]
+}

@@ -1,0 +1,129 @@
+# Production stack.
+#
+# What this deliberately does NOT do, in contrast to docker-compose.yml (which is a development
+# stack and should never be pointed at customer data):
+#   - no source mounts and no `npm run dev`; both services run built images
+#   - no pgAdmin, and no published Postgres port; the database is reachable only on the
+#     internal network
+#   - no seed on boot. Migrations are applied by a one-shot `migrate` service; the demo
+#     tenants (`pethijos`, `demo`) and their well-known passwords are gated behind
+#     SEED_DEMO_DATA and must stay off here
+#
+# Required in .env: DATABASE_URL, JWT_SECRET (>= 32 chars, not "change_me"), CORS_ORIGINS,
+# SUPERADMIN_PASSWORD, and the B2_* credentials. The backend refuses to start otherwise.
+#
+# Two ways to get the images, and APP_VERSION picks between them:
+#
+#   Run a published release (preferred) -- the artefact CI actually verified:
+#     APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml pull
+#     APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml up -d
+#
+#   Build on this host (unchanged, still works, e.g. for an unreleased hotfix):
+#     docker compose -f docker-compose.prod.yml up --build -d
+#
+# Every service keeps both `image:` and `build:`. `pull` fetches the named tag and a later
+# `up -d` uses it without building; `up --build` builds from source and tags it the same.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Runs to completion before the backend starts, so no web process ever serves against a
+  # schema it has not migrated. Provisions the platform superadmin and nothing else.
+  migrate:
+    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
+    build:
+      context: ./backend
+    command: sh -c "npx prisma migrate deploy && node dist-seed/prisma/seed.js"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      SUPERADMIN_USERNAME: ${SUPERADMIN_USERNAME}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+      SUPERADMIN_NAME: ${SUPERADMIN_NAME}
+      SEED_DEMO_DATA: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BACKEND_PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      B2_KEY_ID: ${B2_KEY_ID}
+      B2_APPLICATION_KEY: ${B2_APPLICATION_KEY}
+      B2_BUCKET_NAME: ${B2_BUCKET_NAME}
+      B2_ENDPOINT: ${B2_ENDPOINT}
+      B2_REGION: ${B2_REGION}
+    expose:
+      - "3001"
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # The daily recurring-plan generation, as a scheduled one-shot rather than a timer inside the
+  # web process. Invoke it from the host's cron:
+  #   docker compose -f docker-compose.prod.yml run --rm scheduler
+  # Running it twice is harmless -- generation is idempotent on (recurringPlanId, checkIn) --
+  # but running it from N web replicas, or never because a deploy reset a 24h setInterval, is
+  # what this avoids.
+  scheduler:
+    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
+    build:
+      context: ./backend
+    command: node dist/jobs/run-recurring-plans.js
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - jobs
+    restart: "no"
+
+  frontend:
+    image: ghcr.io/oniriaai/petadmin-frontend:${APP_VERSION:-latest}
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
