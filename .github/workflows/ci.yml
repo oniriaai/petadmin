@@ -1,0 +1,291 @@
+name: CI
+
+# The e2e suites were only ever run by hand against a local container. They are the regression
+# net for tenant isolation and module entitlements — the two things this product is sold on —
+# so they run on every push instead.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # release.yml reuses this entire workflow, so a tag can only be published if the exact
+  # commit it points at passed every gate below.
+  workflow_call:
+
+# Least privilege: nothing here writes to the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Everything that needs no database. Fast, and it fails the obvious things first.
+  static:
+    name: Typecheck, architecture, frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+
+      # Via npm scripts, not inline `npx tsc`, so a developer runs exactly what CI runs.
+      - name: Typecheck backend
+        working-directory: backend
+        run: npm run typecheck
+
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint
+
+      - name: Check backend formatting
+        working-directory: backend
+        run: npm run format:check
+
+      # Registry composition, product catalog, entitlement gate, object keys, the production
+      # config guard, the error-handler contract and the pagination contract.
+      - name: Architecture suite
+        working-directory: backend
+        run: npm run test:architecture
+
+      - name: Install frontend
+        working-directory: frontend
+        run: npm ci
+
+      - name: Typecheck frontend
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Check frontend formatting
+        working-directory: frontend
+        run: npm run format:check
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      # `npm test` is `vitest run`, already single-shot; no --run needed.
+      - name: Frontend tests
+        working-directory: frontend
+        run: npm test
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    needs: static
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: pethijos
+          POSTGRES_USER: pethijos
+          POSTGRES_PASSWORD: pethijos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pethijos -d pethijos"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      # Not `production`: that would make assertSecureConfig demand real secrets, and would put
+      # the tenant-scope guard into warn-only mode — in CI a missing tenant filter must fail.
+      NODE_ENV: test
+      DATABASE_URL: postgresql://pethijos:pethijos@localhost:5432/pethijos
+      JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      SUPERADMIN_USERNAME: superadmin
+      SUPERADMIN_PASSWORD: superadmin123
+      SUPERADMIN_NAME: Plataforma
+      BACKEND_PORT: 3001
+      # The suites log in as the seeded tenants, so the demo data is required here.
+      SEED_DEMO_DATA: "true"
+      # The in-process timer would run generation concurrently with test:scheduler.
+      RUN_SCHEDULER_IN_PROCESS: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend
+        working-directory: backend
+        run: npm ci
+
+      # No `prisma migrate diff` drift gate on purpose: the partial unique index in
+      # 20260906000000_per_tenant_usernames cannot be expressed in schema.prisma (see
+      # prisma/migrations/README.md), so a drift check would fail permanently. Applying the
+      # history to an empty database here, plus /api/v1/health returning 503 while any
+      # migration is pending, is what actually covers migration correctness.
+      - name: Apply migrations
+        working-directory: backend
+        run: npx prisma migrate deploy
+
+      - name: Seed
+        working-directory: backend
+        run: npx tsx prisma/seed.ts
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          npx tsx src/main.ts > "$RUNNER_TEMP/backend.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/backend.pid"
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/api/v1/health > /dev/null; then
+              echo "backend up after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "backend failed to start"; cat "$RUNNER_TEMP/backend.log"; exit 1
+
+      # Ordered cheapest-signal-first: isolation and the console are the suites whose failure
+      # says the most.
+      - name: Tenant isolation
+        working-directory: backend
+        run: npm run test:tenancy
+
+      - name: Platform console
+        working-directory: backend
+        run: npm run test:platform
+
+      - name: Daycare-side user administration
+        working-directory: backend
+        run: npm run test:users
+
+      - name: Offboarding (export and delete)
+        working-directory: backend
+        run: npm run test:offboarding
+
+      - name: Suspension and revocation
+        working-directory: backend
+        run: npm run test:suspension
+
+      - name: Modular domains
+        working-directory: backend
+        run: npm run test:modular
+
+      - name: Financial
+        working-directory: backend
+        run: npm run test:financial
+
+      - name: Check-in / check-out
+        working-directory: backend
+        run: npm run test:checkin
+
+      - name: Settings
+        working-directory: backend
+        run: npm run test:settings
+
+      - name: Recurring plans idempotency
+        working-directory: backend
+        run: npm run test:scheduler
+
+      # Last: it deliberately exhausts the login limiter, which would throttle the logins the
+      # other suites need.
+      - name: Rate limiting and CORS
+        working-directory: backend
+        run: npm run test:ratelimit
+
+      - name: Assert no tenant-scope violations
+        if: always()
+        working-directory: backend
+        run: |
+          # The guard throws in CI, so a violation already fails a suite. This also catches one
+          # on a path no assertion happens to cover.
+          if grep -q "tenant-guard\|Consulta sin ámbito de inquilino" "$RUNNER_TEMP/backend.log"; then
+            echo "::error::Se detectaron consultas sin ámbito de inquilino"
+            grep -n "tenant-guard\|Consulta sin ámbito de inquilino" "$RUNNER_TEMP/backend.log"
+            exit 1
+          fi
+          echo "sin violaciones de ámbito de inquilino"
+
+      - name: Backend log
+        if: always()
+        run: tail -200 "$RUNNER_TEMP/backend.log"
+
+  # Proves the production image builds and that a fresh database comes up with the platform
+  # account and NOT the demo tenants.
+  production-image:
+    name: Production image
+    runs-on: ubuntu-latest
+    needs: static
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # load: true because the assertions below run these images in the local daemon. The gha
+      # cache is scoped per image and shared with release.yml, so a tag build arrives warm.
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          tags: petadmin-backend
+          load: true
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          tags: petadmin-frontend
+          load: true
+          build-args: VITE_API_URL=https://example.invalid/api/v1
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+      - name: Refuse to boot with an insecure production config
+        run: |
+          if docker run --rm -e NODE_ENV=production -e DATABASE_URL=postgresql://x:y@db:5432/z petadmin-backend; then
+            echo "::error::El backend arrancó en producción sin JWT_SECRET"; exit 1
+          fi
+          echo "arranque insegura rechazado como se esperaba"
+
+      - name: Fresh production database has no demo tenants
+        run: |
+          docker network create ci-net
+          docker run -d --name ci-pg --network ci-net \
+            -e POSTGRES_DB=scratch -e POSTGRES_USER=scratch -e POSTGRES_PASSWORD=scratch \
+            postgres:16-alpine
+          for i in $(seq 1 40); do
+            docker exec ci-pg pg_isready -U scratch -d scratch && break
+            sleep 2
+          done
+          DB=postgresql://scratch:scratch@ci-pg:5432/scratch
+          docker run --rm --network ci-net -e DATABASE_URL="$DB" \
+            --entrypoint sh petadmin-backend -c "npx prisma migrate deploy"
+          docker run --rm --network ci-net -e NODE_ENV=production -e DATABASE_URL="$DB" \
+            -e SUPERADMIN_PASSWORD=ci-production-password \
+            --entrypoint sh petadmin-backend -c "node dist-seed/prisma/seed.js"
+
+          daycares=$(docker exec ci-pg psql -U scratch -d scratch -tAc "SELECT count(*) FROM daycares;")
+          supers=$(docker exec ci-pg psql -U scratch -d scratch -tAc "SELECT count(*) FROM users WHERE role='superadmin';")
+          echo "daycares=$daycares superadmins=$supers"
+          # Zero, not one: the tenancy migration backfills a tenant, and
+          # 20260905000000_drop_unused_backfill_tenant removes it when it owns nothing.
+          [ "$daycares" = "0" ] || { echo "::error::Una base de datos nueva no debe tener guarderías"; exit 1; }
+          [ "$supers" = "1" ] || { echo "::error::Debe existir exactamente una cuenta de plataforma"; exit 1; }

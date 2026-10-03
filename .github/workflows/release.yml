@@ -1,0 +1,163 @@
+name: Release
+
+# Continuous *delivery*, not deployment. A `v*` tag re-runs the whole CI suite against the
+# exact commit the tag points at and, only if it passes, publishes immutable images to GHCR
+# and cuts a GitHub Release.
+#
+# Nothing here ever contacts the production host and there are no SSH credentials in this
+# repository. The host pulls a published tag by hand:
+#
+#   APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml pull
+#   APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml up -d
+#
+# The point is that production runs the artefact CI verified, instead of compiling TypeScript
+# on the box and hoping it matches.
+
+on:
+  push:
+    tags: ["v*"]
+
+# A tag is immutable, so two runs for the same one would race to publish identical digests.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # The full gate: typecheck, lint, format, architecture suite, frontend build and tests, the
+  # eleven e2e suites against a real Postgres, and the production-image assertions.
+  verify:
+    name: Verify
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish images
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.meta-backend.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fail before publishing, not after. The frontend bakes VITE_API_URL at build time, and
+      # lib/api.ts falls back with `??`, which only catches undefined — an *empty* build arg
+      # ships a bundle whose API base URL is the empty string, and every request 404s in the
+      # browser with nothing in the server logs to explain it.
+      - name: Require PUBLIC_API_URL
+        env:
+          PUBLIC_API_URL: ${{ vars.PUBLIC_API_URL }}
+        run: |
+          if [ -z "$PUBLIC_API_URL" ]; then
+            echo "::error::Falta la variable de repositorio PUBLIC_API_URL."
+            echo "Defínela en Settings → Secrets and variables → Actions → Variables,"
+            echo "p. ej. https://api.tudominio.com/api/v1 — el frontend la incrusta en el build."
+            exit 1
+          fi
+          echo "PUBLIC_API_URL=$PUBLIC_API_URL"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # `latest` only for a real release: a prerelease tag (v1.2.3-rc1) publishes its own
+      # version tags but must not become what an unpinned host pulls.
+      - name: Backend image metadata
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-backend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Frontend image metadata
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}-frontend
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          build-args: VITE_API_URL=${{ vars.PUBLIC_API_URL }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  release:
+    name: GitHub Release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The release notes carry the exact commands, so the release page is the whole
+      # deployment instruction rather than a pointer to the README.
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          PRERELEASE=""
+          case "$TAG" in *-*) PRERELEASE="--prerelease";; esac
+
+          cat > notes.md <<NOTES
+          ## Despliegue
+
+          \`\`\`bash
+          export APP_VERSION=$TAG
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d
+          \`\`\`
+
+          El servicio \`migrate\` aplica \`prisma migrate deploy\` y termina antes de que arranque
+          el backend. Comprobación: \`curl localhost:3001/api/v1/health\` responde 503 mientras
+          quede alguna migración pendiente.
+
+          ### Imágenes
+
+          - \`ghcr.io/$REPO-backend:$TAG\`
+          - \`ghcr.io/$REPO-frontend:$TAG\`
+
+          **Reversión:** apunta \`APP_VERSION\` a la etiqueta anterior y repite los dos comandos.
+          Esto **no** revierte las migraciones; si esta versión cambió el esquema de forma
+          incompatible, hace falta \`scripts/restore.sh\`.
+          NOTES
+
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file notes.md \
+            --generate-notes \
+            $PRERELEASE
