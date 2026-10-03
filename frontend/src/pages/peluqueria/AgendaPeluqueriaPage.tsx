@@ -9,16 +9,14 @@ import {
   CheckCircle2, 
   AlertCircle,
   RefreshCw,
-  X,
   User,
   PawPrint,
   ArrowRight
 } from "lucide-react";
-import { 
-  peluqueriaApi, 
-  GroomingAppointment, 
-  GroomingService, 
-  api 
+import {
+  peluqueriaApi,
+  GroomingAppointment,
+  GroomingService,
 } from "../../lib/api";
 import { clientsApi } from "../../modules/shared/api";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";

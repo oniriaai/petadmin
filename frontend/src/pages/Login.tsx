@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CalendarCheck2, CircleAlert, Eye, EyeOff, PawPrint, Wallet } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
+import { ApiError } from "../lib/api";
 import { Spinner } from "../components/ui/Spinner";
 
 /**
@@ -31,6 +32,23 @@ export function Login() {
   const location = useLocation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  /**
+   * The daycare slug, asked for only when the server says the username is ambiguous.
+   *
+   * Usernames became unique per daycare rather than globally, so two clients can both have a
+   * `recepcion`. Showing this field to everyone would make every member of staff learn an
+   * identifier they have no reason to know, so it stays hidden until it is actually needed,
+   * and is remembered afterwards.
+   */
+  const [daycare, setDaycare] = useState(() => {
+    try {
+      return localStorage.getItem("daycareSlug") ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [needsDaycare, setNeedsDaycare] = useState(false);
+  const daycareRef = useRef<HTMLInputElement>(null);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [hasCapsLock, setHasCapsLock] = useState(false);
   const [error, setError] = useState("");
@@ -42,13 +60,27 @@ export function Login() {
     setLoading(true);
     setError("");
     try {
-      const signedIn = await login(null, username.trim(), password);
+      const signedIn = await login(null, username.trim(), password, daycare.trim() || undefined);
+      try {
+        if (daycare.trim()) localStorage.setItem("daycareSlug", daycare.trim());
+      } catch {
+        // A browser with site data blocked just asks again next time.
+      }
       const from = (location.state as { from?: string } | null)?.from;
       // The vendor belongs in the console; a tenant user returns to wherever they were sent from.
       navigate(signedIn.role === "superadmin" ? "/platform" : (from ?? "/"), { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos iniciar sesión. Inténtalo de nuevo.");
       setLoading(false);
+
+      // The username exists in several daycares: reveal the field and send the user there
+      // rather than to the password, which was not the problem.
+      if (err instanceof ApiError && err.code === "DAYCARE_REQUIRED") {
+        setNeedsDaycare(true);
+        requestAnimationFrame(() => daycareRef.current?.focus());
+        return;
+      }
+
       // Retyping is the usual next move, so put the cursor where it belongs.
       passwordRef.current?.select();
     }
@@ -101,6 +133,26 @@ export function Login() {
           <p className="text-muted mt-1.5">Entra con la cuenta que te entregó tu guardería.</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
+            {needsDaycare && (
+              <div>
+                <label className="label" htmlFor="login-daycare">Guardería</label>
+                <input
+                  id="login-daycare"
+                  ref={daycareRef}
+                  className="input"
+                  value={daycare}
+                  onChange={(e) => setDaycare(e.target.value)}
+                  placeholder="identificador-de-tu-guarderia"
+                  autoComplete="organization"
+                  disabled={loading}
+                  aria-describedby="login-daycare-hint"
+                />
+                <p id="login-daycare-hint" className="text-muted mt-1.5 text-sm">
+                  Tu usuario existe en más de una guardería. Indica el identificador que te dieron.
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="label" htmlFor="login-username">Usuario</label>
               <input

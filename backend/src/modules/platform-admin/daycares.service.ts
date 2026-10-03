@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { BUSINESS_UNITS, type AssignableTenantRole, type BusinessUnit, AuthzError } from "../../middleware/auth";
 import { DEFAULT_TIMEZONE } from "../../core/tenancy/unit-settings";
 import { invalidate } from "../../platform/module-access";
+import { invalidatePrincipal, invalidatePrincipalsForDaycare } from "../../core/tenancy/principal";
 import { initialEntitlements } from "./entitlements.service";
 
 const BCRYPT_ROUNDS = 10;
@@ -85,6 +86,27 @@ export async function getDaycare(id: string) {
   return { ...rest, unitList: parseUnits(daycare.units), users };
 }
 
+/**
+ * The users of one daycare. Shared by the vendor console and by the daycare's own user-
+ * management screen, so the projection — and in particular the fact that `passwordHash` is
+ * never in it — is defined once.
+ */
+export async function listTenantUsers(daycareId: string) {
+  return prisma.user.findMany({
+    where: { daycareId },
+    orderBy: [{ isActive: "desc" }, { username: "asc" }],
+    select: {
+      id: true,
+      username: true,
+      name: true,
+      role: true,
+      businessUnit: true,
+      isActive: true,
+      createdAt: true,
+    },
+  });
+}
+
 export interface CreateDaycareInput {
   slug: string;
   name: string;
@@ -104,15 +126,9 @@ export async function createDaycare(input: CreateDaycareInput) {
   const slugTaken = await prisma.daycare.findUnique({ where: { slug }, select: { id: true } });
   if (slugTaken) throw new AuthzError(409, `Ya existe una guardería con el identificador "${slug}"`);
 
-  // Usernames are globally unique (login has no tenant selector), so a collision here is with
-  // some other daycare's user and the console has to surface it as such.
-  const usernameTaken = await prisma.user.findUnique({
-    where: { username: input.admin.username },
-    select: { id: true },
-  });
-  if (usernameTaken) {
-    throw new AuthzError(409, `El usuario "${input.admin.username}" ya existe. Sugerencia: ${slug}_${input.admin.username}`);
-  }
+  // No username check: usernames are unique per daycare, and this daycare does not exist yet,
+  // so its first admin cannot collide with anything. What used to be here was a global
+  // uniqueness check that had to suggest renaming the user after another customer's.
 
   return prisma.$transaction(async (tx) => {
     const daycare = await tx.daycare.create({
@@ -193,6 +209,9 @@ export async function updateDaycare(id: string, input: UpdateDaycareInput) {
   });
 
   invalidate(id);
+  // Suspending or reactivating a tenant changes the status of all its users without naming
+  // any of them, so the whole tenant's entries go rather than one user's.
+  invalidatePrincipalsForDaycare(id);
   return { ...daycare, unitList: parseUnits(daycare.units) };
 }
 
@@ -208,9 +227,13 @@ export async function provisionUser(daycareId: string, input: ProvisionUserInput
   if (!daycare) throw new AuthzError(404, "Guardería no encontrada");
   assertRoleFitsUnits(input.role, parseUnits(daycare.units));
 
-  const taken = await prisma.user.findUnique({ where: { username: input.username }, select: { id: true } });
+  // Scoped to this daycare: another customer having the same username is no longer a conflict.
+  const taken = await prisma.user.findUnique({
+    where: { daycareId_username: { daycareId, username: input.username } },
+    select: { id: true },
+  });
   if (taken) {
-    throw new AuthzError(409, `El usuario "${input.username}" ya existe. Sugerencia: ${daycare.slug}_${input.username}`);
+    throw new AuthzError(409, `El usuario "${input.username}" ya existe en esta guardería`);
   }
 
   return prisma.user.create({
@@ -259,7 +282,7 @@ export async function updateUser(daycareId: string, userId: string, input: Updat
     }
   }
 
-  return prisma.user.update({
+  const user = await prisma.user.update({
     where: { id: existing.id },
     data: {
       name: input.name?.trim(),
@@ -270,6 +293,10 @@ export async function updateUser(daycareId: string, userId: string, input: Updat
     },
     select: { id: true, username: true, name: true, role: true, businessUnit: true, isActive: true },
   });
+
+  // Deactivation must bite on the next request, not when the token expires in up to 12h.
+  invalidatePrincipal(user.id);
+  return user;
 }
 
 export async function getOverview() {

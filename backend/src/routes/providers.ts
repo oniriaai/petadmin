@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { handleAuthzError } from "../middleware/auth";
 import { buildDaycareWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import { readPage, sendPage } from "../utils/pagination";
 import { prisma } from "../db";
 
 export const providersRouter = Router();
@@ -29,8 +30,17 @@ providersRouter.get("/", async (req, res) => {
       { name: { contains: search, mode: "insensitive" } },
       { product: { contains: search, mode: "insensitive" } },
     ];
-    const providers = await prisma.provider.findMany({ where, orderBy: { name: "asc" } });
-    res.json(providers);
+    const page = readPage(req);
+    const [providers, total] = await Promise.all([
+      prisma.provider.findMany({
+        where,
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.provider.count({ where }),
+    ]);
+    sendPage(res, page, providers, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

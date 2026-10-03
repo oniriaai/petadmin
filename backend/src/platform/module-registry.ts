@@ -21,6 +21,7 @@ import { storageRouter } from "../routes/storage";
 import { peluqueriaRouter } from "../modules/peluqueria";
 import { guarderiaRouter } from "../modules/guarderia";
 import { platformRouter } from "../modules/platform-admin";
+import { usersRouter } from "../modules/admin";
 import { settingsRouter } from "../core/tenancy/settings.router";
 
 export const backendModules: readonly BackendModule[] = [
@@ -57,6 +58,15 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/settings",
     router: settingsRouter,
     description: "Per-daycare operational settings",
+    access: { roles: ["admin"] },
+  },
+  {
+    id: "users",
+    basePath: "/users",
+    router: usersRouter,
+    description: "Daycare-side staff administration",
+    // Only a tenant admin. The two operational roles must not be able to provision accounts,
+    // and `superadmin` reaches this through its own console, not here.
     access: { roles: ["admin"] },
   },
   { id: "providers", basePath: "/providers", router: providersRouter, description: "Provider records" },

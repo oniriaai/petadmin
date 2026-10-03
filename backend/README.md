@@ -23,7 +23,10 @@ backend/src/
 │   ├── clients/                        # Router público de tutores
 │   ├── pets/                           # Router público de mascotas
 │   ├── storage/object-keys.ts          # Construcción y validación de claves de objeto B2
+│   ├── storage/bulk-delete.ts          # Borrado del prefijo completo de un inquilino
 │   ├── tenancy/scope.ts                # Resolución del inquilino de cada petición
+│   ├── tenancy/guard.ts                # Red de seguridad: falla si un `where` no filtra inquilino
+│   ├── tenancy/principal.ts            # Estado vivo de la cuenta (activa / guardería activa)
 │   ├── tenancy/unit-settings.ts        # Ajustes por (guardería, unidad)
 │   └── modules.ts                      # Superficie pública del Core
 │
@@ -34,16 +37,21 @@ backend/src/
 │   └── module-access.ts                # Entitlements por guardería + middleware del gate
 │
 ├── modules/                             # Slices de negocio
+│   ├── admin/                           # Usuarios administrados por la propia guardería
 │   ├── operaciones/                     # Salas y check-in/check-out
 │   ├── reservas/                        # Reservas y planes recurrentes
 │   ├── guarderia/                       # Ocupación en vivo, aforo y transporte
 │   ├── peluqueria/                      # Catálogo, agenda y flujo de atención
-│   └── platform-admin/                  # Consola del proveedor (/platform)
+│   └── platform-admin/                  # Consola del proveedor (/platform) y baja de inquilinos
 │
-├── middleware/auth.ts                   # JWT, roles, unidades, versión de token
+├── middleware/auth.ts                   # JWT, roles, unidades, versión de token, estado de cuenta
+├── middleware/security.ts               # CORS por lista blanca, límites de peticiones, helmet
+├── middleware/observability.ts          # Registro estructurado, request-id, manejador de errores
+├── jobs/                                # Entradas de un solo uso (planes recurrentes)
+├── utils/pagination.ts                  # Convención de paginación y tope de filas
 ├── routes/                              # Routers en migración (finanzas, informes, etc.)
 ├── lib/s3.ts                            # Cliente S3 para Backblaze B2
-├── db.ts                                # Instancia central de PrismaClient
+├── db.ts                                # PrismaClient + extensión del guard de inquilino
 └── main.ts                              # Bootstrap de Express
 ```
 
@@ -107,6 +115,48 @@ cuerpo de la petición:
 `buildBusinessUnitWhere` fue **eliminado**, no marcado como obsoleto: un helper que filtra por
 unidad pero no por inquilino lee entre guarderías, y dejarlo importable invita justo a ese fallo.
 
+### Red de seguridad (`core/tenancy/guard.ts`)
+
+Los helpers de arriba son el mecanismo; esto es el respaldo. El cliente Prisma de `db.ts` lleva una
+extensión que **lanza** cuando, dentro de la petición de un usuario de inquilino, una consulta a un
+modelo con dueño no filtra por inquilino.
+
+| Exención | Motivo |
+|---|---|
+| Fuera del contexto de una petición | El planificador, el seed y los scripts cruzan inquilinos a propósito |
+| `role === "superadmin"` | Sus lecturas sin fijar abarcan todos los inquilinos por diseño |
+| `update` / `delete` singulares | Prisma exige que su `where` seleccione una fila única, así que no admiten `daycareId`. El patrón del código es `findFirst` acotado + `assertRecordAccess` + escritura por id |
+| `withVerifiedScope(motivo, fn)` | Consulta acotada a través de un padre ya verificado (p. ej. `room.id` salido de un `findMany` acotado). Obliga a declarar por qué es segura |
+
+Para un modelo hijo (`Payment`, `PetVaccination`, `PetDocument`, `ReservationPet`,
+`InventoryMovement`) cuenta tanto el filtro por la relación (`{ payable: { daycareId } }`, lo que
+construye `buildChildScopeWhere`) como por su clave ajena (`{ payableId }`), porque un hijo solo es
+alcanzable a través de su padre. En un modelo **con dueño** la clave ajena no cuenta: aceptarla
+habría aceptado `{ id: { in: petIds }, clientId }` con un `clientId` venido del cuerpo de la
+petición, que es exactamente la consulta que permitía agendar contra el cliente de otra guardería.
+
+Lanza en desarrollo y CI; en producción solo advierte, porque un falso positivo no debe tumbar la
+pantalla de un cliente. Al activarla encontró cuatro fallos reales de aislamiento (cliente, sala,
+escrituras masivas y `GET /export/clients`, que no filtraba nada en absoluto).
+
+### Sesión y suspensión
+
+`requireAuth` no se conforma con que el token sea válido: relee el estado de la cuenta y de su
+guardería en cada petición, a través de una caché corta que la consola invalida al escribir.
+
+| Situación | Respuesta |
+|---|---|
+| Token ausente, caducado o mal firmado | **401** |
+| Versión de token anterior a la tenancy (`tv`) | **401** |
+| El usuario ya no existe, o su `daycareId` no coincide con el del token | **401** |
+| Usuario desactivado | **403** con `{ code: "USER_INACTIVE" }` |
+| Guardería desactivada | **403** con `{ code: "DAYCARE_INACTIVE" }` |
+
+La diferencia importa: un 401 significa "vuelve a entrar" y un 403 con código significa que volver
+a entrar no servirá. Antes `isActive` solo se comprobaba en `/auth/login` y `/auth/me`, así que
+desactivar a un usuario —o suspender a un inquilino que no paga— no surtía efecto hasta que
+caducaba su token, hasta 12 horas después.
+
 ### Cabeceras
 
 | Cabecera | Quién | Efecto |
@@ -114,6 +164,7 @@ unidad pero no por inquilino lee entre guarderías, y dejarlo importable invita 
 | `Authorization: Bearer <jwt>` | Todos | Sesión. Los tokens llevan `tv` (versión); uno anterior a la tenancy recibe 401 limpio |
 | `X-Business-Unit: DAYCARE\|GROOMING` | `admin` y `superadmin` | Acota la vista a una unidad. Sin ella, consolidado |
 | `X-Daycare-Id: <id>` | `superadmin` | Fija el inquilino. Un usuario de guardería solo puede enviar el suyo (403 en otro caso) |
+| `X-Request-Id: <id>` | Opcional, entrante | Se acepta el de la pasarela para que una traza abarque proxy y API; si no viene se genera. Siempre se devuelve |
 
 ### 404 frente a 403
 
@@ -140,12 +191,40 @@ zona inexistente desplazaría en silencio cada ocurrencia que genera el planific
 
 | Método | Endpoint | Descripción |
 |---|---|---|
-| `POST` | `/auth/login` | Emite el JWT. Comprueba que la guardería esté activa y que el rol y el inquilino sean coherentes |
+| `POST` | `/auth/login` | Emite el JWT. Comprueba que la guardería esté activa y que el rol y el inquilino sean coherentes. Cuerpo: `{ username, password, businessUnit?, daycare? }` |
 | `GET` | `/auth/me` | Sesión según el servidor: `{ user, daycare, enabledModules, units, fullAccess }`. Es lo que permite que el frontend filtre la navegación sin confiar en `localStorage` |
+
+`daycare` es el identificador (slug) de la guardería y **solo** es necesario cuando el usuario
+existe en varias: los nombres de usuario son únicos por guardería, no globalmente. Un nombre único
+en toda la instalación entra sin él, así que nadie tiene que aprender un identificador que no
+necesita. Cuando es ambiguo la respuesta es **400** con `{ code: "DAYCARE_REQUIRED" }` y la pantalla
+de login revela el campo. Un `daycare` desconocido responde **401**, igual que una contraseña
+incorrecta: no confirma qué guarderías existen.
 
 Para un superadmin, `/auth/me` depende de si hay inquilino fijado: sin fijar informa alcance total;
 fijado informa los entitlements **reales de ese inquilino**, para ver lo mismo que sus usuarios.
 `fullAccess` sigue siendo `true` en ambos casos, porque el gate no lo restringe de verdad.
+
+### Usuarios de la guardería (`/api/v1/users`, solo `admin`)
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/users` | Personal de la propia guardería. Nunca incluye `passwordHash` |
+| `POST` | `/users` | Provisiona personal: `{ username, password, name, role }` |
+| `PATCH` | `/users/:id` | Renombrar, cambiar rol, restablecer contraseña, activar/desactivar |
+
+Forma parte del **Núcleo**, no es un módulo vendible: que una guardería administre a su propio
+personal no es una función que se venda o se retenga. Sin esto, la consola del proveedor era la
+única vía y cada alta, baja u olvido de contraseña en cualquier cliente era un ticket de soporte.
+
+No reimplementa nada: reutiliza `provisionUser` y `updateUser` de la consola, así que hereda que la
+unidad se derive del rol, que el rol deba caber en una unidad contratada y que no se pueda dejar la
+guardería sin administrador activo. La guardería sale **siempre** de `getRequiredDaycareId(req)`,
+nunca de la ruta ni del cuerpo, y `superadmin` no está en el esquema de roles asignables.
+
+Un administrador tampoco puede desactivarse ni degradarse a sí mismo: **409** con
+`{ code: "SELF_DEMOTION" }`. Se estaría bloqueando a sí mismo a mitad de petición, y el control del
+último administrador no distingue entre "otro" y "yo".
 
 ### Consola de plataforma (`/api/v1/platform`, solo `superadmin`)
 
@@ -162,6 +241,8 @@ fijado informa los entitlements **reales de ese inquilino**, para ver lo mismo q
 | `POST` | `/platform/daycares/:id/users` | Provisiona un usuario de la guardería |
 | `PATCH` | `/platform/daycares/:id/users/:userId` | Activar/desactivar, renombrar, cambiar rol o contraseña |
 | `POST` | `/platform/daycares/:id/refresh` | Invalida la caché de entitlements a mano |
+| `GET` | `/platform/daycares/:id/export` | Libro de Excel con todo lo que posee el inquilino |
+| `DELETE` | `/platform/daycares/:id` | Elimina el inquilino de forma permanente. Cuerpo: `{ confirm: "<slug>" }` |
 | `GET` | `/platform/audit` | Registro de auditoría |
 
 Garantías del módulo:
@@ -174,9 +255,37 @@ Garantías del módulo:
   rechaza tanto habilitar `guarderia` sin `reservas` como quitar `reservas` con `guarderia` activo.
 - Un usuario solo se edita a través de su propia guardería (404 en caso contrario).
 - No se puede desactivar al último administrador activo ni quitar una unidad con usuarios activos.
-- **No hay endpoint para borrar una guardería**: eliminar un inquilino con datos operativos no debe
-  estar a una petición de distancia.
 - Toda escritura queda auditada; las contraseñas nunca llegan al registro.
+
+#### Baja de un inquilino
+
+Ya existe endpoint para eliminar una guardería, pero sigue sin estar a una petición de distancia.
+Es la única acción irreversible de la consola, así que tiene dos salvaguardas:
+
+1. Hay que **repetir el identificador** exacto de la guardería en `{ confirm }`. Un id pegado en la
+   fila equivocada no la satisface.
+2. La guardería **debe estar ya desactivada**. "Cortarles el acceso" y "destruir sus datos" quedan
+   así como dos decisiones tomadas en dos momentos distintos.
+
+`GET /platform/daycares/:id/export` entrega antes un libro con la guardería, sus usuarios, tutores,
+perrhijos, salas, reservas, cobros, cuentas por pagar, inventario y contratos. Sin hashes de
+contraseña: no son datos que el cliente necesite y entregarlos es entregar algo que se puede romper
+sin prisa.
+
+El borrado va en **una sola transacción y en orden**: varias tablas se referencian entre sí
+(`check_in_outs` apunta a reservas, perrhijos, tutores, salas y usuarios; `incomes` a reservas) y
+`users.daycareId` es `onDelete: Restrict`, así que la fila de la guardería no puede caer antes que
+sus usuarios. La respuesta informa del recuento por tabla.
+
+Los archivos se borran **después y fuera** de la transacción. El almacenamiento de objetos no puede
+participar en una transacción de base de datos, así que uno de los dos va primero: va la base de
+datos, porque el prefijo (`daycares/{id}/`) se deriva del id y un fallo al borrar archivos se
+informa y se puede repetir. El orden contrario arriesgaría destruir los archivos de un inquilino que
+sigue vivo. Se borran todas las versiones y marcadores de borrado, no solo la versión actual: el
+bucket tiene versionado, y "hemos borrado sus datos" no debería significar "se pueden recuperar".
+
+La línea de auditoría **sobrevive** al inquilino: `PlatformAuditLog.daycareId` es una columna sin
+clave ajena precisamente para que el registro de una eliminación dure más que lo eliminado.
 
 ### Módulo de Guardería (`/api/v1/guarderia`)
 *Roles `admin` y `daycare`. Requiere el módulo de producto `guarderia`.*
@@ -201,6 +310,102 @@ Garantías del módulo:
 | `PATCH` | `/peluqueria/appointments/:id/status` | `PENDIENTE` → `RECEPCIONADA` → `EN_PROCESO` → `LISTO` → `COMPLETADA` → `CANCELADA` |
 | `POST` | `/peluqueria/appointments/:id/complete` | Completa y registra el cobro para `GROOMING` |
 | `DELETE` | `/peluqueria/appointments/:id` | Cancela la cita |
+
+---
+
+## Protecciones de borde
+
+`src/middleware/security.ts`. Nada de esto existía: `cors()` reflejaba cualquier origen y no había
+límite de peticiones, así que `/auth/login` admitía intentos ilimitados contra nombres de usuario
+que entonces eran únicos a nivel global, y `/storage/upload-url` firmaba URLs mientras alguien
+siguiera pidiéndolas, a costa del dueño del bucket.
+
+| Protección | Detalle |
+|---|---|
+| CORS | Lista blanca desde `CORS_ORIGINS`, no reflejo del origen recibido. Una petición **sin** `Origin` se permite: la cabecera es una protección del navegador, y rechazar su ausencia rompería a cualquier cliente que no lo sea |
+| `/auth/login` | 10 intentos por 10 min, por IP **y** usuario. Los aciertos no cuentan. Las dos mitades importan: la IP frena recorrer una lista de cuentas, el usuario frena un intento distribuido contra una cuenta conocida |
+| `/storage/*` | 60 por minuto **por guardería**, no por IP: cada operación cuesta dinero en el proveedor y el límite debe recaer sobre el inquilino, que además no puede agotar el de otro |
+| Global | 600 por minuto, suficientemente holgado para que el uso normal no lo alcance |
+| `helmet` | Cabeceras de endurecimiento, y `x-powered-by` desactivado |
+
+`assertSecureConfig()` corre **antes** de montar nada y se niega a arrancar en producción si falta
+`JWT_SECRET`, si conserva el valor de ejemplo `change_me`, si tiene menos de 32 caracteres, o si
+faltan `CORS_ORIGINS` o `DATABASE_URL`. Antes el secreto caía a `"change_me"` en dos sitios, así que
+un despliegue que olvidara definirlo firmaba y aceptaba tokens con una clave pública: cualquiera
+podía emitirse un token de superadmin.
+
+Detrás de un proxy inverso hace falta `TRUST_PROXY` (normalmente `1`), o `req.ip` será el del proxy
+y todos los límites por IP compartirán un contador. Es explícito a propósito: confiar en la cabecera
+cuando nada la limpia permite falsear la propia dirección.
+
+---
+
+## Paginación
+
+`src/utils/pagination.ts`. Los listados aceptan `?page` y `?pageSize` (tope **200**) y devuelven
+`{ items, total, page, pageSize, pageCount }`.
+
+**Sin parámetros de paginación devuelven el array de siempre**, acotado. Esto no es compatibilidad
+por inercia: tres formularios del frontend (`CheckInOutForm`, `NuevaReservaModal`,
+`RecurringPlanForm`) cargan la lista completa en un `<select>`, y un selector truncado en silencio
+es peor que una consulta lenta —el cliente que buscas simplemente no está y nada lo dice—.
+`X-Total-Count` viaja en ambas formas, así que un cliente siempre puede detectar que no recibió
+todo.
+
+Se aceptan también `skip`/`take`/`offset`/`limit`, porque `check-in-out` ya se publicó con esos
+nombres.
+
+Dos excepciones deliberadas:
+
+- **`/inventory/items` no pagina**, solo está acotado. Su filtro `lowStock` compara dos columnas
+  (`currentStock <= minStock`), algo que Prisma no puede expresar en un `where`, así que se aplica
+  en JS; filtrar después de tomar una página daría una página corta y un total que no concuerda.
+- **`/export/*` no pagina**: una exportación debe contener todo, y truncarla en silencio sería peor
+  que tardar.
+
+El histórico de check-in/out ordena con `nulls: "last"`. Postgres coloca los `NULL` **primero** en
+orden descendente, y una fila creada desde una reserva no tiene `checkInTime` hasta que la mascota
+llega: la primera página del histórico eran visitas que nunca ocurrieron y la más reciente real era
+inalcanzable.
+
+---
+
+## Observabilidad
+
+`src/middleware/observability.ts`. Atender a varias guarderías desde una sola instalación significa
+que la primera pregunta de cualquier incidencia es *de qué inquilino*, y `console.log` no podía
+responderla.
+
+- Cada petición lleva un `x-request-id`; cada línea autenticada lleva `daycareId`, `userId`,
+  `username` y `role`. El `Authorization`, las cookies y las contraseñas se eliminan del registro.
+- Un error no controlado responde **500** con el `requestId` incluido —lo único que hace rastreable
+  un reporte de "falló sobre las 3"— y **nunca** con el texto del error.
+- Con `SENTRY_DSN` definido, los errores se reportan etiquetados por inquilino. Sin él no se envía
+  nada.
+
+| Endpoint | Para qué |
+|---|---|
+| `GET /api/v1/health` | Base de datos **y** estado de migraciones (`applied` / `pending`). Responde **503** si quedan pendientes: un proceso corriendo contra un esquema sin migrar falla en las rutas reales mientras se declara sano |
+| `GET /api/v1/ready` | Sonda barata para el orquestador |
+
+---
+
+## Planes recurrentes
+
+La generación es idempotente sobre la clave única `(recurringPlanId, checkIn)`, así que repetirla es
+inofensivo.
+
+En desarrollo corre dentro del proceso web; en producción **no**. N réplicas lo ejecutarían N veces
+y, más probable en la práctica, un redespliegue reinicia el temporizador de 24 h y podría no
+ejecutarse nunca. Ahí se invoca como job de un solo uso:
+
+```bash
+npm run job:recurring-plans                   # local
+docker compose -f docker-compose.prod.yml run --rm scheduler
+```
+
+`RUN_SCHEDULER_IN_PROCESS` fuerza cualquiera de los dos comportamientos. El job sale con código
+distinto de cero si alguna ocurrencia falla.
 
 ---
 
@@ -234,11 +439,18 @@ hace). `prisma db push` queda como salida de emergencia en desarrollo.
 | `20260902000000_rename_business_units` | `KINDERDOG`→`DAYCARE`, `PETHIJOS`→`GROOMING` y sus roles |
 | `20260903000000_add_daycare_tenancy` | `daycares`, `daycare_modules`, `platform_audit_logs`, `daycareId` con backfill, FKs, índices y el CHECK `users_superadmin_untenanted` |
 | `20260904000000_add_unit_vat_percent` | `business_unit_settings.vatPercent`, con el valor por defecto que ya estaba escrito a mano |
+| `20260905000000_drop_unused_backfill_tenant` | Elimina la guardería `daycare_pethijos` **solo si no posee ningún dato**. La migración de tenancy la inserta sin condiciones (correcto para adoptar una instalación de un solo inquilino), con lo que una base de datos **nueva** arrancaba con un inquilino que nadie creó, activo y con los siete módulos vendibles habilitados |
+| `20260906000000_per_tenant_usernames` | `username` pasa a ser único por `(daycareId, username)`, más un índice **parcial** sobre `username` donde `daycareId IS NULL` para las cuentas de plataforma: Postgres considera los `NULL` distintos entre sí, así que el índice compuesto no las cubriría |
 
 `prisma/legacy-migrations/` conserva tres migraciones anteriores al baseline. Están **fuera** de
 `prisma/migrations/` a propósito: sus marcas de tiempo ordenan antes que el baseline, así que en una
 base de datos nueva `migrate deploy` las ejecutaría primero y el baseline fallaría al recrear las
 mismas tablas.
+
+El índice parcial de `20260906000000_per_tenant_usernames` **no se puede expresar en
+`schema.prisma`**, así que vive solo en el SQL de la migración. `migrate deploy` lo respeta; un
+`prisma migrate dev` lo vería como deriva e intentaría eliminarlo, así que hay que volver a
+declararlo si alguna vez se regenera el baseline.
 
 ---
 
@@ -247,9 +459,13 @@ mismas tablas.
 ```bash
 # Desarrollo
 npm run dev                  # tsx watch src/main.ts
-npm run build                # Compila src + (seed, scripts, tests) a través de tsconfig.seed.json
+npm run build                # Compila src; tsconfig.seed.json solo comprueba tipos (noEmit)
+npm run build:seed           # Emite el seed a dist-seed/ para la imagen de producción
 npm run start                # Ejecuta el build
 npm run typecheck:aux        # Solo seed/scripts/tests
+
+# Jobs
+npm run job:recurring-plans  # Generación de planes recurrentes, un solo uso
 
 # Base de datos
 npm run db:generate          # Prisma Client
@@ -260,12 +476,20 @@ npm run db:seed              # prisma/seed.ts
 npm run db:setup             # migrate deploy + seed
 
 # Pruebas
-npm run test:architecture    # Registros, catálogo, gate de módulos, claves de objeto
-npm run test:modular         # E2E Guardería y Peluquería
-npm run test:financial       # E2E transacciones y cuentas por pagar
-npm run test:checkin         # E2E check-in / check-out
-npm run test:tenancy         # Aislamiento, MODULE_DISABLED y unidad de negocio
+# Sin base de datos: registros, catálogo, gate, claves de objeto, guarda de
+# configuración de producción, contrato del manejador de errores y de la paginación
+npm run test:architecture
+
+# E2E contra un backend levantado
+npm run test:tenancy         # Aislamiento, MODULE_DISABLED, unidad de negocio y escritura cruzada
 npm run test:platform        # Consola de plataforma
+npm run test:users           # Usuarios por guardería y nombres de usuario por inquilino
+npm run test:offboarding     # Exportación y eliminación de una guardería
+npm run test:suspension      # Desactivación de usuarios y suspensión de inquilinos
+npm run test:ratelimit       # Límite de inicios de sesión y lista blanca de CORS
+npm run test:modular         # Guardería y Peluquería
+npm run test:financial       # Transacciones y cuentas por pagar
+npm run test:checkin         # Check-in / check-out
 npm run test:settings        # Configuración por guardería y su efecto en el IVA
 npm run test:scheduler       # Idempotencia del generador de planes recurrentes
 ```
@@ -277,9 +501,15 @@ npm run test:scheduler       # Idempotencia del generador de planes recurrentes
 ```bash
 docker compose up --build
 
-docker exec pethijos-backend npm run test:modular
-docker exec pethijos-backend npm run test:financial
-docker exec pethijos-backend npm run test:checkin
-docker exec pethijos-backend npm run test:tenancy
-docker exec pethijos-backend npm run test:platform
+# Las once suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
+# sesión a propósito y throttlearía los logins que necesitan las demás.
+for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler ratelimit; do
+  docker exec pethijos-backend npm run "test:$s" || break
+done
 ```
+
+`docker-compose.yml` es un stack de **desarrollo** y no debe apuntarse nunca a datos de clientes:
+monta el código, ejecuta `npm run dev`, publica el puerto de Postgres, incluye pgAdmin y siembra las
+guarderías de demostración en cada arranque. Para producción está `docker-compose.prod.yml` con
+`backend/Dockerfile`; las variables obligatorias y el porqué están en el
+[README raíz](../README.md#despliegue-en-producción).

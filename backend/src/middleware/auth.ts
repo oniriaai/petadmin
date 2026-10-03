@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+import { getPrincipalStatus } from "../core/tenancy/principal";
+
 export const BUSINESS_UNITS = ["DAYCARE", "GROOMING"] as const;
 export type BusinessUnit = (typeof BUSINESS_UNITS)[number];
 /**
@@ -20,6 +22,16 @@ export type AssignableTenantRole = (typeof ASSIGNABLE_TENANT_ROLES)[number];
  * without rotating JWT_SECRET.
  */
 export const TOKEN_VERSION = 2;
+
+/**
+ * The signing and verification secret, read once.
+ *
+ * It used to be `process.env.JWT_SECRET ?? "change_me"` in two places -- here and in the login
+ * route -- so a deployment that forgot to set it ran with a publicly known secret and forgeable
+ * superadmin tokens. `assertSecureConfig()` in main.ts refuses to boot in that state outside
+ * development; this constant makes sure there is only one place the value can come from.
+ */
+export const JWT_SECRET = process.env.JWT_SECRET ?? "change_me";
 
 /**
  * Transitional aliases for the pre-rename Kinderdog/Pethijos identifiers. Accepted on input
@@ -163,18 +175,35 @@ export function handleAuthzError(res: Response, error: unknown): boolean {
   return false;
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+/**
+ * Authenticates a request and confirms the account behind the token is still live.
+ *
+ * The token alone is not enough. It is stateless and valid for 12h, so a user deactivated by
+ * the console — or a whole tenant suspended for non-payment — would keep working on every
+ * route until it expired. `getPrincipalStatus` re-reads both, through a short-lived cache the
+ * console invalidates on write.
+ *
+ * The three refusals are deliberately distinguishable: an expired or malformed token is a 401
+ * (sign in again), a deactivated account is a 403 (signing in again will not help), and a
+ * suspended tenant is a 403 naming the tenant so support can tell the two apart.
+ */
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = req.headers.authorization;
   if (!auth?.startsWith("Bearer ")) {
     res.status(401).json({ message: "No autorizado" });
     return;
   }
+
+  let payload: Omit<JwtPayload, "role"> & { role: string };
   try {
     const token = auth.slice(7);
-    const payload = jwt.verify(token, process.env.JWT_SECRET ?? "change_me") as Omit<JwtPayload, "role"> & {
-      role: string;
-    };
+    payload = jwt.verify(token, JWT_SECRET) as Omit<JwtPayload, "role"> & { role: string };
+  } catch {
+    res.status(401).json({ message: "Token inválido" });
+    return;
+  }
 
+  try {
     // Reject pre-tenancy tokens explicitly rather than letting a missing daycareId fail later.
     if (payload.tv !== TOKEN_VERSION) {
       res.status(401).json({ message: "Sesión caducada, inicia sesión nuevamente" });
@@ -195,9 +224,32 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
       return;
     }
 
+    const status = await getPrincipalStatus(payload.userId);
+    if (!status) {
+      // The token names a user that no longer exists.
+      res.status(401).json({ message: "Sesión no válida" });
+      return;
+    }
+    // A token minted before the user was moved between tenants must not keep its old scope.
+    if (status.daycareId !== daycareId) {
+      res.status(401).json({ message: "Sesión caducada, inicia sesión nuevamente" });
+      return;
+    }
+    if (!status.userActive) {
+      res.status(403).json({ message: "Tu cuenta está desactivada", code: "USER_INACTIVE" });
+      return;
+    }
+    if (!status.daycareActive) {
+      res.status(403).json({ message: "La guardería está desactivada", code: "DAYCARE_INACTIVE" });
+      return;
+    }
+
     req.user = { ...payload, role, daycareId };
     next();
-  } catch {
-    res.status(401).json({ message: "Token inválido" });
+  } catch (error) {
+    // The status lookup touches the database, so it can fail for reasons that are not the
+    // caller's fault. That is a 500, not a 401 -- answering "token inválido" to a database
+    // outage would log every user out.
+    next(error);
   }
 }

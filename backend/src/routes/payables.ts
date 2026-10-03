@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import { readPage, sendPage } from "../utils/pagination";
 
 export const payablesRouter = Router();
 
@@ -28,12 +29,18 @@ payablesRouter.get("/", async (req, res) => {
   if (type) where.type = type;
   if (status) where.status = status;
   if (category) where.category = category;
-  const payables = await prisma.payable.findMany({
-    where,
-    include: { provider: { select: { id: true, name: true } }, payments: { orderBy: { date: "desc" } } },
-    orderBy: { createdAt: "desc" },
-  });
-  res.json(payables);
+  const page = readPage(req);
+  const [payables, total] = await Promise.all([
+    prisma.payable.findMany({
+      where,
+      include: { provider: { select: { id: true, name: true } }, payments: { orderBy: { date: "desc" } } },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.payable.count({ where }),
+  ]);
+  sendPage(res, page, payables, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

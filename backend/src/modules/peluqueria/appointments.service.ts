@@ -1,13 +1,14 @@
 import { prisma } from "../../db";
-import type { BusinessUnit } from "../../middleware/auth";
+import { AuthzError, type BusinessUnit } from "../../middleware/auth";
+import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
+import { assertClientInTenant } from "../../utils/validation";
+import { DEFAULT_GROOMING_SERVICES } from "./services";
 
 /**
  * The accounting/brand slot this module books under. Declared once here so the per-tenant
  * scoping work has a single place to replace with a request-derived value.
  */
 export const PELUQUERIA_BUSINESS_UNIT: BusinessUnit = "GROOMING";
-import { DEFAULT_GROOMING_SERVICES } from "./services";
-import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
 
 export interface CreateAppointmentDTO {
   daycareId: string;
@@ -152,12 +153,18 @@ export class GroomingAppointmentsService {
     const totalAmount = basePrice - discountAmount + vatAmount;
     const pendingAmount = totalAmount - advanceAmount;
 
-    // Validate pets belong to client
+    // The client must belong to THIS daycare. Both clientId and petIds arrive from the request
+    // body, and checking only that the pets belong to the client let a tenant book an
+    // appointment against another daycare's client and pets -- writing a reservation into its
+    // own tenant that pointed at the other's records, and returning the other tenant's pet
+    // names in `concept`.
+    await assertClientInTenant(clientId, daycareId);
+
     const pets = await prisma.pet.findMany({
-      where: { id: { in: petIds }, clientId },
+      where: { id: { in: petIds }, clientId, daycareId },
     });
     if (pets.length !== petIds.length) {
-      throw new Error("Una o más mascotas seleccionadas no pertenecen a este cliente");
+      throw new AuthzError(404, "Una o más mascotas seleccionadas no pertenecen a este cliente");
     }
 
     const petNames = pets.map(p => p.name).join(", ");

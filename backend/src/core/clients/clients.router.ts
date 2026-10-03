@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { handleAuthzError } from "../../middleware/auth";
 import { buildDaycareWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import { readPage, sendPage } from "../../utils/pagination";
 import { prisma } from "../../db";
 
 export const clientsRouter = Router();
@@ -36,12 +37,21 @@ clientsRouter.get("/", async (req, res) => {
       { phone: { contains: search } },
     ];
   }
-  const clients = await prisma.client.findMany({
-    where,
-    include: { pets: { where: { isActive: true }, select: { id: true, name: true, species: true, breed: true } } },
-    orderBy: { lastName: "asc" },
-  });
-  res.json(clients);
+  // Bounded, but the bare array is preserved for callers that have no pager: CheckInOutForm,
+  // NuevaReservaModal and RecurringPlanForm all load this into a <select>, and a silently
+  // truncated picker is a worse bug than a slow query. See utils/pagination.ts.
+  const page = readPage(req);
+  const [clients, total] = await Promise.all([
+    prisma.client.findMany({
+      where,
+      include: { pets: { where: { isActive: true }, select: { id: true, name: true, species: true, breed: true } } },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.client.count({ where }),
+  ]);
+  sendPage(res, page, clients, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

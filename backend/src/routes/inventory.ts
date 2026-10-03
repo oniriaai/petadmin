@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import { DEFAULT_LIMIT } from "../utils/pagination";
 
 export const inventoryRouter = Router();
 
@@ -18,9 +19,15 @@ const itemSchema = z.object({
 inventoryRouter.get("/items", async (req, res) => {
   try {
   const { lowStock } = req.query as Record<string, string>;
+  // Bounded but deliberately NOT paginated. `lowStock` is applied below in JS because it is a
+  // column-to-column comparison (`currentStock <= minStock`) that Prisma cannot express in a
+  // `where`; filtering after a page has been taken would return a short page and a total that
+  // disagrees with it. A tenant's stock list is small, so a cap is the right trade here —
+  // moving the filter into the query would mean raw SQL, outside the tenancy helpers.
   const items = await prisma.inventoryItem.findMany({
     where: { ...buildScopeWhere(req), isActive: true },
-    orderBy: { name: "asc" },
+    orderBy: [{ name: "asc" }, { id: "asc" }],
+    take: DEFAULT_LIMIT,
   });
   const result = lowStock === "true" ? items.filter(i => i.currentStock <= i.minStock) : items;
   res.json(result);

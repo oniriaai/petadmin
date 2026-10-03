@@ -1,28 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Home, 
-  Users, 
-  Clock, 
-  Plus, 
-  CheckCircle2, 
-  AlertTriangle, 
-  RefreshCw, 
-  Truck, 
-  ArrowRight,
-  LogOut,
+import {
+  Home,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Truck,
   LogIn,
   Search,
-  PawPrint, MapPin
+  PawPrint,
+  MapPin,
 } from "lucide-react";
-import { 
-  guarderiaApi, 
-  DaycareRoomOccupancy, 
-  api 
-} from "../../lib/api";
+import { guarderiaApi, DaycareRoomOccupancy } from "../../lib/api";
 import { clientsApi } from "../../modules/shared/api";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { Modal } from "../../components/ui/Modal";
-import { fmtCurrency } from "../../lib/utils";
 
 export function ControlGuarderiaPage() {
   const [occupancy, setOccupancy] = useState<DaycareRoomOccupancy[]>([]);

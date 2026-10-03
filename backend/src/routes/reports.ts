@@ -3,6 +3,12 @@ import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
 
+/**
+ * How far back the monthly series reaches when the caller does not say. Two years covers
+ * year-over-year comparison, which is what the chart is for.
+ */
+const MONTHLY_SERIES_MONTHS = 24;
+
 export const reportsRouter = Router();
 
 reportsRouter.get("/incomes", async (req, res) => {
@@ -16,8 +22,28 @@ reportsRouter.get("/incomes", async (req, res) => {
     if (to) (where.date as Record<string, unknown>).lte = new Date(to);
   }
 
+  /**
+   * The monthly series is bucketed in JS, so this read is the one query in the handler that
+   * is not an aggregate — the other three use `aggregate`/`groupBy` and touch no rows. With no
+   * `from`/`to` it scanned the tenant's entire income history on every report load, and that
+   * cost grows forever.
+   *
+   * Bounded by a default window when the caller gives none. Prisma cannot group by month
+   * (`date_trunc`) without raw SQL, and raw SQL here would mean hand-writing the tenant filter
+   * outside `buildScopeWhere` — the one thing worth avoiding in this codebase. An explicit
+   * `from`/`to` is still honoured in full, so nothing is unreachable; only the default is
+   * capped.
+   */
+  const monthlyWhere = { ...where };
+  if (!from && !to) {
+    const windowStart = new Date();
+    windowStart.setMonth(windowStart.getMonth() - MONTHLY_SERIES_MONTHS);
+    windowStart.setHours(0, 0, 0, 0);
+    monthlyWhere.date = { gte: windowStart };
+  }
+
   const monthlyRows = await prisma.income.findMany({
-    where,
+    where: monthlyWhere,
     select: { date: true, total: true },
     orderBy: { date: "asc" },
   });

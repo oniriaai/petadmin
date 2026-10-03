@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import { readPage, sendPage } from "../utils/pagination";
 
 export const contractsRouter = Router();
 
@@ -21,15 +22,21 @@ contractsRouter.get("/", async (req, res) => {
   const { status } = req.query as Record<string, string>;
   const where: Record<string, unknown> = buildScopeWhere(req);
   if (status) where.status = status;
-  const contracts = await prisma.contract.findMany({
+  const page = readPage(req);
+  const [contracts, total] = await Promise.all([
+    prisma.contract.findMany({
     where,
     include: {
       client: { select: { id: true, firstName: true, lastName: true } },
       pet: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: "desc" },
-  });
-  res.json(contracts);
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.contract.count({ where }),
+  ]);
+  sendPage(res, page, contracts, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

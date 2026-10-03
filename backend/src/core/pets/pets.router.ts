@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { handleAuthzError } from "../../middleware/auth";
 import { buildChildScopeWhere, buildDaycareWhere } from "../../core/tenancy/scope";
+import { readPage, sendPage } from "../../utils/pagination";
 import { prisma } from "../../db";
 
 export const petsRouter = Router();
@@ -38,12 +39,19 @@ petsRouter.get("/", async (req, res) => {
       { microchip: { contains: search } },
     ];
   }
-  const pets = await prisma.pet.findMany({
-    where,
-    include: { client: { select: { id: true, firstName: true, lastName: true, phone: true } }, vaccinations: true },
-    orderBy: { name: "asc" },
-  });
-  res.json(pets);
+  // Bare array by default, as for clients: HerramientasPage loads this whole list.
+  const page = readPage(req);
+  const [pets, total] = await Promise.all([
+    prisma.pet.findMany({
+      where,
+      include: { client: { select: { id: true, firstName: true, lastName: true, phone: true } }, vaccinations: true },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.pet.count({ where }),
+  ]);
+  sendPage(res, page, pets, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import { readPage, sendPage } from "../../utils/pagination";
 import {
   cancelFuturePendingReservationsForPlan,
   syncFuturePendingReservationsForPlan,
@@ -32,16 +33,22 @@ recurringPlansRouter.get("/", async (req, res) => {
   else if (status === "inactive") where.isActive = false;
   if (clientId) where.clientId = clientId;
 
-  const plans = await prisma.recurringPlan.findMany({
-    where,
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true } },
-      room: { select: { id: true, name: true } },
-      reservations: { select: { id: true, checkIn: true, checkOut: true, status: true } },
-    },
-    orderBy: { startDate: "desc" },
-  });
-  res.json(plans);
+  const page = readPage(req);
+  const [plans, total] = await Promise.all([
+    prisma.recurringPlan.findMany({
+      where,
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true } },
+        room: { select: { id: true, name: true } },
+        reservations: { select: { id: true, checkIn: true, checkOut: true, status: true } },
+      },
+      orderBy: [{ startDate: "desc" }, { id: "desc" }],
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.recurringPlan.count({ where }),
+  ]);
+  sendPage(res, page, plans, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

@@ -2,7 +2,7 @@ import { Response, Router } from "express";
 import ExcelJS from "exceljs";
 import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
-import { buildScopeWhere } from "../core/tenancy/scope";
+import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
 
 export const exportRouter = Router();
 
@@ -13,19 +13,33 @@ async function sendWorkbook(res: Response, wb: ExcelJS.Workbook, filename: strin
 }
 
 exportRouter.get("/clients", async (req, res) => {
-  const clients = await prisma.client.findMany({
-    include: { pets: { where: { isActive: true } } },
-    orderBy: { lastName: "asc" },
-  });
+  try {
+    // This query had NO tenant filter: any user of any daycare that bought Informes exported
+    // every other daycare's tutors, with their phone, email and address. The three exports
+    // below were scoped; this one was missed, and no e2e test reached /export, so nothing
+    // caught it until the tenant-scope guard did. `Client` has no businessUnit, so the daycare
+    // filter alone is the right one, as in clients.router.ts.
+    const clients = await prisma.client.findMany({
+      where: buildDaycareWhere(req),
+      include: { pets: { where: { isActive: true } } },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+    });
 
-  const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet("Clientes");
-  ws.addRow(["Apellido", "Nombre", "Cédula", "Teléfono", "WhatsApp", "Email", "Ciudad", "Provincia", "Estado", "Mascotas"]);
-  ws.getRow(1).font = { bold: true };
-  clients.forEach(c => {
-    ws.addRow([c.lastName, c.firstName, c.idNumber, c.phone, c.whatsapp, c.email, c.city, c.province, c.isActive ? "Activo" : "Inactivo", c.pets.map(p => p.name).join(", ")]);
-  });
-  await sendWorkbook(res, wb, "clientes.xlsx");
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Clientes");
+    ws.addRow(["Apellido", "Nombre", "Cédula", "Teléfono", "WhatsApp", "Email", "Ciudad", "Provincia", "Estado", "Mascotas"]);
+    ws.getRow(1).font = { bold: true };
+    clients.forEach(c => {
+      ws.addRow([c.lastName, c.firstName, c.idNumber, c.phone, c.whatsapp, c.email, c.city, c.province, c.isActive ? "Activo" : "Inactivo", c.pets.map(p => p.name).join(", ")]);
+    });
+    await sendWorkbook(res, wb, "clientes.xlsx");
+  } catch (error) {
+    // It also had no catch. Express 4 does not handle a rejected async handler, so anything
+    // thrown in here became an unhandled rejection and took the process down with it.
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
 });
 
 exportRouter.get("/reservations", async (req, res) => {

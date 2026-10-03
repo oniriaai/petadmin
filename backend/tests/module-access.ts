@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { NextFunction, Request, Response } from "express";
 
-import { backendModules, moduleHandlers, registerBackendModules } from "../src/platform/module-registry";
+import { backendModules, registerBackendModules } from "../src/platform/module-registry";
 import { moduleServesUnits, requireModuleAccess } from "../src/platform/module-access";
 import { requireAuth } from "../src/middleware/auth";
 import { backendModuleIdsFor, productModuleForBackendId } from "../src/platform/product-modules";

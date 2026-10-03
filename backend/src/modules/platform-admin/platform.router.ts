@@ -15,6 +15,7 @@ import {
   updateUser,
 } from "./daycares.service";
 import { getEntitlementMatrix, setEntitlements } from "./entitlements.service";
+import { buildDaycareExport, deleteDaycare } from "./offboarding.service";
 
 export const platformRouter = Router();
 
@@ -252,6 +253,78 @@ platformRouter.patch("/daycares/:id/users/:userId", async (req, res) => {
       detail: { ...parsed.data, password: parsed.data.password ? "(actualizada)" : undefined },
     });
     res.json(user);
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+// --- offboarding ------------------------------------------------------------
+
+/**
+ * Hand a client its data back.
+ *
+ * The audit line is written BEFORE the workbook is streamed: once `res` is being written to,
+ * nothing can be added to the response, and an export of a customer's whole record is exactly
+ * the kind of thing that should leave a trace whether or not the download completed.
+ */
+platformRouter.get("/daycares/:id/export", async (req, res) => {
+  try {
+    const daycare = await getDaycare(req.params.id);
+    const workbook = await buildDaycareExport(req.params.id);
+
+    await recordAudit(req, {
+      action: "daycare.export",
+      daycareId: daycare.id,
+      targetType: "daycare",
+      targetId: daycare.id,
+      detail: { slug: daycare.slug },
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${daycare.slug}-datos.xlsx"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+const deleteSchema = z.object({
+  /** The daycare's own slug, retyped. A mis-clicked row cannot satisfy this. */
+  confirm: z.string().min(1),
+});
+
+/**
+ * Permanently delete a daycare. The only irreversible action in the console, so it asks for
+ * the slug and refuses while the tenant is still active — see offboarding.service.ts.
+ */
+platformRouter.delete("/daycares/:id", async (req, res) => {
+  try {
+    const parsed = deleteSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({
+        message: "Repite el identificador de la guardería para confirmar la eliminación.",
+        errors: parsed.error.flatten(),
+      });
+      return;
+    }
+
+    const summary = await deleteDaycare(req.params.id, parsed.data.confirm);
+
+    // Recorded after the fact, and it survives the tenant: PlatformAuditLog.daycareId has no
+    // foreign key precisely so the record of a deletion outlives what it deleted.
+    await recordAudit(req, {
+      action: "daycare.delete",
+      daycareId: req.params.id,
+      targetType: "daycare",
+      targetId: req.params.id,
+      detail: { slug: summary.slug, name: summary.name, rows: summary.rows, storage: summary.storage },
+    });
+
+    res.json(summary);
   } catch (error) {
     fail(res, error);
   }

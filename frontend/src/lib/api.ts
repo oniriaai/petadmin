@@ -27,6 +27,17 @@ export class ApiError extends Error {
   get isModuleDisabled(): boolean {
     return this.code === "MODULE_DISABLED";
   }
+
+  /**
+   * The account or its daycare was deactivated while the session was open.
+   *
+   * This arrives as a 403 rather than a 401 because the token is perfectly valid — signing in
+   * again will not help, which is exactly why the session has to be cleared rather than
+   * retried.
+   */
+  get isSessionRevoked(): boolean {
+    return this.code === "USER_INACTIVE" || this.code === "DAYCARE_INACTIVE";
+  }
 }
 
 function getToken() {
@@ -94,6 +105,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const err = await res.json().catch(() => ({ message: "Error de red" }));
     const error = new ApiError(res.status, err.message ?? "Error del servidor", err.code, err.errors);
     if (error.isModuleDisabled) onModuleDisabled?.(err.module);
+    // A deactivated user or a suspended daycare ends the session. Without this the browser
+    // would keep a dead token and show an error on every screen instead of returning to login.
+    if (error.isSessionRevoked) onUnauthorized?.();
     throw error;
   }
   if (res.status === 204) return undefined as T;

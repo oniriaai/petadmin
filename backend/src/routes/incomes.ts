@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import { readPage, sendPage } from "../utils/pagination";
 
 export const incomesRouter = Router();
 
@@ -30,12 +31,20 @@ incomesRouter.get("/", async (req, res) => {
     if (from) (where.date as Record<string, unknown>).gte = new Date(from);
     if (to) (where.date as Record<string, unknown>).lte = new Date(to);
   }
-  const incomes = await prisma.income.findMany({
-    where,
-    include: { reservation: { select: { id: true, service: true, client: { select: { firstName: true, lastName: true } } } } },
-    orderBy: { date: "desc" },
-  });
-  res.json(incomes);
+  // The ledger grows forever, so this is the clearest case for a bounded read. `id` breaks
+  // ties on `date` so a page boundary cannot show or skip the same row twice.
+  const page = readPage(req);
+  const [incomes, total] = await Promise.all([
+    prisma.income.findMany({
+      where,
+      include: { reservation: { select: { id: true, service: true, client: { select: { firstName: true, lastName: true } } } } },
+      orderBy: [{ date: "desc" }, { id: "desc" }],
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.income.count({ where }),
+  ]);
+  sendPage(res, page, incomes, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

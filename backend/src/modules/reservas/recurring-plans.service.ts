@@ -167,12 +167,12 @@ async function createReservationFromPlan(plan: {
   });
   if (existing) return "exists";
 
-  const conflictValidation = await validateNoReservationConflicts(plan.roomId, checkIn, checkOut);
+  const conflictValidation = await validateNoReservationConflicts(plan.roomId, plan.daycareId, checkIn, checkOut);
   if (!conflictValidation.valid) {
     throw new Error(conflictValidation.message || "Conflicto de horario");
   }
 
-  const capacityValidation = await validateRoomCapacity(plan.roomId, checkIn, checkOut, petIds.length);
+  const capacityValidation = await validateRoomCapacity(plan.roomId, plan.daycareId, checkIn, checkOut, petIds.length);
   if (!capacityValidation.valid) {
     throw new Error(capacityValidation.message || "Capacidad excedida");
   }

@@ -7,7 +7,9 @@ export type PlatformAction =
   | "daycare.update"
   | "module.toggle"
   | "user.provision"
-  | "user.update";
+  | "user.update"
+  | "daycare.export"
+  | "daycare.delete";
 
 export interface AuditInput {
   action: PlatformAction;

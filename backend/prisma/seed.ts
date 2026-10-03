@@ -18,6 +18,19 @@ const BU = {
 const PETHIJOS_ID = "daycare_pethijos";
 const DEMO_ID = "daycare_demo";
 
+/**
+ * Whether to create the demo tenants and their sample data.
+ *
+ * The `pethijos` and `demo` tenants carry well-known passwords (`admin123`, `demo123`) and
+ * exist for development and for the isolation suites. They must never reach a customer-facing
+ * database, so outside development this is off unless asked for explicitly. With it off the
+ * seed still provisions the platform superadmin, which is what a fresh production database
+ * actually needs.
+ */
+const SEED_DEMO_DATA = process.env.SEED_DEMO_DATA
+  ? process.env.SEED_DEMO_DATA.toLowerCase() === "true"
+  : process.env.NODE_ENV !== "production";
+
 /** Stamps the default tenant onto a batch of seed rows. */
 const tenant = <T extends object>(rows: readonly T[]): (T & { daycareId: string })[] =>
   rows.map((row) => ({ ...row, daycareId: PETHIJOS_ID }));
@@ -91,7 +104,9 @@ async function ensureSuperadmin() {
     );
   }
 
-  const existing = await prisma.user.findUnique({ where: { username } });
+  // Platform accounts have no daycare, so they are matched on that rather than by a
+  // globally unique username, which no longer exists.
+  const existing = await prisma.user.findFirst({ where: { username, daycareId: null } });
   if (existing) {
     console.log(`[seed] superadmin '${username}' ya existe (contraseña sin cambios)`);
     return;
@@ -168,7 +183,7 @@ async function ensureDaycares() {
     create: { daycareId: DEMO_ID, businessUnit: BU.GROOMING, timezone: "America/Bogota" },
   });
 
-  const demoAdmin = await prisma.user.findUnique({ where: { username: "demo_admin" } });
+  const demoAdmin = await prisma.user.findFirst({ where: { username: "demo_admin", daycareId: DEMO_ID } });
   if (!demoAdmin) {
     await prisma.user.create({
       data: {
@@ -184,8 +199,18 @@ async function ensureDaycares() {
 }
 
 async function main() {
-  await ensureDaycares();
+  // Always first, and independent of the demo data: a production database needs exactly this.
   await ensureSuperadmin();
+
+  if (!SEED_DEMO_DATA) {
+    console.log(
+      "[seed] SEED_DEMO_DATA no está activo: solo se provisionó la cuenta de plataforma. " +
+        "Las guarderías de demostración (pethijos, demo) NO se crearon.",
+    );
+    return;
+  }
+
+  await ensureDaycares();
 
   const existing = await prisma.user.count({ where: { daycareId: PETHIJOS_ID } });
   if (existing > 0) {
@@ -439,8 +464,12 @@ async function main() {
 
   const [kdFutureMulti, , kdCanceledPast, kdActiveToday, phFuture, phActiveToday, phPastPending] = reservations;
 
-  const adminKd = await prisma.user.findUniqueOrThrow({ where: { username: "kinderdog_admin" } });
-  const adminPh = await prisma.user.findUniqueOrThrow({ where: { username: "pethijos_admin" } });
+  const adminKd = await prisma.user.findUniqueOrThrow({
+    where: { daycareId_username: { daycareId: PETHIJOS_ID, username: "kinderdog_admin" } },
+  });
+  const adminPh = await prisma.user.findUniqueOrThrow({
+    where: { daycareId_username: { daycareId: PETHIJOS_ID, username: "pethijos_admin" } },
+  });
 
   await prisma.checkInOut.createMany({
     data: tenant([

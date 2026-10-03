@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import { readPage } from "../../utils/pagination";
 import {
   createCheckInOutSchema,
   checkInSchema,
@@ -106,13 +107,13 @@ checkInOutRouter.post("/", async (req, res) => {
     }
 
     // Validate pet ownership
-    const petOwnershipValidation = await validatePetOwnership(finalPetIds, clientId);
+    const petOwnershipValidation = await validatePetOwnership(finalPetIds, clientId, getRequiredDaycareId(req));
     if (!petOwnershipValidation.valid) {
       return res.status(400).json({ message: petOwnershipValidation.message });
     }
 
     // Validate room exists and belongs to business unit
-    const roomValidation = await validateRoomExists(roomId, bu);
+    const roomValidation = await validateRoomExists(roomId, getRequiredDaycareId(req), bu);
     if (!roomValidation.valid) {
       return res.status(400).json({ message: roomValidation.message });
     }
@@ -195,6 +196,7 @@ checkInOutRouter.post("/:id/check-in", async (req, res) => {
     if (checkInOut.room) {
       const capacityValidation = await validateRoomCapacity(
         checkInOut.roomId,
+        checkInOut.daycareId,
         checkInTime,
         checkInOut.checkOutTime || checkInTime,
         1
@@ -344,11 +346,13 @@ checkInOutRouter.get("/history", async (req, res) => {
     const buWhere = buildScopeWhere(req);
     const {
       clientId, petId, roomId, reservationId, startDate, endDate,
-      skip, take, offset, limit 
     } = req.query as Record<string, string>;
 
-    const finalSkip = parseInt(offset || skip || "0");
-    const finalTake = parseInt(limit || take || "50");
+    // Bounded by the shared helper rather than trusting the query string: `?limit=999999`
+    // used to read the whole table for the tenant.
+    const requested = readPage(req);
+    const finalSkip = requested.skip;
+    const finalTake = requested.paginated ? requested.take : 50;
 
     const where: Record<string, unknown> = {
       ...buWhere,
@@ -382,7 +386,12 @@ checkInOutRouter.get("/history", async (req, res) => {
           reservation: { select: { id: true, service: true } },
           performedByUser: { select: { id: true, name: true } },
         },
-        orderBy: { checkInTime: "desc" },
+        // `nulls: "last"` is the fix for a real bug, not a refinement. Postgres sorts NULLs
+        // FIRST under DESC, and a CheckInOut row created from a reservation has no checkInTime
+        // until the pet actually arrives. With 64 such rows against a default page of 50, the
+        // first page of "history" was entirely visits that never happened and the most recent
+        // real one was unreachable. `createdAt` breaks ties so a page boundary is stable.
+        orderBy: [{ checkInTime: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
         skip: finalSkip,
         take: finalTake,
       }),

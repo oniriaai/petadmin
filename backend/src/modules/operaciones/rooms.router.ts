@@ -1,8 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import { withVerifiedScope } from "../../core/tenancy/guard";
 
 export const roomsRouter = Router();
 
@@ -34,25 +35,33 @@ roomsRouter.get("/", async (req, res) => {
   const roomsWithOccupancy = await Promise.all(
     rooms.map(async (room) => {
       // Primary: count via active CheckInOut records (most accurate for daycare)
-      const activeCheckIns = await prisma.checkInOut.count({
-        where: {
-          roomId: room.id,
-          isActive: true,
-          checkOutTime: null,
-        },
-      });
+      const activeCheckIns = await withVerifiedScope(
+        "room.id comes from the tenant-scoped findMany above",
+        () =>
+          prisma.checkInOut.count({
+            where: {
+              roomId: room.id,
+              isActive: true,
+              checkOutTime: null,
+            },
+          }),
+      );
 
       // Fallback / supplement: count via active reservation pets (covers peluquería kanban flow
       // where check-in records may not be created per-pet but reservation status is set directly)
-      const activeReservations = await prisma.reservation.findMany({
-        where: {
-          roomId: room.id,
-          status: { in: ACTIVE_STATUSES },
-          checkIn: { lte: now },
-          checkOut: { gte: now },
-        },
-        include: { pets: true },
-      });
+      const activeReservations = await withVerifiedScope(
+        "room.id comes from the tenant-scoped findMany above",
+        () =>
+          prisma.reservation.findMany({
+            where: {
+              roomId: room.id,
+              status: { in: ACTIVE_STATUSES },
+              checkIn: { lte: now },
+              checkOut: { gte: now },
+            },
+            include: { pets: true },
+          }),
+      );
       const reservationPets = activeReservations.reduce((sum, r) => sum + r.pets.length, 0);
 
       // Use the higher of the two counts to avoid double-counting when both sources exist

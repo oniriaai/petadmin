@@ -8,12 +8,16 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_NAME, B2_ENDPOINT } from "../lib/s3";
 import { handleAuthzError } from "../middleware/auth";
+import { storageLimiter } from "../middleware/security";
 import { buildPetPhotoKey, resolveObjectKey } from "../core/storage/object-keys";
 import { buildChildScopeWhere, buildDaycareWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 import { prisma } from "../db";
 import { z } from "zod";
 
 export const storageRouter = Router();
+
+// Per-tenant, not per-IP: a daycare's staff share one budget and cannot exhaust another's.
+storageRouter.use(storageLimiter);
 
 const uploadUrlSchema = z.object({
   fileName: z.string().min(1),

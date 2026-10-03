@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import { readPage, sendPage } from "../../utils/pagination";
+import { assertClientInTenant } from "../../utils/validation";
 
 export const reservationsRouter = Router();
 
@@ -47,16 +49,25 @@ reservationsRouter.get("/", async (req, res) => {
     ]};
   }
 
-  const reservations = await prisma.reservation.findMany({
-    where,
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true, phone: true, whatsapp: true } },
-      pets: { include: { pet: { select: { id: true, name: true, species: true, breed: true } } } },
-      room: { select: { id: true, name: true } },
-    },
-    orderBy: { checkIn: "asc" },
-  });
-  res.json(reservations);
+  const page = readPage(req);
+  const [reservations, total] = await Promise.all([
+    prisma.reservation.findMany({
+      where,
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true, phone: true, whatsapp: true } },
+        pets: { include: { pet: { select: { id: true, name: true, species: true, breed: true } } } },
+        room: { select: { id: true, name: true } },
+      },
+      // `checkIn` is nullable. ASC already puts NULLs last in Postgres, but stating it means
+      // the order does not silently invert if this ever becomes DESC — which is exactly how
+      // the check-in-out history bug happened. `id` keeps page boundaries stable.
+      orderBy: [{ checkIn: { sort: "asc", nulls: "last" } }, { id: "asc" }],
+      skip: page.skip,
+      take: page.take,
+    }),
+    prisma.reservation.count({ where }),
+  ]);
+  sendPage(res, page, reservations, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -96,9 +107,16 @@ reservationsRouter.post("/", async (req, res) => {
   // to edit it.
   const vatPercent = parsed.data.vatPercent ?? (await getUnitVatPercent(getRequiredDaycareId(req), bu));
 
-  // Validate all pets belong to the client
+  // The client must belong to THIS daycare. clientId and petIds both come from the request
+  // body, and checking only that the pets belong to the client let a tenant create a
+  // reservation against another daycare's client and pets. A 404, like every other
+  // cross-tenant read, so the response does not confirm the record exists.
+  const daycareId = getRequiredDaycareId(req);
+  await assertClientInTenant(clientId, daycareId);
+
+  // Validate all pets belong to the client, within this daycare
   const pets = await prisma.pet.findMany({
-    where: { id: { in: petIds }, clientId },
+    where: { id: { in: petIds }, clientId, daycareId },
   });
   if (pets.length !== petIds.length) {
     res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
@@ -107,7 +125,10 @@ reservationsRouter.post("/", async (req, res) => {
 
   // Validate room capacity and conflicts if room is specified
   if (roomId && checkIn && checkOut) {
-    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    // Scoped to the tenant: the room id comes from the request body, and checking only
+    // businessUnit let a tenant book into another daycare's room (every daycare has a
+    // DAYCARE and/or GROOMING unit) and have capacity computed from its occupancy.
+    const room = await prisma.room.findFirst({ where: { id: roomId, daycareId } });
     if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
     if (room.businessUnit !== bu) { res.status(400).json({ message: "La sala no pertenece a la unidad seleccionada" }); return; }
 
@@ -117,6 +138,7 @@ reservationsRouter.post("/", async (req, res) => {
     // Check for conflicts (overlapping reservations)
     const conflicts = await prisma.reservation.count({
       where: {
+        daycareId,
         roomId,
         status: { not: "CANCELADA" },
         checkIn: { lt: checkOutDate },
@@ -131,6 +153,7 @@ reservationsRouter.post("/", async (req, res) => {
     // Check capacity at check-in time (count total pets in active reservations at that moment)
     const occupancyReservations = await prisma.reservation.findMany({
       where: {
+        daycareId,
         roomId,
         status: "ACTIVA",
         checkIn: { lte: checkInDate },
@@ -215,10 +238,13 @@ reservationsRouter.put("/:id", async (req, res) => {
   if (!current) { res.status(404).json({ message: "Reserva no encontrada" }); return; }
   assertRecordAccess(req, current);
 
-  // Validate pets belong to client if changing
+  // Validate pets belong to client if changing. `current.daycareId` is the tenant of the
+  // record already verified by assertRecordAccess above, so a reassignment cannot reach
+  // across tenants even when the body names another daycare's client.
   if (petIds && clientId) {
+    await assertClientInTenant(clientId, current.daycareId);
     const pets = await prisma.pet.findMany({
-      where: { id: { in: petIds }, clientId },
+      where: { id: { in: petIds }, clientId, daycareId: current.daycareId },
     });
     if (pets.length !== petIds.length) {
       res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
@@ -226,7 +252,7 @@ reservationsRouter.put("/:id", async (req, res) => {
     }
   } else if (petIds && !clientId) {
     const pets = await prisma.pet.findMany({
-      where: { id: { in: petIds }, clientId: current.clientId },
+      where: { id: { in: petIds }, clientId: current.clientId, daycareId: current.daycareId },
     });
     if (pets.length !== petIds.length) {
       res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
@@ -240,13 +266,14 @@ reservationsRouter.put("/:id", async (req, res) => {
   const newCheckOut = checkOut ? new Date(checkOut) : current.checkOut;
 
   if (newRoomId && newCheckIn && newCheckOut) {
-    const room = await prisma.room.findUnique({ where: { id: newRoomId } });
+    const room = await prisma.room.findFirst({ where: { id: newRoomId, daycareId: current.daycareId } });
     if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
     if (room.businessUnit !== current.businessUnit) { res.status(400).json({ message: "La sala no pertenece a la unidad de la reserva" }); return; }
 
     // Check for conflicts with other reservations (exclude current)
     const conflicts = await prisma.reservation.count({
       where: {
+        daycareId: current.daycareId,
         roomId: newRoomId,
         id: { not: req.params.id },
         status: { not: "CANCELADA" },
@@ -263,6 +290,7 @@ reservationsRouter.put("/:id", async (req, res) => {
     const newPetIds = petIds || (current.pets?.map(p => p.petId) ?? []);
     const occupancyReservations = await prisma.reservation.findMany({
       where: {
+        daycareId: current.daycareId,
         roomId: newRoomId,
         id: { not: req.params.id },
         status: "ACTIVA",
@@ -328,6 +356,7 @@ reservationsRouter.post("/:id/checkin", async (req, res) => {
   if (reservation.roomId && reservation.room) {
     const occupancy = await prisma.reservation.count({
       where: {
+        daycareId: reservation.daycareId,
         roomId: reservation.roomId,
         status: "ACTIVA",
         checkIn: { lte: checkInTime },
@@ -348,9 +377,11 @@ reservationsRouter.post("/:id/checkin", async (req, res) => {
     include: { client: true, room: true, pets: { include: { pet: true } } },
   });
 
-  // Update linked CheckInOut records
+  // Update linked CheckInOut records. Scoped by tenant as well as by reservation: the
+  // reservation id is already verified, but a bulk write is worth filtering explicitly so it
+  // cannot touch another tenant's rows if the relation is ever mis-set.
   await prisma.checkInOut.updateMany({
-    where: { reservationId: req.params.id },
+    where: { reservationId: req.params.id, daycareId: reservation.daycareId },
     data: { checkInTime },
   });
 
@@ -377,9 +408,9 @@ reservationsRouter.post("/:id/checkout", async (req, res) => {
     include: { client: true },
   });
 
-  // Update linked CheckInOut records
+  // Update linked CheckInOut records, scoped by tenant as on the check-in path.
   await prisma.checkInOut.updateMany({
-    where: { reservationId: req.params.id },
+    where: { reservationId: req.params.id, daycareId: current.daycareId },
     data: { checkOutTime },
   });
 

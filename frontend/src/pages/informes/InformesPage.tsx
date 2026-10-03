@@ -50,7 +50,7 @@ export function InformesPage() {
   async function exportFile(path: string, filename: string) {
     setDownloading(true);
     try { await downloadFile(path, filename); }
-    catch (e) { alert("Error al descargar") }
+    catch { alert("Error al descargar") }
     finally { setDownloading(false); }
   }
 

@@ -4,7 +4,7 @@
  * Usage: tsx tests/check-in-out.e2e.ts
  */
 
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 
 const BASE_URL = "http://localhost:3001/api/v1";
 let authToken: string;
