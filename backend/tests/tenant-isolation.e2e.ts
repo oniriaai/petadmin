@@ -12,7 +12,12 @@ const BASE_URL = "http://localhost:3001/api/v1";
 const PETHIJOS_ID = "daycare_pethijos";
 const DEMO_ID = "daycare_demo";
 
-interface TestResult { name: string; passed: boolean; error?: string; duration: number }
+interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+  duration: number;
+}
 const results: TestResult[] = [];
 
 async function test(name: string, fn: () => Promise<void>): Promise<void> {
@@ -81,7 +86,7 @@ async function run() {
       expectStatus(own.status, 200, `GET ${path} (propia)`);
       const other = await b.get(path);
       expectStatus(other.status, 200, `GET ${path} (demo)`);
-      const rows = Array.isArray(other.data) ? other.data : other.data?.data ?? [];
+      const rows = Array.isArray(other.data) ? other.data : (other.data?.data ?? []);
       if (rows.length !== 0) {
         throw new Error(`GET ${path}: la guardería demo no debería ver ${rows.length} registro(s)`);
       }
@@ -94,12 +99,22 @@ async function run() {
     // The demo tenant is seeded without finanzas, inventario, informes, cumplimiento or
     // guarderia. Isolation and entitlement are different protections and must not be confused:
     // an empty list would mean "you have none", 403 means "you did not buy this".
-    for (const path of ["/incomes", "/payables", "/providers", "/inventory/items", "/reports/kpis", "/contracts", "/alerts"]) {
+    for (const path of [
+      "/incomes",
+      "/payables",
+      "/providers",
+      "/inventory/items",
+      "/reports/kpis",
+      "/contracts",
+      "/alerts",
+    ]) {
       expectStatus((await a.get(path)).status, 200, `GET ${path} (tenant con el módulo)`);
       const denied = await b.get(path);
       expectStatus(denied.status, 403, `GET ${path} (tenant sin el módulo)`);
       if (denied.data?.code !== "MODULE_DISABLED") {
-        throw new Error(`GET ${path}: se esperaba code MODULE_DISABLED, se recibió ${JSON.stringify(denied.data)}`);
+        throw new Error(
+          `GET ${path}: se esperaba code MODULE_DISABLED, se recibió ${JSON.stringify(denied.data)}`,
+        );
       }
     }
   });
@@ -120,11 +135,16 @@ async function run() {
     const a = clientFor(pethijos);
     const b = clientFor(demo);
     const clientId = (await a.get("/clients")).data[0]?.id;
-    expectStatus((await b.put(`/clients/${clientId}`, { firstName: "Hack", lastName: "Hack" })).status, 404, "PUT cruzado");
+    expectStatus(
+      (await b.put(`/clients/${clientId}`, { firstName: "Hack", lastName: "Hack" })).status,
+      404,
+      "PUT cruzado",
+    );
     expectStatus((await b.delete(`/clients/${clientId}`)).status, 404, "DELETE cruzado");
     // ...and the record is untouched.
     const after = await a.get(`/clients/${clientId}`);
-    if (after.data.firstName === "Hack") throw new Error("El registro fue modificado por otra guardería");
+    if (after.data.firstName === "Hack")
+      throw new Error("El registro fue modificado por otra guardería");
   });
 
   await test("Una mascota no puede crearse contra un cliente de otra guardería", async () => {
@@ -148,10 +168,12 @@ async function run() {
     const globalCount = everything.data.length;
 
     const pinnedDemo = await clientFor(superadmin, DEMO_ID).get("/clients");
-    if (pinnedDemo.data.length !== 0) throw new Error("La guardería demo no debería tener clientes");
+    if (pinnedDemo.data.length !== 0)
+      throw new Error("La guardería demo no debería tener clientes");
 
     const pinnedMain = await clientFor(superadmin, PETHIJOS_ID).get("/clients");
-    if (pinnedMain.data.length === 0) throw new Error("La guardería principal debería tener clientes");
+    if (pinnedMain.data.length === 0)
+      throw new Error("La guardería principal debería tener clientes");
     if (pinnedMain.data.length > globalCount) throw new Error("El alcance fijado excede el global");
   });
 
@@ -204,7 +226,9 @@ async function run() {
     const payload = JSON.parse(Buffer.from(stale.data.token.split(".")[1], "base64").toString());
     if (payload.tv !== 2) throw new Error(`El token debería declarar tv=2, trae ${payload.tv}`);
     if (payload.daycareId !== PETHIJOS_ID) {
-      throw new Error(`El token debería llevar daycareId=${PETHIJOS_ID}, trae ${payload.daycareId}`);
+      throw new Error(
+        `El token debería llevar daycareId=${PETHIJOS_ID}, trae ${payload.daycareId}`,
+      );
     }
   });
 
@@ -247,7 +271,8 @@ async function run() {
       checkOut: new Date(Date.now() + 90_000_000).toISOString(),
       basePrice: 20,
     });
-    if (denied.status === 201) throw new Error("Se creó una reserva contra el cliente de otra guardería");
+    if (denied.status === 201)
+      throw new Error("Se creó una reserva contra el cliente de otra guardería");
     expectStatus(denied.status, 404, "Reserva con cliente ajeno");
   });
 

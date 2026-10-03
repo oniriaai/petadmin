@@ -115,7 +115,11 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
       }
     >
       <div className="space-y-4">
-        {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Concepto</label>
@@ -157,7 +161,9 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
               <div className="text-gray-600">IVA ({vatPercent}%)</div>
-              <div className="text-lg font-semibold text-blue-600">${vatAmount.toLocaleString()}</div>
+              <div className="text-lg font-semibold text-blue-600">
+                ${vatAmount.toLocaleString()}
+              </div>
             </div>
             <div>
               <div className="text-gray-600">Monto Base</div>

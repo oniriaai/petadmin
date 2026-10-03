@@ -1,6 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarDays, Users, DollarSign, AlertTriangle, ArrowRight, Clock, PawPrint, Scissors, Car, CheckCircle2, CircleAlert, CalendarPlus, UserPlus, BarChart3, BriefcaseBusiness } from "lucide-react";
+import {
+  CalendarDays,
+  Users,
+  DollarSign,
+  AlertTriangle,
+  ArrowRight,
+  Clock,
+  PawPrint,
+  Scissors,
+  Car,
+  CheckCircle2,
+  CircleAlert,
+  CalendarPlus,
+  UserPlus,
+  BarChart3,
+  BriefcaseBusiness,
+} from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { fmtCurrency, fmt, fmtTime, fmtDayLabel, STATUSES } from "../lib/utils";
@@ -17,10 +33,30 @@ interface Summary {
   ingresosMes: number;
   totalClientes: number;
   alertas: Array<{ id: string; severity: string; title: string; pet?: string }>;
-  proximasReservas: Array<{ id: string; cliente: string; mascotas: string; servicio: string; estado: string; checkIn: string; sala?: string }>;
+  proximasReservas: Array<{
+    id: string;
+    cliente: string;
+    mascotas: string;
+    servicio: string;
+    estado: string;
+    checkIn: string;
+    sala?: string;
+  }>;
 }
 
-function StatCard({ label, value, sub, icon: Icon, color }: { label: string; value: string | number; sub?: string; icon: React.ElementType; color: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ElementType;
+  color: string;
+}) {
   return (
     <div className="card p-5 flex items-start gap-4">
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
@@ -47,7 +83,8 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get<Summary>("/dashboard/summary")
+    api
+      .get<Summary>("/dashboard/summary")
       .then(setSummary)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -56,32 +93,61 @@ export function Dashboard() {
   if (loading) return <PageLoader />;
   if (!summary) return <p className="text-red-600 p-6">Error cargando dashboard</p>;
 
-  const dashboardLabel = user?.role === "admin"
-    ? activeBusinessUnit === "DAYCARE"
-      ? "Guardería"
-      : activeBusinessUnit === "GROOMING"
-        ? "Peluquería"
-        : "Consolidado"
-    : user?.businessUnit === "DAYCARE"
-      ? "Guardería"
-      : "Peluquería";
+  const dashboardLabel =
+    user?.role === "admin"
+      ? activeBusinessUnit === "DAYCARE"
+        ? "Guardería"
+        : activeBusinessUnit === "GROOMING"
+          ? "Peluquería"
+          : "Consolidado"
+      : user?.businessUnit === "DAYCARE"
+        ? "Guardería"
+        : "Peluquería";
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <PageHeader title={<>{dashboardLabel} — Dashboard</>} subtitle={<>{fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}</>} />
+      <PageHeader
+        title={<>{dashboardLabel} — Dashboard</>}
+        subtitle={<>{fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}</>}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Reservas hoy" value={summary.reservasHoy} sub={`${summary.activas} activas`} icon={CalendarDays} color="bg-blue-500" />
-        <StatCard label="Entradas / Salidas" value={`${summary.entradas} / ${summary.salidas}`} icon={Clock} color="bg-green-500" />
-        <StatCard label="Ingresos del día" value={fmtCurrency(summary.ingresosHoy)} sub={`Mes: ${fmtCurrency(summary.ingresosMes)}`} icon={DollarSign} color="bg-emerald-500" />
-        <StatCard label="Clientes activos" value={summary.totalClientes} icon={Users} color="bg-purple-500" />
+        <StatCard
+          label="Reservas hoy"
+          value={summary.reservasHoy}
+          sub={`${summary.activas} activas`}
+          icon={CalendarDays}
+          color="bg-blue-500"
+        />
+        <StatCard
+          label="Entradas / Salidas"
+          value={`${summary.entradas} / ${summary.salidas}`}
+          icon={Clock}
+          color="bg-green-500"
+        />
+        <StatCard
+          label="Ingresos del día"
+          value={fmtCurrency(summary.ingresosHoy)}
+          sub={`Mes: ${fmtCurrency(summary.ingresosMes)}`}
+          icon={DollarSign}
+          color="bg-emerald-500"
+        />
+        <StatCard
+          label="Clientes activos"
+          value={summary.totalClientes}
+          icon={Users}
+          color="bg-purple-500"
+        />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
             <h2 className="font-semibold text-gray-800">Próximas reservas</h2>
-            <Link to="/operaciones" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+            <Link
+              to="/operaciones"
+              className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+            >
               Ver todas <ArrowRight size={14} />
             </Link>
           </div>
@@ -89,16 +155,27 @@ export function Dashboard() {
             <p className="text-center text-gray-400 py-10">Sin reservas programadas</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {summary.proximasReservas.map(r => {
-                const st = STATUSES[r.estado] ?? { label: r.estado, color: "bg-gray-100 text-gray-700" };
+              {summary.proximasReservas.map((r) => {
+                const st = STATUSES[r.estado] ?? {
+                  label: r.estado,
+                  color: "bg-gray-100 text-gray-700",
+                };
                 return (
                   <div key={r.id} className="flex items-center gap-3 px-5 py-3">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-lg shrink-0">
-                      {r.servicio === "GUARDERIA" ? <PawPrint size={18} className="text-amber-700" /> : r.servicio.startsWith("PELUQUERIA") ? <Scissors size={18} className="text-violet-700" /> : <Car size={18} className="text-blue-700" />}
+                      {r.servicio === "GUARDERIA" ? (
+                        <PawPrint size={18} className="text-amber-700" />
+                      ) : r.servicio.startsWith("PELUQUERIA") ? (
+                        <Scissors size={18} className="text-violet-700" />
+                      ) : (
+                        <Car size={18} className="text-blue-700" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">{r.cliente}</p>
-                      <p className="text-xs text-gray-500 truncate">{r.mascotas} · {r.sala ?? r.servicio}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {r.mascotas} · {r.sala ?? r.servicio}
+                      </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className="text-sm font-medium text-gray-700">
@@ -122,10 +199,13 @@ export function Dashboard() {
             <span className="badge bg-red-100 text-red-700">{summary.alertas.length}</span>
           </div>
           {summary.alertas.length === 0 ? (
-            <p className="text-center text-gray-400 py-10 text-sm"><CheckCircle2 size={16} className="inline-block mr-1 text-emerald-600" />Sin alertas pendientes</p>
+            <p className="text-center text-gray-400 py-10 text-sm">
+              <CheckCircle2 size={16} className="inline-block mr-1 text-emerald-600" />
+              Sin alertas pendientes
+            </p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {summary.alertas.map(a => (
+              {summary.alertas.map((a) => (
                 <div key={a.id} className="px-5 py-3">
                   <p className="text-sm font-medium text-gray-800">
                     {SEVERITY_ICON[a.severity]} {a.title}
@@ -136,7 +216,10 @@ export function Dashboard() {
             </div>
           )}
           <div className="px-5 py-3 border-t border-gray-100">
-            <Link to="/herramientas" className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+            <Link
+              to="/herramientas"
+              className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+            >
               Ver todas las alertas <ArrowRight size={14} />
             </Link>
           </div>
@@ -145,12 +228,36 @@ export function Dashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { to: "/operaciones", label: "Nueva Reserva", Icon: CalendarPlus, bg: "bg-blue-50 hover:bg-blue-100" },
-          { to: "/clientes", label: "Nuevo Cliente", Icon: UserPlus, bg: "bg-purple-50 hover:bg-purple-100" },
-          { to: "/informes", label: "Ver Informes", Icon: BarChart3, bg: "bg-green-50 hover:bg-green-100" },
-          { to: "/transacciones", label: "Gestión Financiera", Icon: BriefcaseBusiness, bg: "bg-amber-50 hover:bg-amber-100" },
+          {
+            to: "/operaciones",
+            label: "Nueva Reserva",
+            Icon: CalendarPlus,
+            bg: "bg-blue-50 hover:bg-blue-100",
+          },
+          {
+            to: "/clientes",
+            label: "Nuevo Cliente",
+            Icon: UserPlus,
+            bg: "bg-purple-50 hover:bg-purple-100",
+          },
+          {
+            to: "/informes",
+            label: "Ver Informes",
+            Icon: BarChart3,
+            bg: "bg-green-50 hover:bg-green-100",
+          },
+          {
+            to: "/transacciones",
+            label: "Gestión Financiera",
+            Icon: BriefcaseBusiness,
+            bg: "bg-amber-50 hover:bg-amber-100",
+          },
         ].map(({ to, label, Icon, bg }) => (
-          <Link key={to} to={to} className={`card p-4 ${bg} flex items-center gap-3 transition-colors cursor-pointer no-underline`}>
+          <Link
+            key={to}
+            to={to}
+            className={`card p-4 ${bg} flex items-center gap-3 transition-colors cursor-pointer no-underline`}
+          >
             <Icon size={22} className="text-slate-700" aria-hidden="true" />
             <span className="font-medium text-gray-800 text-sm">{label}</span>
           </Link>

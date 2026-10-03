@@ -25,15 +25,22 @@ interface Props {
   users?: User[];
   isReservation?: boolean;
   onConfirm: (
-    id: string, 
-    checkOutTime: string, 
-    performedByUserId?: string, 
-    createIncome?: boolean, 
-    paymentMethod?: string
+    id: string,
+    checkOutTime: string,
+    performedByUserId?: string,
+    createIncome?: boolean,
+    paymentMethod?: string,
   ) => Promise<void>;
 }
 
-export function CheckOutModal({ open, onClose, record, users = [], isReservation = false, onConfirm }: Props) {
+export function CheckOutModal({
+  open,
+  onClose,
+  record,
+  users = [],
+  isReservation = false,
+  onConfirm,
+}: Props) {
   const [checkOutTime, setCheckOutTime] = useState(fmtDateTimeLocalInput(new Date()));
   const [performedByUserId, setPerformedByUserId] = useState("");
   const [createIncome, setCreateIncome] = useState(true);
@@ -50,11 +57,11 @@ export function CheckOutModal({ open, onClose, record, users = [], isReservation
       // Convert local datetime to ISO string for backend
       const isoTime = new Date(checkOutTime).toISOString();
       await onConfirm(
-        record.id, 
-        isoTime, 
-        performedByUserId || undefined, 
-        isReservation ? createIncome : undefined, 
-        isReservation ? paymentMethod : undefined
+        record.id,
+        isoTime,
+        performedByUserId || undefined,
+        isReservation ? createIncome : undefined,
+        isReservation ? paymentMethod : undefined,
       );
       setPerformedByUserId("");
       onClose();

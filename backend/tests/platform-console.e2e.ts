@@ -58,7 +58,12 @@ async function login(
   businessUnit?: string,
   daycare?: string,
 ): Promise<string> {
-  const res = await axios.post(`${BASE_URL}/auth/login`, { username, password, businessUnit, daycare });
+  const res = await axios.post(`${BASE_URL}/auth/login`, {
+    username,
+    password,
+    businessUnit,
+    daycare,
+  });
   return res.data.token;
 }
 
@@ -78,7 +83,12 @@ async function main(): Promise<void> {
   let createdId = "";
 
   await test("La consola es inalcanzable para un usuario de guardería", async () => {
-    for (const path of ["/platform/overview", "/platform/daycares", "/platform/modules", "/platform/audit"]) {
+    for (const path of [
+      "/platform/overview",
+      "/platform/daycares",
+      "/platform/modules",
+      "/platform/audit",
+    ]) {
       const res = await tenant.get(path);
       expectStatus(res.status, 403, `GET ${path}`);
       // A tenant must not be told the console exists as a purchasable module.
@@ -86,7 +96,11 @@ async function main(): Promise<void> {
         throw new Error(`GET ${path}: la consola no debe presentarse como un módulo deshabilitado`);
       }
     }
-    expectStatus((await tenant.post("/platform/daycares", {})).status, 403, "POST /platform/daycares");
+    expectStatus(
+      (await tenant.post("/platform/daycares", {})).status,
+      403,
+      "POST /platform/daycares",
+    );
   });
 
   await test("Sin autenticación la consola responde 401, no 403", async () => {
@@ -131,7 +145,9 @@ async function main(): Promise<void> {
     }
     // Every toggleable module must have a row, enabled or not, so the matrix is complete.
     if (detail.data.entitlements.length < 7) {
-      throw new Error(`la matriz debe listar todos los módulos vendibles, tiene ${detail.data.entitlements.length}`);
+      throw new Error(
+        `la matriz debe listar todos los módulos vendibles, tiene ${detail.data.entitlements.length}`,
+      );
     }
   });
 
@@ -173,28 +189,51 @@ async function main(): Promise<void> {
 
     // Turning both off together is coherent and must be accepted.
     expectStatus(
-      (await put([{ moduleId: "reservas", isEnabled: false }, { moduleId: "peluqueria", isEnabled: false }])).status,
+      (
+        await put([
+          { moduleId: "reservas", isEnabled: false },
+          { moduleId: "peluqueria", isEnabled: false },
+        ])
+      ).status,
       200,
       "quitar ambos",
     );
 
     // Enabling a module whose prerequisite is now off.
-    expectStatus((await put([{ moduleId: "guarderia", isEnabled: true }])).status, 400, "guarderia sin reservas");
+    expectStatus(
+      (await put([{ moduleId: "guarderia", isEnabled: true }])).status,
+      400,
+      "guarderia sin reservas",
+    );
 
     // With the prerequisite in the same request it is fine.
     expectStatus(
-      (await put([{ moduleId: "reservas", isEnabled: true }, { moduleId: "guarderia", isEnabled: true }])).status,
+      (
+        await put([
+          { moduleId: "reservas", isEnabled: true },
+          { moduleId: "guarderia", isEnabled: true },
+        ])
+      ).status,
       200,
       "guarderia con reservas",
     );
 
     // The other half of the same invariant: pulling the prerequisite out from under a module
     // that is already on. Validating only the modules being enabled would miss this.
-    expectStatus((await put([{ moduleId: "reservas", isEnabled: false }])).status, 400, "quitar reservas bajo guarderia");
+    expectStatus(
+      (await put([{ moduleId: "reservas", isEnabled: false }])).status,
+      400,
+      "quitar reservas bajo guarderia",
+    );
 
     // Restore the state the rest of the suite expects: reservas + peluqueria, guarderia off.
     expectStatus(
-      (await put([{ moduleId: "guarderia", isEnabled: false }, { moduleId: "peluqueria", isEnabled: true }])).status,
+      (
+        await put([
+          { moduleId: "guarderia", isEnabled: false },
+          { moduleId: "peluqueria", isEnabled: true },
+        ])
+      ).status,
       200,
       "restaurar",
     );
@@ -247,9 +286,11 @@ async function main(): Promise<void> {
     const res = await clientFor(newAdmin).get("/auth/me");
     expectStatus(res.status, 200, "GET /auth/me");
     if (res.data.daycare?.id !== createdId) throw new Error("la guardería no coincide");
-    if (!res.data.enabledModules.includes("nucleo")) throw new Error("el núcleo siempre está disponible");
+    if (!res.data.enabledModules.includes("nucleo"))
+      throw new Error("el núcleo siempre está disponible");
     if (!res.data.enabledModules.includes("peluqueria")) throw new Error("falta peluqueria");
-    if (res.data.enabledModules.includes("guarderia")) throw new Error("guarderia no está habilitado");
+    if (res.data.enabledModules.includes("guarderia"))
+      throw new Error("guarderia no está habilitado");
     if (res.data.fullAccess !== false) throw new Error("un inquilino no tiene acceso total");
 
     // Pinned, the superadmin sees that tenant's view -- but is still marked full-access.
@@ -260,7 +301,8 @@ async function main(): Promise<void> {
 
     const unpinned = await clientFor(superadmin).get("/auth/me");
     if (unpinned.data.daycare !== null) throw new Error("sin fijar no hay guardería");
-    if (!unpinned.data.enabledModules.includes("guarderia")) throw new Error("sin fijar el alcance es total");
+    if (!unpinned.data.enabledModules.includes("guarderia"))
+      throw new Error("sin fijar el alcance es total");
   });
 
   await test("El rol superadmin no se puede asignar a un usuario de guardería", async () => {
@@ -302,14 +344,18 @@ async function main(): Promise<void> {
     const seeded = await platform.get("/platform/daycares");
     const otherId = seeded.data.find((d: { id: string }) => d.id !== createdId)?.id;
     if (!otherId) throw new Error("se necesita otra guardería para esta prueba");
-    const crossed = await platform.patch(`/platform/daycares/${otherId}/users/${target.id}`, { name: "Cambiado" });
+    const crossed = await platform.patch(`/platform/daycares/${otherId}/users/${target.id}`, {
+      name: "Cambiado",
+    });
     expectStatus(crossed.status, 404, "edición cruzada");
   });
 
   await test("No se puede desactivar al único administrador activo", async () => {
     const detail = await platform.get(`/platform/daycares/${createdId}`);
     const admin = detail.data.users.find((u: { username: string }) => u.username === adminUsername);
-    const res = await platform.patch(`/platform/daycares/${createdId}/users/${admin.id}`, { isActive: false });
+    const res = await platform.patch(`/platform/daycares/${createdId}/users/${admin.id}`, {
+      isActive: false,
+    });
     expectStatus(res.status, 409, "desactivar único admin");
   });
 
@@ -326,7 +372,12 @@ async function main(): Promise<void> {
     );
     const res = await axios.post(
       `${BASE_URL}/auth/login`,
-      { daycare: slug, username: adminUsername, password: "e2e-password", businessUnit: "GROOMING" },
+      {
+        daycare: slug,
+        username: adminUsername,
+        password: "e2e-password",
+        businessUnit: "GROOMING",
+      },
       { validateStatus: () => true },
     );
     expectStatus(res.status, 403, "login en guardería desactivada");
@@ -346,10 +397,12 @@ async function main(): Promise<void> {
       if (!actions.has(action)) throw new Error(`falta la acción ${action} en la auditoría`);
     }
     const actors = new Set(res.data.map((row: { actorUsername: string }) => row.actorUsername));
-    if (actors.size !== 1) throw new Error(`se esperaba un único actor, hubo: ${[...actors].join(", ")}`);
+    if (actors.size !== 1)
+      throw new Error(`se esperaba un único actor, hubo: ${[...actors].join(", ")}`);
     // The password must never reach the audit trail in the clear.
     const serialized = JSON.stringify(res.data);
-    if (serialized.includes("e2e-password")) throw new Error("la auditoría no debe contener contraseñas");
+    if (serialized.includes("e2e-password"))
+      throw new Error("la auditoría no debe contener contraseñas");
   });
 
   await test("La guardería de prueba se elimina al terminar", async () => {
@@ -359,7 +412,9 @@ async function main(): Promise<void> {
   });
 
   console.log("=".repeat(60));
-  console.log(`📊 Consola de plataforma:\n   Pasadas: ${passed}/${passed + failed}\n   Fallidas: ${failed}/${passed + failed}`);
+  console.log(
+    `📊 Consola de plataforma:\n   Pasadas: ${passed}/${passed + failed}\n   Fallidas: ${failed}/${passed + failed}`,
+  );
   console.log("=".repeat(60));
   process.exit(failed > 0 ? 1 : 0);
 }

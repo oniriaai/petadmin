@@ -46,10 +46,7 @@ export async function deleteDaycarePrefix(daycareId: string): Promise<PrefixDele
         }),
       );
 
-      const objects = [
-        ...(listing.Versions ?? []),
-        ...(listing.DeleteMarkers ?? []),
-      ]
+      const objects = [...(listing.Versions ?? []), ...(listing.DeleteMarkers ?? [])]
         .filter((entry) => entry.Key)
         .map((entry) => ({ Key: entry.Key as string, VersionId: entry.VersionId }));
 

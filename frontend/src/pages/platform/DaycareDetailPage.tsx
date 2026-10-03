@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ExternalLink, KeyRound, Plus, UserPlus } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
-import { platformApi, type DaycareDetail, type Entitlement, type PlatformUser } from "../../lib/platform-api";
+import {
+  platformApi,
+  type DaycareDetail,
+  type Entitlement,
+  type PlatformUser,
+} from "../../lib/platform-api";
 import { businessUnitLabel } from "../../modules/shared/contracts";
 import { PlatformPage, auditLine, useAsync } from "./shared";
 
@@ -33,9 +38,12 @@ export function DaycareDetailPage() {
    */
   async function toggle(entitlement: Entitlement) {
     const updated = await runWrite(() =>
-      platformApi.setModules(id, [{ moduleId: entitlement.moduleId, isEnabled: !entitlement.isEnabled }]),
+      platformApi.setModules(id, [
+        { moduleId: entitlement.moduleId, isEnabled: !entitlement.isEnabled },
+      ]),
     );
-    if (updated) setDetail((current) => (current ? { ...current, entitlements: updated } : current));
+    if (updated)
+      setDetail((current) => (current ? { ...current, entitlements: updated } : current));
     else await run(load);
   }
 
@@ -63,15 +71,34 @@ export function DaycareDetailPage() {
       actions={
         detail && (
           <div className="flex flex-wrap gap-2">
-            <Link to="/platform/daycares" className="btn btn-secondary"
-              style={{ background: "var(--color-surface)", color: "var(--color-muted)", borderColor: "var(--color-border)" }}>
+            <Link
+              to="/platform/daycares"
+              className="btn btn-secondary"
+              style={{
+                background: "var(--color-surface)",
+                color: "var(--color-muted)",
+                borderColor: "var(--color-border)",
+              }}
+            >
               <ArrowLeft size={16} /> Volver
             </Link>
-            <button className="btn btn-secondary" onClick={() => void setActive(!detail.isActive)} disabled={isWriting}
-              style={{ background: "var(--color-surface)", color: "var(--color-muted)", borderColor: "var(--color-border)" }}>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void setActive(!detail.isActive)}
+              disabled={isWriting}
+              style={{
+                background: "var(--color-surface)",
+                color: "var(--color-muted)",
+                borderColor: "var(--color-border)",
+              }}
+            >
               {detail.isActive ? "Desactivar" : "Activar"}
             </button>
-            <button className="btn btn-primary" onClick={() => void operate()} disabled={!detail.isActive}>
+            <button
+              className="btn btn-primary"
+              onClick={() => void operate()}
+              disabled={!detail.isActive}
+            >
               <ExternalLink size={16} /> Operar como esta guardería
             </button>
           </div>
@@ -81,13 +108,19 @@ export function DaycareDetailPage() {
       {detail && (
         <>
           <section>
-            <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--color-muted)" }}>
+            <h2
+              className="text-sm font-semibold uppercase tracking-wider mb-3"
+              style={{ color: "var(--color-muted)" }}
+            >
               Módulos contratados
             </h2>
             <div className="grid gap-2 sm:grid-cols-2">
               {detail.entitlements.map((entitlement) => (
-                <div key={entitlement.moduleId} className="card p-3 flex items-start gap-3"
-                  style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+                <div
+                  key={entitlement.moduleId}
+                  className="card p-3 flex items-start gap-3"
+                  style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+                >
                   <label className="flex items-start gap-3 cursor-pointer flex-1 min-w-0">
                     <input
                       type="checkbox"
@@ -98,11 +131,17 @@ export function DaycareDetailPage() {
                     />
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{entitlement.label}</span>
-                      <span className="block text-xs mt-0.5" style={{ color: "var(--color-muted)" }}>
+                      <span
+                        className="block text-xs mt-0.5"
+                        style={{ color: "var(--color-muted)" }}
+                      >
                         {entitlement.description}
                       </span>
                       {entitlement.requires.length > 0 && (
-                        <span className="block text-[11px] mt-1" style={{ color: "var(--color-muted)" }}>
+                        <span
+                          className="block text-[11px] mt-1"
+                          style={{ color: "var(--color-muted)" }}
+                        >
                           Requiere: {entitlement.requires.join(", ")}
                         </span>
                       )}
@@ -116,17 +155,35 @@ export function DaycareDetailPage() {
           <UsersSection daycareId={id} users={detail.users} onChanged={() => void run(load)} />
 
           <section className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--color-muted)" }}>
+            <h2
+              className="text-sm font-semibold uppercase tracking-wider mb-3"
+              style={{ color: "var(--color-muted)" }}
+            >
               Auditoría
             </h2>
-            <div className="card divide-y" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+            <div
+              className="card divide-y"
+              style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+            >
               {detail.audit.length === 0 && (
-                <p className="p-4 text-sm" style={{ color: "var(--color-muted)" }}>Sin actividad registrada.</p>
+                <p className="p-4 text-sm" style={{ color: "var(--color-muted)" }}>
+                  Sin actividad registrada.
+                </p>
               )}
               {detail.audit.map((entry) => (
-                <div key={entry.id} className="p-3 text-sm flex items-baseline gap-3" style={{ borderColor: "var(--color-border)" }}>
-                  <span className="text-xs shrink-0 font-mono" style={{ color: "var(--color-muted)" }}>
-                    {new Date(entry.createdAt).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
+                <div
+                  key={entry.id}
+                  className="p-3 text-sm flex items-baseline gap-3"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <span
+                    className="text-xs shrink-0 font-mono"
+                    style={{ color: "var(--color-muted)" }}
+                  >
+                    {new Date(entry.createdAt).toLocaleString("es-EC", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}
                   </span>
                   <span className="min-w-0">{auditLine(entry)}</span>
                 </div>
@@ -152,7 +209,9 @@ function UsersSection({
   const { run, isLoading, error } = useAsync();
 
   async function toggleActive(user: PlatformUser) {
-    const ok = await run(() => platformApi.updateUser(daycareId, user.id, { isActive: !user.isActive }));
+    const ok = await run(() =>
+      platformApi.updateUser(daycareId, user.id, { isActive: !user.isActive }),
+    );
     if (ok) onChanged();
   }
 
@@ -166,17 +225,30 @@ function UsersSection({
   return (
     <section className="mt-8">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>
+        <h2
+          className="text-sm font-semibold uppercase tracking-wider"
+          style={{ color: "var(--color-muted)" }}
+        >
           Usuarios
         </h2>
-        <button className="btn btn-secondary btn-sm" onClick={() => setShowNew((v) => !v)}
-          style={{ background: "var(--color-surface)", color: "var(--color-muted)", borderColor: "var(--color-border)" }}>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={() => setShowNew((v) => !v)}
+          style={{
+            background: "var(--color-surface)",
+            color: "var(--color-muted)",
+            borderColor: "var(--color-border)",
+          }}
+        >
           <UserPlus size={14} /> Nuevo usuario
         </button>
       </div>
 
       {error && (
-        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+        <div
+          className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -191,35 +263,66 @@ function UsersSection({
         />
       )}
 
-      <div className="card overflow-hidden" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+      <div
+        className="card overflow-hidden"
+        style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
                 {["Usuario", "Nombre", "Rol", "Unidad", "Estado", ""].map((header) => (
-                  <th key={header} className="table-th" style={{ background: "transparent", color: "var(--color-muted)" }}>{header}</th>
+                  <th
+                    key={header}
+                    className="table-th"
+                    style={{ background: "transparent", color: "var(--color-muted)" }}
+                  >
+                    {header}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-t" style={{ borderColor: "var(--color-border)" }}>
-                  <td className="table-td font-mono text-xs" style={{ color: "var(--color-ink)" }}>{user.username}</td>
-                  <td className="table-td" style={{ color: "var(--color-ink)" }}>{user.name}</td>
-                  <td className="table-td" style={{ color: "var(--color-muted)" }}>{ROLE_LABELS[user.role] ?? user.role}</td>
-                  <td className="table-td" style={{ color: "var(--color-muted)" }}>{businessUnitLabel(user.businessUnit)}</td>
+                <tr
+                  key={user.id}
+                  className="border-t"
+                  style={{ borderColor: "var(--color-border)" }}
+                >
+                  <td className="table-td font-mono text-xs" style={{ color: "var(--color-ink)" }}>
+                    {user.username}
+                  </td>
+                  <td className="table-td" style={{ color: "var(--color-ink)" }}>
+                    {user.name}
+                  </td>
+                  <td className="table-td" style={{ color: "var(--color-muted)" }}>
+                    {ROLE_LABELS[user.role] ?? user.role}
+                  </td>
+                  <td className="table-td" style={{ color: "var(--color-muted)" }}>
+                    {businessUnitLabel(user.businessUnit)}
+                  </td>
                   <td className="table-td">
-                    <span className={`badge ${user.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}>
+                    <span
+                      className={`badge ${user.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}
+                    >
                       {user.isActive ? "Activo" : "Inactivo"}
                     </span>
                   </td>
                   <td className="table-td text-right whitespace-nowrap">
-                    <button className="btn btn-ghost btn-sm" style={{ color: "var(--color-muted)" }} disabled={isLoading}
-                      onClick={() => void resetPassword(user)}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: "var(--color-muted)" }}
+                      disabled={isLoading}
+                      onClick={() => void resetPassword(user)}
+                    >
                       <KeyRound size={14} /> Contraseña
                     </button>
-                    <button className="btn btn-ghost btn-sm" style={{ color: "var(--color-muted)" }} disabled={isLoading}
-                      onClick={() => void toggleActive(user)}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      style={{ color: "var(--color-muted)" }}
+                      disabled={isLoading}
+                      onClick={() => void toggleActive(user)}
+                    >
                       {user.isActive ? "Desactivar" : "Activar"}
                     </button>
                   </td>
@@ -242,36 +345,87 @@ function NewUserForm({ daycareId, onCreated }: { daycareId: string; onCreated: (
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    const created = await run(() => platformApi.provisionUser(daycareId, { username, name, password, role }));
+    const created = await run(() =>
+      platformApi.provisionUser(daycareId, { username, name, password, role }),
+    );
     if (created) onCreated();
   }
 
-  const inputStyle = { background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" };
+  const inputStyle = {
+    background: "var(--color-canvas)",
+    color: "var(--color-ink)",
+    borderColor: "var(--color-border)",
+  };
 
   return (
-    <form onSubmit={submit} className="card p-4 mb-3" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+    <form
+      onSubmit={submit}
+      className="card p-4 mb-3"
+      style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+    >
       {error && (
-        <div className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300" role="alert">
+        <div
+          className="mb-3 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+          role="alert"
+        >
           {error}
         </div>
       )}
       <div className="grid gap-3 sm:grid-cols-4">
         <div>
-          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-u">Usuario</label>
-          <input id="nu-u" className="input font-mono" value={username} onChange={(e) => setUsername(e.target.value)} required minLength={3} style={inputStyle} />
+          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-u">
+            Usuario
+          </label>
+          <input
+            id="nu-u"
+            className="input font-mono"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            minLength={3}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-n">Nombre</label>
-          <input id="nu-n" className="input" value={name} onChange={(e) => setName(e.target.value)} required style={inputStyle} />
+          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-n">
+            Nombre
+          </label>
+          <input
+            id="nu-n"
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-p">Contraseña</label>
-          <input id="nu-p" type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} style={inputStyle} />
+          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-p">
+            Contraseña
+          </label>
+          <input
+            id="nu-p"
+            type="password"
+            className="input"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            style={inputStyle}
+          />
         </div>
         <div>
-          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-r">Rol</label>
+          <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nu-r">
+            Rol
+          </label>
           {/* `superadmin` is absent by construction: the server's schema does not accept it. */}
-          <select id="nu-r" className="input" value={role} onChange={(e) => setRole(e.target.value)} style={inputStyle}>
+          <select
+            id="nu-r"
+            className="input"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            style={inputStyle}
+          >
             <option value="admin">Administrador</option>
             <option value="daycare">Guardería</option>
             <option value="grooming">Peluquería</option>

@@ -38,7 +38,10 @@ export interface CompleteAppointmentDTO {
 }
 
 export class GroomingAppointmentsService {
-  static async listAppointments(daycareId: string, query: { date?: string; status?: string; search?: string }) {
+  static async listAppointments(
+    daycareId: string,
+    query: { date?: string; status?: string; search?: string },
+  ) {
     const where: any = {
       daycareId,
       businessUnit: PELUQUERIA_BUSINESS_UNIT,
@@ -67,14 +70,20 @@ export class GroomingAppointmentsService {
     const reservations = await prisma.reservation.findMany({
       where,
       include: {
-        client: { select: { id: true, firstName: true, lastName: true, phone: true, whatsapp: true } },
-        pets: { include: { pet: { select: { id: true, name: true, species: true, breed: true, photoUrl: true } } } },
+        client: {
+          select: { id: true, firstName: true, lastName: true, phone: true, whatsapp: true },
+        },
+        pets: {
+          include: {
+            pet: { select: { id: true, name: true, species: true, breed: true, photoUrl: true } },
+          },
+        },
         incomes: true,
       },
       orderBy: { checkIn: "asc" },
     });
 
-    return reservations.map(r => {
+    return reservations.map((r) => {
       const checkInTime = r.checkIn ? new Date(r.checkIn).getTime() : 0;
       const checkOutTime = r.checkOut ? new Date(r.checkOut).getTime() : checkInTime;
       const duration = Math.max(15, Math.round((checkOutTime - checkInTime) / 60000));
@@ -83,7 +92,7 @@ export class GroomingAppointmentsService {
         id: r.id,
         clientId: r.clientId,
         client: r.client,
-        pets: r.pets.map(p => p.pet),
+        pets: r.pets.map((p) => p.pet),
         service: r.service,
         status: r.status,
         startTime: r.checkIn,
@@ -142,7 +151,7 @@ export class GroomingAppointmentsService {
     // The unit's configured rate, not a literal. Grooming appointments belong to GROOMING.
     const vatPercent = dto.vatPercent ?? (await getUnitVatPercent(daycareId, "GROOMING"));
 
-    const matchedService = DEFAULT_GROOMING_SERVICES.find(s => s.id === serviceId);
+    const matchedService = DEFAULT_GROOMING_SERVICES.find((s) => s.id === serviceId);
     const serviceName = dto.serviceName || matchedService?.name || "Servicio de Peluquería";
     const basePrice = dto.basePrice ?? matchedService?.basePrice ?? 20;
 
@@ -167,7 +176,7 @@ export class GroomingAppointmentsService {
       throw new AuthzError(404, "Una o más mascotas seleccionadas no pertenecen a este cliente");
     }
 
-    const petNames = pets.map(p => p.name).join(", ");
+    const petNames = pets.map((p) => p.name).join(", ");
     const concept = `${serviceName} - ${petNames}`;
 
     return await prisma.$transaction(async (tx) => {
@@ -191,7 +200,7 @@ export class GroomingAppointmentsService {
           totalAmount,
           pendingAmount,
           pets: {
-            create: petIds.map(petId => ({ petId })),
+            create: petIds.map((petId) => ({ petId })),
           },
         },
         include: {
@@ -229,7 +238,11 @@ export class GroomingAppointmentsService {
       where: { id },
       include: { client: true, pets: true },
     });
-    if (!existing || existing.daycareId !== daycareId || existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
+    if (
+      !existing ||
+      existing.daycareId !== daycareId ||
+      existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT
+    ) {
       throw new Error("Cita de peluquería no encontrada");
     }
 
@@ -237,7 +250,9 @@ export class GroomingAppointmentsService {
       where: { id },
       data: {
         status: dto.status,
-        notes: dto.notes ? `${existing.notes ? existing.notes + " | " : ""}${dto.notes}` : existing.notes,
+        notes: dto.notes
+          ? `${existing.notes ? existing.notes + " | " : ""}${dto.notes}`
+          : existing.notes,
       },
       include: { client: true, pets: { include: { pet: true } } },
     });
@@ -248,7 +263,11 @@ export class GroomingAppointmentsService {
       where: { id },
       include: { client: true, pets: { include: { pet: true } } },
     });
-    if (!existing || existing.daycareId !== daycareId || existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
+    if (
+      !existing ||
+      existing.daycareId !== daycareId ||
+      existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT
+    ) {
       throw new Error("Cita de peluquería no encontrada");
     }
 
@@ -292,7 +311,11 @@ export class GroomingAppointmentsService {
 
   static async deleteAppointment(daycareId: string, id: string) {
     const existing = await prisma.reservation.findUnique({ where: { id } });
-    if (!existing || existing.daycareId !== daycareId || existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT) {
+    if (
+      !existing ||
+      existing.daycareId !== daycareId ||
+      existing.businessUnit !== PELUQUERIA_BUSINESS_UNIT
+    ) {
       throw new Error("Cita de peluquería no encontrada");
     }
 

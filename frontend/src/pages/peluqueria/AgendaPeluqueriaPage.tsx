@@ -1,23 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
-import { 
-  Calendar as CalendarIcon, 
-  Clock, 
-  Scissors, 
-  Plus, 
-  Search, 
-  DollarSign, 
-  CheckCircle2, 
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  Scissors,
+  Plus,
+  Search,
+  DollarSign,
+  CheckCircle2,
   AlertCircle,
   RefreshCw,
   User,
   PawPrint,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
-import {
-  peluqueriaApi,
-  GroomingAppointment,
-  GroomingService,
-} from "../../lib/api";
+import { peluqueriaApi, GroomingAppointment, GroomingService } from "../../lib/api";
 import { clientsApi } from "../../modules/shared/api";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { Modal } from "../../components/ui/Modal";
@@ -27,9 +23,21 @@ import { setHours, setMinutes, startOfToday } from "date-fns";
 const STATUS_COLUMNS = [
   { key: "PENDIENTE", label: "Agendadas", color: "bg-blue-50 border-blue-200 text-blue-800" },
   { key: "RECEPCIONADA", label: "En Salón", color: "bg-amber-50 border-amber-200 text-amber-800" },
-  { key: "EN_PROCESO", label: "En Baño / Corte", color: "bg-purple-50 border-purple-200 text-purple-800" },
-  { key: "LISTO", label: "Listo para Entrega", color: "bg-emerald-50 border-emerald-200 text-emerald-800" },
-  { key: "COMPLETADA", label: "Entregadas / Cobradas", color: "bg-gray-50 border-gray-200 text-gray-700" },
+  {
+    key: "EN_PROCESO",
+    label: "En Baño / Corte",
+    color: "bg-purple-50 border-purple-200 text-purple-800",
+  },
+  {
+    key: "LISTO",
+    label: "Listo para Entrega",
+    color: "bg-emerald-50 border-emerald-200 text-emerald-800",
+  },
+  {
+    key: "COMPLETADA",
+    label: "Entregadas / Cobradas",
+    color: "bg-gray-50 border-gray-200 text-gray-700",
+  },
 ];
 
 export function AgendaPeluqueriaPage() {
@@ -102,34 +110,45 @@ export function AgendaPeluqueriaPage() {
 
   const handleServiceChange = (serviceId: string) => {
     setSelectedServiceId(serviceId);
-    const s = services.find(x => x.id === serviceId);
+    const s = services.find((x) => x.id === serviceId);
     if (s) {
       setDurationMinutes(s.durationMinutes);
       setBasePrice(s.basePrice);
     }
   };
 
-  const selectedClient = useMemo(() => clients.find(c => c.id === selectedClientId), [clients, selectedClientId]);
+  const selectedClient = useMemo(
+    () => clients.find((c) => c.id === selectedClientId),
+    [clients, selectedClientId],
+  );
 
   const filteredClients = useMemo(() => {
     if (!clientSearch) return [];
     const s = clientSearch.toLowerCase();
-    return clients.filter(c => 
-      c.firstName.toLowerCase().includes(s) || 
-      c.lastName.toLowerCase().includes(s)
-    ).slice(0, 5);
+    return clients
+      .filter((c) => c.firstName.toLowerCase().includes(s) || c.lastName.toLowerCase().includes(s))
+      .slice(0, 5);
   }, [clients, clientSearch]);
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedClientId) { setFormError("Selecciona un cliente"); return; }
-    if (selectedPetIds.length === 0) { setFormError("Selecciona al menos una mascota"); return; }
-    if (!startTime) { setFormError("Selecciona fecha y hora de inicio"); return; }
+    if (!selectedClientId) {
+      setFormError("Selecciona un cliente");
+      return;
+    }
+    if (selectedPetIds.length === 0) {
+      setFormError("Selecciona al menos una mascota");
+      return;
+    }
+    if (!startTime) {
+      setFormError("Selecciona fecha y hora de inicio");
+      return;
+    }
 
     setFormSaving(true);
     setFormError("");
     try {
-      const matched = services.find(s => s.id === selectedServiceId);
+      const matched = services.find((s) => s.id === selectedServiceId);
       await peluqueriaApi.createAppointment({
         clientId: selectedClientId,
         petIds: selectedPetIds,
@@ -199,11 +218,11 @@ export function AgendaPeluqueriaPage() {
   };
 
   const filteredAppointments = useMemo(() => {
-    return appointments.filter(a => {
+    return appointments.filter((a) => {
       if (!search) return true;
       const s = search.toLowerCase();
       const clientName = `${a.client.firstName} ${a.client.lastName}`.toLowerCase();
-      const petNames = a.pets.map(p => p.name.toLowerCase()).join(" ");
+      const petNames = a.pets.map((p) => p.name.toLowerCase()).join(" ");
       const serviceName = a.service.toLowerCase();
       return clientName.includes(s) || petNames.includes(s) || serviceName.includes(s);
     });
@@ -212,10 +231,11 @@ export function AgendaPeluqueriaPage() {
   const stats = useMemo(() => {
     return {
       total: appointments.length,
-      pendientes: appointments.filter(a => a.status === "PENDIENTE").length,
-      enProceso: appointments.filter(a => ["RECEPCIONADA", "EN_PROCESO"].includes(a.status)).length,
-      listos: appointments.filter(a => a.status === "LISTO").length,
-      completadas: appointments.filter(a => a.status === "COMPLETADA").length,
+      pendientes: appointments.filter((a) => a.status === "PENDIENTE").length,
+      enProceso: appointments.filter((a) => ["RECEPCIONADA", "EN_PROCESO"].includes(a.status))
+        .length,
+      listos: appointments.filter((a) => a.status === "LISTO").length,
+      completadas: appointments.filter((a) => a.status === "COMPLETADA").length,
       ingresosHoy: appointments.reduce((sum, a) => {
         const collected = a.incomes?.reduce((acc, inc) => acc + inc.total, 0) || 0;
         return sum + collected;
@@ -236,7 +256,9 @@ export function AgendaPeluqueriaPage() {
             </span>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Agenda de Peluquería</h1>
-              <p className="text-sm text-gray-500">Gestión de turnos por duración, flujo de estilismo y cobro directo</p>
+              <p className="text-sm text-gray-500">
+                Gestión de turnos por duración, flujo de estilismo y cobro directo
+              </p>
             </div>
           </div>
         </div>
@@ -328,11 +350,16 @@ export function AgendaPeluqueriaPage() {
       {/* Main View */}
       {viewMode === "kanban" ? (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
-          {STATUS_COLUMNS.map(col => {
-            const colAppts = filteredAppointments.filter(a => a.status === col.key);
+          {STATUS_COLUMNS.map((col) => {
+            const colAppts = filteredAppointments.filter((a) => a.status === col.key);
             return (
-              <div key={col.key} className="flex flex-col rounded-xl bg-gray-50 border border-gray-200 min-h-[500px]">
-                <div className={`p-3 border-b border-gray-200 font-semibold text-xs flex items-center justify-between ${col.color}`}>
+              <div
+                key={col.key}
+                className="flex flex-col rounded-xl bg-gray-50 border border-gray-200 min-h-[500px]"
+              >
+                <div
+                  className={`p-3 border-b border-gray-200 font-semibold text-xs flex items-center justify-between ${col.color}`}
+                >
                   <span>{col.label}</span>
                   <span className="w-5 h-5 rounded-full bg-white/80 flex items-center justify-center text-xs font-bold">
                     {colAppts.length}
@@ -343,13 +370,21 @@ export function AgendaPeluqueriaPage() {
                   {colAppts.length === 0 ? (
                     <p className="text-center text-xs text-gray-400 py-8">Sin citas</p>
                   ) : (
-                    colAppts.map(appt => (
-                      <div key={appt.id} className="card p-3 shadow-sm hover:shadow-md transition space-y-2.5 bg-white border border-gray-100">
+                    colAppts.map((appt) => (
+                      <div
+                        key={appt.id}
+                        className="card p-3 shadow-sm hover:shadow-md transition space-y-2.5 bg-white border border-gray-100"
+                      >
                         {/* Header: Pet + Time */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2">
                             {appt.pets[0]?.photoUrl ? (
-                              <img src={appt.pets[0].photoUrl} alt={`Foto de ${appt.pets[0].name}`} loading="lazy" className="w-8 h-8 rounded-full object-cover" />
+                              <img
+                                src={appt.pets[0].photoUrl}
+                                alt={`Foto de ${appt.pets[0].name}`}
+                                loading="lazy"
+                                className="w-8 h-8 rounded-full object-cover"
+                              />
                             ) : (
                               <div className="w-8 h-8 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-xs font-bold">
                                 <Scissors size={16} className="text-violet-700" />
@@ -357,18 +392,25 @@ export function AgendaPeluqueriaPage() {
                             )}
                             <div>
                               <p className="font-bold text-sm text-gray-900 leading-tight">
-                                {appt.pets.map(p => p.name).join(", ")}
+                                {appt.pets.map((p) => p.name).join(", ")}
                               </p>
-                              <p className="text-xs text-gray-500 truncate">{appt.client.firstName} {appt.client.lastName}</p>
+                              <p className="text-xs text-gray-500 truncate">
+                                {appt.client.firstName} {appt.client.lastName}
+                              </p>
                             </div>
                           </div>
 
                           <div className="text-right">
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-700 bg-violet-50 px-2 py-0.5 rounded-md">
                               <Clock size={11} />
-                              {new Date(appt.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(appt.startTime).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </span>
-                            <p className="text-[10px] text-gray-400 mt-0.5">{appt.durationMinutes} min</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {appt.durationMinutes} min
+                            </p>
                           </div>
                         </div>
 
@@ -376,9 +418,16 @@ export function AgendaPeluqueriaPage() {
                         <div className="bg-gray-50 rounded-lg p-2 text-xs">
                           <p className="font-medium text-gray-800">{appt.service}</p>
                           <div className="flex justify-between items-center mt-1 text-[11px] text-gray-500">
-                            <span>Total: <strong className="text-gray-900">{fmtCurrency(appt.totalAmount)}</strong></span>
+                            <span>
+                              Total:{" "}
+                              <strong className="text-gray-900">
+                                {fmtCurrency(appt.totalAmount)}
+                              </strong>
+                            </span>
                             {appt.pendingAmount > 0 ? (
-                              <span className="text-amber-600 font-semibold">Pendiente: {fmtCurrency(appt.pendingAmount)}</span>
+                              <span className="text-amber-600 font-semibold">
+                                Pendiente: {fmtCurrency(appt.pendingAmount)}
+                              </span>
                             ) : (
                               <span className="text-emerald-600 font-semibold">Pagado</span>
                             )}
@@ -471,33 +520,38 @@ export function AgendaPeluqueriaPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAppointments.map(appt => (
+                  filteredAppointments.map((appt) => (
                     <tr key={appt.id} className="hover:bg-gray-50/80 transition">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="font-semibold text-gray-900">
-                          {new Date(appt.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(appt.startTime).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </span>
-                        <span className="text-xs text-gray-400 block">{appt.durationMinutes} min</span>
+                        <span className="text-xs text-gray-400 block">
+                          {appt.durationMinutes} min
+                        </span>
                       </td>
                       <td className="px-4 py-3 font-medium text-gray-900">
-                        {appt.pets.map(p => p.name).join(", ")}
+                        {appt.pets.map((p) => p.name).join(", ")}
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         {appt.client.firstName} {appt.client.lastName}
                         <span className="text-xs text-gray-400 block">{appt.client.phone}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-800 font-medium">
-                        {appt.service}
-                      </td>
+                      <td className="px-4 py-3 text-gray-800 font-medium">{appt.service}</td>
                       <td className="px-4 py-3">
-                        <span className="badge badge-gray text-xs">
-                          {appt.status}
-                        </span>
+                        <span className="badge badge-gray text-xs">{appt.status}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="font-bold text-gray-900">{fmtCurrency(appt.totalAmount)}</span>
+                        <span className="font-bold text-gray-900">
+                          {fmtCurrency(appt.totalAmount)}
+                        </span>
                         {appt.pendingAmount > 0 && (
-                          <span className="text-xs text-amber-600 block">Pendiente: {fmtCurrency(appt.pendingAmount)}</span>
+                          <span className="text-xs text-amber-600 block">
+                            Pendiente: {fmtCurrency(appt.pendingAmount)}
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -522,7 +576,12 @@ export function AgendaPeluqueriaPage() {
       )}
 
       {/* Modal: Agendar Nueva Cita de Peluquería */}
-      <Modal open={showNewModal} onClose={() => setShowNewModal(false)} title="Agendar Cita de Peluquería" size="lg">
+      <Modal
+        open={showNewModal}
+        onClose={() => setShowNewModal(false)}
+        title="Agendar Cita de Peluquería"
+        size="lg"
+      >
         <form onSubmit={handleCreateAppointment} className="space-y-4">
           {formError && (
             <div className="p-3 bg-red-50 text-red-700 text-sm rounded-lg flex items-center gap-2">
@@ -533,10 +592,15 @@ export function AgendaPeluqueriaPage() {
 
           {/* 1. Cliente y Mascotas */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-700 uppercase">1. Cliente y Perrhijo</label>
+            <label className="text-xs font-semibold text-gray-700 uppercase">
+              1. Cliente y Perrhijo
+            </label>
             {!selectedClientId ? (
               <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search
+                  size={16}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                />
                 <input
                   type="text"
                   placeholder="Buscar cliente por nombre..."
@@ -546,7 +610,7 @@ export function AgendaPeluqueriaPage() {
                 />
                 {filteredClients.length > 0 && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                    {filteredClients.map(c => (
+                    {filteredClients.map((c) => (
                       <button
                         key={c.id}
                         type="button"
@@ -556,7 +620,9 @@ export function AgendaPeluqueriaPage() {
                         }}
                         className="w-full text-left px-3 py-2 text-sm hover:bg-violet-50 flex items-center justify-between"
                       >
-                        <span className="font-medium text-gray-900">{c.firstName} {c.lastName}</span>
+                        <span className="font-medium text-gray-900">
+                          {c.firstName} {c.lastName}
+                        </span>
                         <span className="text-xs text-gray-400">{c.phone || c.email}</span>
                       </button>
                     ))}
@@ -574,7 +640,10 @@ export function AgendaPeluqueriaPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setSelectedClientId(""); setSelectedPetIds([]); }}
+                  onClick={() => {
+                    setSelectedClientId("");
+                    setSelectedPetIds([]);
+                  }}
                   className="text-xs text-red-500 hover:text-red-700"
                 >
                   Cambiar
@@ -585,7 +654,9 @@ export function AgendaPeluqueriaPage() {
             {/* Mascotas del cliente */}
             {selectedClient && (
               <div className="pt-2">
-                <p className="text-xs text-gray-600 font-medium mb-1.5">Selecciona la(s) mascota(s) para la cita:</p>
+                <p className="text-xs text-gray-600 font-medium mb-1.5">
+                  Selecciona la(s) mascota(s) para la cita:
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {selectedClient.pets?.map((p: any) => {
                     const isSelected = selectedPetIds.includes(p.id);
@@ -594,12 +665,13 @@ export function AgendaPeluqueriaPage() {
                         key={p.id}
                         type="button"
                         onClick={() => {
-                          if (isSelected) setSelectedPetIds(prev => prev.filter(x => x !== p.id));
-                          else setSelectedPetIds(prev => [...prev, p.id]);
+                          if (isSelected)
+                            setSelectedPetIds((prev) => prev.filter((x) => x !== p.id));
+                          else setSelectedPetIds((prev) => [...prev, p.id]);
                         }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                          isSelected 
-                            ? "bg-violet-600 text-white shadow-sm" 
+                          isSelected
+                            ? "bg-violet-600 text-white shadow-sm"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         }`}
                       >
@@ -618,17 +690,21 @@ export function AgendaPeluqueriaPage() {
 
           {/* 2. Servicio, Fecha y Duración */}
           <div className="space-y-3">
-            <label className="text-xs font-semibold text-gray-700 uppercase">2. Servicio y Horario</label>
-            
+            <label className="text-xs font-semibold text-gray-700 uppercase">
+              2. Servicio y Horario
+            </label>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-gray-600 font-medium block mb-1">Servicio de Peluquería</label>
+                <label className="text-xs text-gray-600 font-medium block mb-1">
+                  Servicio de Peluquería
+                </label>
                 <select
                   value={selectedServiceId}
                   onChange={(e) => handleServiceChange(e.target.value)}
                   className="input text-sm"
                 >
-                  {services.map(s => (
+                  {services.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.durationMinutes} min - {fmtCurrency(s.basePrice)})
                     </option>
@@ -637,7 +713,9 @@ export function AgendaPeluqueriaPage() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-600 font-medium block mb-1">Fecha y Hora de Cita</label>
+                <label className="text-xs text-gray-600 font-medium block mb-1">
+                  Fecha y Hora de Cita
+                </label>
                 <input
                   type="datetime-local"
                   value={startTime}
@@ -648,7 +726,9 @@ export function AgendaPeluqueriaPage() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-600 font-medium block mb-1">Duración Estimada (minutos)</label>
+                <label className="text-xs text-gray-600 font-medium block mb-1">
+                  Duración Estimada (minutos)
+                </label>
                 <input
                   type="number"
                   min={15}
@@ -661,7 +741,9 @@ export function AgendaPeluqueriaPage() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-600 font-medium block mb-1">Precio Base ($)</label>
+                <label className="text-xs text-gray-600 font-medium block mb-1">
+                  Precio Base ($)
+                </label>
                 <input
                   type="number"
                   min={0}
@@ -679,7 +761,9 @@ export function AgendaPeluqueriaPage() {
           {/* 3. Anticipo y Notas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-gray-600 font-medium block mb-1">Anticipo Opcional ($)</label>
+              <label className="text-xs text-gray-600 font-medium block mb-1">
+                Anticipo Opcional ($)
+              </label>
               <input
                 type="number"
                 min={0}
@@ -691,7 +775,9 @@ export function AgendaPeluqueriaPage() {
             </div>
 
             <div>
-              <label className="text-xs text-gray-600 font-medium block mb-1">Forma de Pago Anticipo</label>
+              <label className="text-xs text-gray-600 font-medium block mb-1">
+                Forma de Pago Anticipo
+              </label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
@@ -704,7 +790,9 @@ export function AgendaPeluqueriaPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="text-xs text-gray-600 font-medium block mb-1">Notas de Estilismo / Observaciones</label>
+              <label className="text-xs text-gray-600 font-medium block mb-1">
+                Notas de Estilismo / Observaciones
+              </label>
               <input
                 type="text"
                 placeholder="Ej. nudos en orejas, piel delicada, corte a tijera..."
@@ -736,18 +824,26 @@ export function AgendaPeluqueriaPage() {
       </Modal>
 
       {/* Modal: Entregar y Cobrar Cita (independiente de la unidad de Peluquería) */}
-      <Modal open={showCollectModal} onClose={() => setShowCollectModal(false)} title="Cobro y Entrega de Peluquería">
+      <Modal
+        open={showCollectModal}
+        onClose={() => setShowCollectModal(false)}
+        title="Cobro y Entrega de Peluquería"
+      >
         <form onSubmit={handleCollect} className="space-y-4">
           <div className="p-3 bg-violet-50 border border-violet-100 rounded-xl space-y-1">
             <p className="text-xs text-violet-800 font-medium">Servicio: {selectedAppt?.service}</p>
             <p className="text-sm font-bold text-gray-900">
-              Perrhijo: {selectedAppt?.pets.map(p => p.name).join(", ")}
+              Perrhijo: {selectedAppt?.pets.map((p) => p.name).join(", ")}
             </p>
-            <p className="text-xs text-gray-500">Tutor: {selectedAppt?.client.firstName} {selectedAppt?.client.lastName}</p>
+            <p className="text-xs text-gray-500">
+              Tutor: {selectedAppt?.client.firstName} {selectedAppt?.client.lastName}
+            </p>
           </div>
 
           <div>
-            <label className="text-xs text-gray-600 font-medium block mb-1">Monto a Cobrar ($)</label>
+            <label className="text-xs text-gray-600 font-medium block mb-1">
+              Monto a Cobrar ($)
+            </label>
             <input
               type="number"
               step={0.1}
@@ -758,7 +854,8 @@ export function AgendaPeluqueriaPage() {
               required
             />
             <p className="text-[11px] text-gray-400 mt-1">
-              Se registrará un ingreso contable independiente a nombre de <strong>Peluquería</strong>.
+              Se registrará un ingreso contable independiente a nombre de{" "}
+              <strong>Peluquería</strong>.
             </p>
           </div>
 

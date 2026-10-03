@@ -27,7 +27,11 @@ describe("route guards", () => {
         <Routes>
           <Route
             path="/clientes"
-            element={<PrivateRoute><div>private-content</div></PrivateRoute>}
+            element={
+              <PrivateRoute>
+                <div>private-content</div>
+              </PrivateRoute>
+            }
           />
           <Route path="/login" element={<LoginProbe />} />
         </Routes>
@@ -49,7 +53,11 @@ describe("route guards", () => {
         <Routes>
           <Route
             path="/login"
-            element={<PublicOnlyRoute><div>login-page</div></PublicOnlyRoute>}
+            element={
+              <PublicOnlyRoute>
+                <div>login-page</div>
+              </PublicOnlyRoute>
+            }
           />
           <Route path="/clientes" element={<div>clientes-page</div>} />
         </Routes>

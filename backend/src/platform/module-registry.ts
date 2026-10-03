@@ -27,11 +27,32 @@ import { settingsRouter } from "../core/tenancy/settings.router";
 export const backendModules: readonly BackendModule[] = [
   // Public: mounted without requireAuth, since this is where a session comes from. Any
   // authenticated endpoint added here (e.g. GET /auth/me) must apply requireAuth itself.
-  { id: "auth", basePath: "/auth", router: authRouter, description: "Authentication and session management", public: true },
-  { id: "dashboard", basePath: "/dashboard", router: dashboardRouter, description: "Cross-domain dashboard summaries" },
-  { id: "clients", basePath: "/clients", router: clientsRouter, description: "Shared client records" },
+  {
+    id: "auth",
+    basePath: "/auth",
+    router: authRouter,
+    description: "Authentication and session management",
+    public: true,
+  },
+  {
+    id: "dashboard",
+    basePath: "/dashboard",
+    router: dashboardRouter,
+    description: "Cross-domain dashboard summaries",
+  },
+  {
+    id: "clients",
+    basePath: "/clients",
+    router: clientsRouter,
+    description: "Shared client records",
+  },
   { id: "pets", basePath: "/pets", router: petsRouter, description: "Shared pet records" },
-  { id: "storage", basePath: "/storage", router: storageRouter, description: "Shared object storage operations" },
+  {
+    id: "storage",
+    basePath: "/storage",
+    router: storageRouter,
+    description: "Shared object storage operations",
+  },
   {
     id: "reservations",
     basePath: "/reservations",
@@ -69,7 +90,12 @@ export const backendModules: readonly BackendModule[] = [
     // and `superadmin` reaches this through its own console, not here.
     access: { roles: ["admin"] },
   },
-  { id: "providers", basePath: "/providers", router: providersRouter, description: "Provider records" },
+  {
+    id: "providers",
+    basePath: "/providers",
+    router: providersRouter,
+    description: "Provider records",
+  },
   {
     id: "rooms",
     basePath: "/rooms",
@@ -77,13 +103,43 @@ export const backendModules: readonly BackendModule[] = [
     description: "Room and capacity records",
     access: { roles: ["admin", "daycare", "grooming"], businessUnits: ["DAYCARE", "GROOMING"] },
   },
-  { id: "payables", basePath: "/payables", router: payablesRouter, description: "Payables and expenses" },
+  {
+    id: "payables",
+    basePath: "/payables",
+    router: payablesRouter,
+    description: "Payables and expenses",
+  },
   { id: "incomes", basePath: "/incomes", router: incomesRouter, description: "Income records" },
-  { id: "inventory", basePath: "/inventory", router: inventoryRouter, description: "Inventory records" },
-  { id: "reports", basePath: "/reports", router: reportsRouter, description: "Reports and analytics" },
-  { id: "alerts", basePath: "/alerts", router: alertsRouter, description: "Alerts and notifications" },
-  { id: "contracts", basePath: "/contracts", router: contractsRouter, description: "Client and pet contracts" },
-  { id: "export", basePath: "/export", router: exportRouter, description: "Data export operations" },
+  {
+    id: "inventory",
+    basePath: "/inventory",
+    router: inventoryRouter,
+    description: "Inventory records",
+  },
+  {
+    id: "reports",
+    basePath: "/reports",
+    router: reportsRouter,
+    description: "Reports and analytics",
+  },
+  {
+    id: "alerts",
+    basePath: "/alerts",
+    router: alertsRouter,
+    description: "Alerts and notifications",
+  },
+  {
+    id: "contracts",
+    basePath: "/contracts",
+    router: contractsRouter,
+    description: "Client and pet contracts",
+  },
+  {
+    id: "export",
+    basePath: "/export",
+    router: exportRouter,
+    description: "Data export operations",
+  },
   {
     id: "guarderia",
     basePath: "/guarderia",
@@ -115,8 +171,10 @@ export function validateBackendModules(modules: readonly BackendModule[] = backe
 
   for (const module of modules) {
     if (ids.has(module.id)) throw new Error(`Duplicate backend module id: ${module.id}`);
-    if (paths.has(module.basePath)) throw new Error(`Duplicate backend module path: ${module.basePath}`);
-    if (!module.basePath.startsWith("/")) throw new Error(`Backend module path must start with '/': ${module.id}`);
+    if (paths.has(module.basePath))
+      throw new Error(`Duplicate backend module path: ${module.basePath}`);
+    if (!module.basePath.startsWith("/"))
+      throw new Error(`Backend module path must start with '/': ${module.id}`);
     if (module.access && module.access.roles.length === 0) {
       throw new Error(`Backend module must declare at least one access role: ${module.id}`);
     }

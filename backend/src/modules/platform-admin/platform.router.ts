@@ -92,7 +92,10 @@ const slugSchema = z
   .string()
   .min(2)
   .max(40)
-  .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/, "El identificador solo admite minúsculas, números y guiones");
+  .regex(
+    /^[a-z0-9][a-z0-9-]*[a-z0-9]$/,
+    "El identificador solo admite minúsculas, números y guiones",
+  );
 
 const createSchema = z.object({
   slug: slugSchema,
@@ -102,7 +105,11 @@ const createSchema = z.object({
   units: z.array(z.string()).min(1),
   modules: z.array(z.string()).optional(),
   admin: z.object({
-    username: z.string().min(3).max(40).regex(/^[a-zA-Z0-9._-]+$/, "Usuario inválido"),
+    username: z
+      .string()
+      .min(3)
+      .max(40)
+      .regex(/^[a-zA-Z0-9._-]+$/, "Usuario inválido"),
     password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
     name: z.string().min(1).max(120),
   }),
@@ -119,7 +126,12 @@ platformRouter.post("/daycares", async (req, res) => {
       daycareId: daycare.id,
       targetType: "daycare",
       targetId: daycare.id,
-      detail: { slug: daycare.slug, units: daycare.units, modules: parsed.data.modules ?? "default", admin: admin.username },
+      detail: {
+        slug: daycare.slug,
+        units: daycare.units,
+        modules: parsed.data.modules ?? "default",
+        admin: admin.username,
+      },
     });
     res.status(201).json({ daycare, admin });
   } catch (error) {
@@ -205,7 +217,11 @@ platformRouter.put("/daycares/:id/modules", async (req, res) => {
 // --- users ------------------------------------------------------------------
 
 const provisionSchema = z.object({
-  username: z.string().min(3).max(40).regex(/^[a-zA-Z0-9._-]+$/, "Usuario inválido"),
+  username: z
+    .string()
+    .min(3)
+    .max(40)
+    .regex(/^[a-zA-Z0-9._-]+$/, "Usuario inválido"),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
   name: z.string().min(1).max(120),
   // `superadmin` is not a member of this enum, so it cannot be requested at all.
@@ -321,7 +337,12 @@ platformRouter.delete("/daycares/:id", async (req, res) => {
       daycareId: req.params.id,
       targetType: "daycare",
       targetId: req.params.id,
-      detail: { slug: summary.slug, name: summary.name, rows: summary.rows, storage: summary.storage },
+      detail: {
+        slug: summary.slug,
+        name: summary.name,
+        rows: summary.rows,
+        storage: summary.storage,
+      },
     });
 
     res.json(summary);

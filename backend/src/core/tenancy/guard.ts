@@ -198,7 +198,11 @@ export function recordedViolations(): readonly GuardViolation[] {
 
 const enforce = process.env.NODE_ENV !== "production";
 
-export function checkTenantScope(model: string | undefined, operation: string, args: unknown): void {
+export function checkTenantScope(
+  model: string | undefined,
+  operation: string,
+  args: unknown,
+): void {
   if (!model) return;
   if (!GUARDED_OPERATIONS.has(operation)) return;
 

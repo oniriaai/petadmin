@@ -34,7 +34,7 @@ function parseDaysOfWeek(daysOfWeek: string): Set<number> {
     daysOfWeek
       .split(",")
       .map((d) => Number(d.trim()))
-      .filter((d) => Number.isInteger(d) && d >= 1 && d <= 7)
+      .filter((d) => Number.isInteger(d) && d >= 1 && d <= 7),
   );
 }
 
@@ -44,7 +44,10 @@ function parseTime(time: string): { hour: number; minute: number } {
   return { hour: Number(match[1]), minute: Number(match[2]) };
 }
 
-function localDatePartsInTimezone(date: Date, timezone: string): { year: number; month: number; day: number } {
+function localDatePartsInTimezone(
+  date: Date,
+  timezone: string,
+): { year: number; month: number; day: number } {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
     year: "numeric",
@@ -81,7 +84,7 @@ function localDateTimeOffsetMs(utcDate: Date, timezone: string): number {
 
 function localDateTimeToUtc(
   local: { year: number; month: number; day: number; hour: number; minute: number },
-  timezone: string
+  timezone: string,
 ): Date {
   const targetMs = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, 0, 0);
   let guessMs = targetMs;
@@ -92,13 +95,20 @@ function localDateTimeToUtc(
   return new Date(guessMs);
 }
 
-function compareLocalDates(a: { year: number; month: number; day: number }, b: { year: number; month: number; day: number }): number {
+function compareLocalDates(
+  a: { year: number; month: number; day: number },
+  b: { year: number; month: number; day: number },
+): number {
   if (a.year !== b.year) return a.year - b.year;
   if (a.month !== b.month) return a.month - b.month;
   return a.day - b.day;
 }
 
-function addOneLocalDay(d: { year: number; month: number; day: number }): { year: number; month: number; day: number } {
+function addOneLocalDay(d: { year: number; month: number; day: number }): {
+  year: number;
+  month: number;
+  day: number;
+} {
   const nextUtc = new Date(Date.UTC(d.year, d.month - 1, d.day + 1, 12, 0, 0, 0));
   return {
     year: nextUtc.getUTCFullYear(),
@@ -116,7 +126,7 @@ function toOccurrenceTimes(
   localDate: { year: number; month: number; day: number },
   startTime: string,
   endTime: string,
-  timezone: string
+  timezone: string,
 ) {
   const start = parseTime(startTime);
   const end = parseTime(endTime);
@@ -125,18 +135,22 @@ function toOccurrenceTimes(
   return { checkIn, checkOut };
 }
 
-async function createReservationFromPlan(plan: {
-  id: string;
-  daycareId: string;
-  businessUnit: string;
-  clientId: string;
-  roomId: string | null;
-  service: string;
-  notes: string | null;
-  petIds: string;
-  startTime: string;
-  endTime: string;
-}, checkIn: Date, checkOut: Date): Promise<OccurrenceOutcome> {
+async function createReservationFromPlan(
+  plan: {
+    id: string;
+    daycareId: string;
+    businessUnit: string;
+    clientId: string;
+    roomId: string | null;
+    service: string;
+    notes: string | null;
+    petIds: string;
+    startTime: string;
+    endTime: string;
+  },
+  checkIn: Date,
+  checkOut: Date,
+): Promise<OccurrenceOutcome> {
   if (!plan.roomId) {
     throw new Error("Plan sin sala asignada: no se puede generar reserva");
   }
@@ -167,12 +181,23 @@ async function createReservationFromPlan(plan: {
   });
   if (existing) return "exists";
 
-  const conflictValidation = await validateNoReservationConflicts(plan.roomId, plan.daycareId, checkIn, checkOut);
+  const conflictValidation = await validateNoReservationConflicts(
+    plan.roomId,
+    plan.daycareId,
+    checkIn,
+    checkOut,
+  );
   if (!conflictValidation.valid) {
     throw new Error(conflictValidation.message || "Conflicto de horario");
   }
 
-  const capacityValidation = await validateRoomCapacity(plan.roomId, plan.daycareId, checkIn, checkOut, petIds.length);
+  const capacityValidation = await validateRoomCapacity(
+    plan.roomId,
+    plan.daycareId,
+    checkIn,
+    checkOut,
+    petIds.length,
+  );
   if (!capacityValidation.valid) {
     throw new Error(capacityValidation.message || "Capacidad excedida");
   }
@@ -210,7 +235,9 @@ async function createReservationFromPlan(plan: {
   return "created";
 }
 
-export async function generateRecurringReservations(referenceDate = new Date()): Promise<GenerationStats> {
+export async function generateRecurringReservations(
+  referenceDate = new Date(),
+): Promise<GenerationStats> {
   const stats: GenerationStats = {
     scannedPlans: 0,
     evaluatedOccurrences: 0,
@@ -268,12 +295,21 @@ export async function generateRecurringReservations(referenceDate = new Date()):
     const localStart = localDatePartsInTimezone(windowStartUtc, timezone);
     const localEnd = localDatePartsInTimezone(windowEndUtc, timezone);
 
-    for (let localDay = localStart; compareLocalDates(localDay, localEnd) <= 0; localDay = addOneLocalDay(localDay)) {
+    for (
+      let localDay = localStart;
+      compareLocalDates(localDay, localEnd) <= 0;
+      localDay = addOneLocalDay(localDay)
+    ) {
       if (!planDays.has(localDayNumber(localDay))) {
         continue;
       }
 
-      const { checkIn, checkOut } = toOccurrenceTimes(localDay, plan.startTime, plan.endTime, timezone);
+      const { checkIn, checkOut } = toOccurrenceTimes(
+        localDay,
+        plan.startTime,
+        plan.endTime,
+        timezone,
+      );
       if (checkOut <= checkIn) {
         recordFailure("Horario inválido: la salida no es posterior a la entrada");
         continue;
@@ -287,10 +323,7 @@ export async function generateRecurringReservations(referenceDate = new Date()):
           stats.skippedExisting += 1;
         }
       } catch (error) {
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002"
-        ) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
           // Another run created it between the existence check and the insert. Still a skip.
           stats.skippedExisting += 1;
         } else {
@@ -338,7 +371,12 @@ export async function syncFuturePendingReservationsForPlan(planId: string): Prom
       const timezone = await getUnitTimezone(plan.daycareId, plan.businessUnit);
       if (!reservation.checkIn) return;
       const localDay = localDatePartsInTimezone(reservation.checkIn, timezone);
-      const { checkIn, checkOut } = toOccurrenceTimes(localDay, plan.startTime, plan.endTime, timezone);
+      const { checkIn, checkOut } = toOccurrenceTimes(
+        localDay,
+        plan.startTime,
+        plan.endTime,
+        timezone,
+      );
       await tx.reservation.update({
         where: { id: reservation.id },
         data: {
@@ -422,9 +460,12 @@ export function startRecurringPlansScheduler() {
 
   // Run once on startup, then every 24h.
   void run();
-  const interval = setInterval(() => {
-    void run();
-  }, 24 * 60 * 60 * 1000);
+  const interval = setInterval(
+    () => {
+      void run();
+    },
+    24 * 60 * 60 * 1000,
+  );
 
   return interval;
 }

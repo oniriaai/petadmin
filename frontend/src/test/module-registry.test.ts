@@ -11,10 +11,7 @@ describe("frontend module registry", () => {
   it("rejects duplicate routes", () => {
     const [first] = frontendModules;
     expect(() =>
-      validateFrontendModules([
-        first,
-        { ...first, id: "duplicate", routes: [...first.routes] },
-      ]),
+      validateFrontendModules([first, { ...first, id: "duplicate", routes: [...first.routes] }]),
     ).toThrow("Duplicate frontend route path");
   });
 });

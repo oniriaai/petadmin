@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Package, Pencil, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Package,
+  Pencil,
+  Plus,
+  Search,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { Modal } from "../../components/ui/Modal";
@@ -41,7 +51,14 @@ const MOVEMENT_LABELS: Record<Movement["type"], string> = {
   AJUSTE: "Ajuste",
 };
 
-const emptyItem = { name: "", category: "", unit: "unidad", minStock: 0, currentStock: 0, unitCost: 0 };
+const emptyItem = {
+  name: "",
+  category: "",
+  unit: "unidad",
+  minStock: 0,
+  currentStock: 0,
+  unitCost: 0,
+};
 
 export function InventarioPage() {
   const { activeBusinessUnit } = useAuth();
@@ -60,7 +77,11 @@ export function InventarioPage() {
     try {
       setItems(await api.get<InventoryItem[]>("/inventory/items"));
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al cargar el inventario");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Error al cargar el inventario",
+      );
     } finally {
       setLoading(false);
     }
@@ -72,12 +93,15 @@ export function InventarioPage() {
   }, [load, activeBusinessUnit]);
 
   async function remove(item: InventoryItem) {
-    if (!window.confirm(`¿Dar de baja "${item.name}"? Dejará de aparecer en el inventario.`)) return;
+    if (!window.confirm(`¿Dar de baja "${item.name}"? Dejará de aparecer en el inventario.`))
+      return;
     try {
       await api.del(`/inventory/items/${item.id}`);
       await load();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al dar de baja");
+      setError(
+        err instanceof ApiError || err instanceof Error ? err.message : "Error al dar de baja",
+      );
     }
   }
 
@@ -85,9 +109,7 @@ export function InventarioPage() {
   const visible = items
     .filter((item) => !onlyLowStock || item.currentStock <= item.minStock)
     .filter((item) =>
-      search
-        ? `${item.name} ${item.category}`.toLowerCase().includes(search.toLowerCase())
-        : true,
+      search ? `${item.name} ${item.category}`.toLowerCase().includes(search.toLowerCase()) : true,
     );
   const totalValue = items.reduce((sum, item) => sum + item.currentStock * item.unitCost, 0);
 
@@ -110,7 +132,10 @@ export function InventarioPage() {
       />
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -149,7 +174,9 @@ export function InventarioPage() {
         <div className="card p-10 text-center">
           <Package size={28} className="mx-auto mb-2 text-gray-300" />
           <p className="text-sm text-muted">
-            {items.length === 0 ? "Todavía no hay artículos registrados." : "Ningún artículo coincide con el filtro."}
+            {items.length === 0
+              ? "Todavía no hay artículos registrados."
+              : "Ningún artículo coincide con el filtro."}
           </p>
         </div>
       ) : (
@@ -177,7 +204,9 @@ export function InventarioPage() {
                       <td className="table-td">
                         <span className={isLow ? "text-amber-700 font-semibold" : ""}>
                           {item.currentStock} {item.unit}
-                          {isLow && <AlertTriangle size={13} className="inline-block ml-1.5 -mt-0.5" />}
+                          {isLow && (
+                            <AlertTriangle size={13} className="inline-block ml-1.5 -mt-0.5" />
+                          )}
                         </span>
                       </td>
                       <td className="table-td">{item.minStock}</td>
@@ -197,7 +226,11 @@ export function InventarioPage() {
                         >
                           <Pencil size={14} />
                         </button>
-                        <button className="btn-ghost btn-sm text-red-600" onClick={() => void remove(item)} aria-label={`Dar de baja ${item.name}`}>
+                        <button
+                          className="btn-ghost btn-sm text-red-600"
+                          onClick={() => void remove(item)}
+                          aria-label={`Dar de baja ${item.name}`}
+                        >
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -275,35 +308,92 @@ function ItemForm({
     <Modal open onClose={onClose} title={item ? "Editar artículo" : "Nuevo artículo"}>
       <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert"
+          >
             {error}
           </div>
         )}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="label" htmlFor="inv-name">Nombre</label>
-            <input id="inv-name" className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label className="label" htmlFor="inv-name">
+              Nombre
+            </label>
+            <input
+              id="inv-name"
+              className="input"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
           </div>
           <div>
-            <label className="label" htmlFor="inv-cat">Categoría</label>
-            <input id="inv-cat" className="input" required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} />
+            <label className="label" htmlFor="inv-cat">
+              Categoría
+            </label>
+            <input
+              id="inv-cat"
+              className="input"
+              required
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            />
           </div>
           <div>
-            <label className="label" htmlFor="inv-unit">Unidad de medida</label>
-            <input id="inv-unit" className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="unidad, kg, litro" />
+            <label className="label" htmlFor="inv-unit">
+              Unidad de medida
+            </label>
+            <input
+              id="inv-unit"
+              className="input"
+              value={form.unit}
+              onChange={(e) => setForm({ ...form, unit: e.target.value })}
+              placeholder="unidad, kg, litro"
+            />
           </div>
           <div>
-            <label className="label" htmlFor="inv-cost">Costo unitario</label>
-            <input id="inv-cost" className="input" type="number" min="0" step="0.01" value={form.unitCost} onChange={(e) => setForm({ ...form, unitCost: +e.target.value })} />
+            <label className="label" htmlFor="inv-cost">
+              Costo unitario
+            </label>
+            <input
+              id="inv-cost"
+              className="input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.unitCost}
+              onChange={(e) => setForm({ ...form, unitCost: +e.target.value })}
+            />
           </div>
           <div>
-            <label className="label" htmlFor="inv-min">Stock mínimo</label>
-            <input id="inv-min" className="input" type="number" min="0" step="0.01" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: +e.target.value })} />
+            <label className="label" htmlFor="inv-min">
+              Stock mínimo
+            </label>
+            <input
+              id="inv-min"
+              className="input"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.minStock}
+              onChange={(e) => setForm({ ...form, minStock: +e.target.value })}
+            />
           </div>
           {!item && (
             <div>
-              <label className="label" htmlFor="inv-stock">Stock inicial</label>
-              <input id="inv-stock" className="input" type="number" min="0" step="0.01" value={form.currentStock} onChange={(e) => setForm({ ...form, currentStock: +e.target.value })} />
+              <label className="label" htmlFor="inv-stock">
+                Stock inicial
+              </label>
+              <input
+                id="inv-stock"
+                className="input"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.currentStock}
+                onChange={(e) => setForm({ ...form, currentStock: +e.target.value })}
+              />
             </div>
           )}
         </div>
@@ -314,7 +404,9 @@ function ItemForm({
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
           <button type="submit" className="btn-primary" disabled={saving}>
             {saving ? <Spinner size={14} /> : null} Guardar
           </button>
@@ -349,7 +441,11 @@ function MovementModal({
 
   // An "ajuste" sets the level outright; the others add to or subtract from it.
   const resulting =
-    type === "AJUSTE" ? Number(quantity || 0) : type === "SALIDA" ? item.currentStock - Number(quantity || 0) : item.currentStock + Number(quantity || 0);
+    type === "AJUSTE"
+      ? Number(quantity || 0)
+      : type === "SALIDA"
+        ? item.currentStock - Number(quantity || 0)
+        : item.currentStock + Number(quantity || 0);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -363,7 +459,11 @@ function MovementModal({
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al registrar el movimiento");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Error al registrar el movimiento",
+      );
     } finally {
       setSaving(false);
     }
@@ -373,7 +473,10 @@ function MovementModal({
     <Modal open onClose={onClose} title={`Movimiento — ${item.name}`}>
       <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -386,7 +489,13 @@ function MovementModal({
               onClick={() => setType(option)}
               className={type === option ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
             >
-              {option === "ENTRADA" ? <ArrowUpCircle size={14} /> : option === "SALIDA" ? <ArrowDownCircle size={14} /> : <SlidersHorizontal size={14} />}
+              {option === "ENTRADA" ? (
+                <ArrowUpCircle size={14} />
+              ) : option === "SALIDA" ? (
+                <ArrowDownCircle size={14} />
+              ) : (
+                <SlidersHorizontal size={14} />
+              )}
               {MOVEMENT_LABELS[option]}
             </button>
           ))}
@@ -397,16 +506,35 @@ function MovementModal({
             <label className="label" htmlFor="mv-qty">
               {type === "AJUSTE" ? "Stock real contado" : "Cantidad"}
             </label>
-            <input id="mv-qty" className="input" type="number" min="0" step="0.01" required value={quantity} onChange={(e) => setQuantity(e.target.value)} />
+            <input
+              id="mv-qty"
+              className="input"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
           </div>
           <div>
-            <label className="label" htmlFor="mv-reason">Motivo (opcional)</label>
-            <input id="mv-reason" className="input" value={reason} onChange={(e) => setReason(e.target.value)} />
+            <label className="label" htmlFor="mv-reason">
+              Motivo (opcional)
+            </label>
+            <input
+              id="mv-reason"
+              className="input"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
           </div>
         </div>
 
         <p className="text-sm text-muted">
-          Stock actual <span className="font-medium text-ink">{item.currentStock} {item.unit}</span>
+          Stock actual{" "}
+          <span className="font-medium text-ink">
+            {item.currentStock} {item.unit}
+          </span>
           {quantity !== "" && (
             <>
               {" → "}
@@ -422,7 +550,9 @@ function MovementModal({
 
         {movements.length > 0 && (
           <div className="border-t border-line-subtle pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">Últimos movimientos</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
+              Últimos movimientos
+            </p>
             <ul className="space-y-1 max-h-40 overflow-y-auto text-sm">
               {movements.slice(0, 10).map((movement) => (
                 <li key={movement.id} className="flex items-baseline gap-2">
@@ -440,8 +570,14 @@ function MovementModal({
         )}
 
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
-          <button type="submit" className="btn-primary" disabled={saving || quantity === "" || resulting < 0}>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={saving || quantity === "" || resulting < 0}
+          >
             {saving ? <Spinner size={14} /> : null} Registrar
           </button>
         </div>

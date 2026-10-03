@@ -107,7 +107,8 @@ export class AuthzError extends Error {
 function readScopeBusinessUnit(req: Request): BusinessUnit | undefined {
   const headerRaw = req.headers["x-business-unit"];
   const headerValue = Array.isArray(headerRaw) ? headerRaw[0] : headerRaw;
-  const queryValue = typeof req.query.businessUnit === "string" ? req.query.businessUnit : undefined;
+  const queryValue =
+    typeof req.query.businessUnit === "string" ? req.query.businessUnit : undefined;
   const raw = headerValue ?? queryValue;
   if (!raw) return undefined;
   const candidate = normalizeBusinessUnit(raw);
@@ -140,7 +141,8 @@ export function getBusinessUnitScope(req: Request): BusinessUnit[] {
 
 export function getRequiredBusinessUnit(req: Request, bodyBusinessUnit?: unknown): BusinessUnit {
   if (!req.user) throw new AuthzError(401, "No autorizado");
-  const bodyBu = typeof bodyBusinessUnit === "string" ? normalizeBusinessUnit(bodyBusinessUnit) : null;
+  const bodyBu =
+    typeof bodyBusinessUnit === "string" ? normalizeBusinessUnit(bodyBusinessUnit) : null;
   const scoped = readScopeBusinessUnit(req);
 
   if (hasAllUnitsAccess(req.user.role)) {

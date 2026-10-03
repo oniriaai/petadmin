@@ -13,7 +13,7 @@ import { AuthzError } from "../middleware/auth";
 export async function validatePetOwnership(
   petIds: string[],
   clientId: string,
-  daycareId: string
+  daycareId: string,
 ): Promise<{ valid: boolean; message?: string }> {
   const pets = await prisma.pet.findMany({
     where: { id: { in: petIds }, clientId, daycareId },
@@ -56,7 +56,7 @@ export async function assertClientInTenant(clientId: string, daycareId: string):
 export async function validateRoomExists(
   roomId: string,
   daycareId: string,
-  businessUnit?: string
+  businessUnit?: string,
 ): Promise<{ valid: boolean; room?: any; message?: string }> {
   const room = await prisma.room.findFirst({
     where: { id: roomId, daycareId },
@@ -89,7 +89,7 @@ export async function validateRoomCapacity(
   checkInTime: Date,
   checkOutTime: Date,
   petCount: number,
-  excludeReservationId?: string
+  excludeReservationId?: string,
 ): Promise<{ valid: boolean; availableCapacity?: number; message?: string }> {
   const room = await prisma.room.findFirst({
     where: { id: roomId, daycareId },
@@ -130,12 +130,9 @@ export async function validateRoomCapacity(
     },
   });
 
-  const reservationPetCount = occupancyReservations.reduce(
-    (sum, r) => sum + r.pets.length,
-    0
-  );
+  const reservationPetCount = occupancyReservations.reduce((sum, r) => sum + r.pets.length, 0);
   const checkInOutCount = occupancyCheckInOuts.filter(
-    (c: any) => c.checkOutTime === null || c.checkOutTime >= checkInTime
+    (c: any) => c.checkOutTime === null || c.checkOutTime >= checkInTime,
   ).length;
 
   const totalOccupancy = reservationPetCount + checkInOutCount + petCount;
@@ -160,7 +157,7 @@ export async function validateNoReservationConflicts(
   daycareId: string,
   checkInTime: Date,
   checkOutTime: Date,
-  excludeReservationId?: string
+  excludeReservationId?: string,
 ): Promise<{ valid: boolean; message?: string }> {
   const conflicts = await prisma.reservation.count({
     where: {

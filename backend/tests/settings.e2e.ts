@@ -72,15 +72,24 @@ async function main(): Promise<void> {
     const res = await demo.get("/settings");
     expectStatus(res.status, 200, "GET /settings (demo)");
     const units = res.data.units.map((u: { businessUnit: string }) => u.businessUnit);
-    if (units.join(",") !== "GROOMING") throw new Error(`la guardería demo solo tiene GROOMING, vio: ${units}`);
+    if (units.join(",") !== "GROOMING")
+      throw new Error(`la guardería demo solo tiene GROOMING, vio: ${units}`);
 
     // 404, not 403: the unit does not exist for this tenant.
-    expectStatus((await demo.put("/settings/DAYCARE", { vatPercent: 10 })).status, 404, "unidad ajena");
+    expectStatus(
+      (await demo.put("/settings/DAYCARE", { vatPercent: 10 })).status,
+      404,
+      "unidad ajena",
+    );
   });
 
   await test("Solo un administrador puede leer o escribir la configuración", async () => {
     expectStatus((await operator.get("/settings")).status, 403, "rol daycare");
-    expectStatus((await operator.put("/settings/DAYCARE", { vatPercent: 10 })).status, 403, "rol daycare");
+    expectStatus(
+      (await operator.put("/settings/DAYCARE", { vatPercent: 10 })).status,
+      403,
+      "rol daycare",
+    );
   });
 
   await test("Los valores inválidos se rechazan con un mensaje útil", async () => {
@@ -91,14 +100,28 @@ async function main(): Promise<void> {
     if (!String(badZone.data.message).includes("Mars/Olympus")) {
       throw new Error("el mensaje debe nombrar la zona rechazada");
     }
-    expectStatus((await admin.put("/settings/DAYCARE", { vatPercent: 150 })).status, 400, "IVA fuera de rango");
-    expectStatus((await admin.put("/settings/DAYCARE", { vatPercent: -1 })).status, 400, "IVA negativo");
-    expectStatus((await admin.put("/settings/NO_EXISTE", { vatPercent: 10 })).status, 400, "unidad inválida");
+    expectStatus(
+      (await admin.put("/settings/DAYCARE", { vatPercent: 150 })).status,
+      400,
+      "IVA fuera de rango",
+    );
+    expectStatus(
+      (await admin.put("/settings/DAYCARE", { vatPercent: -1 })).status,
+      400,
+      "IVA negativo",
+    );
+    expectStatus(
+      (await admin.put("/settings/NO_EXISTE", { vatPercent: 10 })).status,
+      400,
+      "unidad inválida",
+    );
   });
 
   await test("El IVA configurado se aplica a una reserva nueva que no indica otro", async () => {
     const original = await admin.get("/settings");
-    const before = original.data.units.find((u: { businessUnit: string }) => u.businessUnit === "DAYCARE").vatPercent;
+    const before = original.data.units.find(
+      (u: { businessUnit: string }) => u.businessUnit === "DAYCARE",
+    ).vatPercent;
 
     try {
       const saved = await admin.put("/settings/DAYCARE", { vatPercent: 12 });
@@ -131,7 +154,9 @@ async function main(): Promise<void> {
         throw new Error(`la reserva usó ${created.data.vatPercent}% en vez del 12% configurado`);
       }
       if (created.data.vatAmount !== 12) {
-        throw new Error(`IVA calculado ${created.data.vatAmount}, esperado 12 sobre una base de 100`);
+        throw new Error(
+          `IVA calculado ${created.data.vatAmount}, esperado 12 sobre una base de 100`,
+        );
       }
 
       // An explicit rate still wins over the default.
@@ -158,7 +183,9 @@ async function main(): Promise<void> {
   });
 
   console.log("=".repeat(60));
-  console.log(`📊 Configuración:\n   Pasadas: ${passed}/${passed + failed}\n   Fallidas: ${failed}/${passed + failed}`);
+  console.log(
+    `📊 Configuración:\n   Pasadas: ${passed}/${passed + failed}\n   Fallidas: ${failed}/${passed + failed}`,
+  );
   console.log("=".repeat(60));
   process.exit(failed > 0 ? 1 : 0);
 }

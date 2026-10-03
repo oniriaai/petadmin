@@ -32,7 +32,15 @@ settingsRouter.get("/", async (req, res) => {
     const daycareId = getRequiredDaycareId(req);
     const daycare = await prisma.daycare.findUnique({
       where: { id: daycareId },
-      select: { id: true, slug: true, name: true, legalName: true, timezone: true, units: true, isActive: true },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        legalName: true,
+        timezone: true,
+        units: true,
+        isActive: true,
+      },
     });
     if (!daycare) {
       res.status(404).json({ message: "Guardería no encontrada" });

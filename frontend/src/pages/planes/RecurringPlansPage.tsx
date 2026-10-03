@@ -61,10 +61,10 @@ export function RecurringPlansPage() {
 
   const filtered = search
     ? plans.filter(
-        p =>
+        (p) =>
           p.client.firstName.toLowerCase().includes(search.toLowerCase()) ||
           p.client.lastName.toLowerCase().includes(search.toLowerCase()) ||
-          p.room?.name.toLowerCase().includes(search.toLowerCase())
+          p.room?.name.toLowerCase().includes(search.toLowerCase()),
       )
     : plans;
 
@@ -74,20 +74,27 @@ export function RecurringPlansPage() {
 
   const daysLabel = (days: string) => {
     const dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-    return days.split(",").map(d => dayNames[parseInt(d) - 1]).join(", ");
+    return days
+      .split(",")
+      .map((d) => dayNames[parseInt(d) - 1])
+      .join(", ");
   };
 
   return (
     <div className="p-4 sm:p-6 space-y-5">
       <PageHeader
-          title="Planes Recurrentes"
-          subtitle={<>{plans.filter(p => p.isActive).length} planes activos de {plans.length}</>}
-          actions={
-            <button onClick={() => setShowNew(true)} className="btn-primary">
-          <Plus size={16} /> Nuevo Plan
-        </button>
-          }
-        />
+        title="Planes Recurrentes"
+        subtitle={
+          <>
+            {plans.filter((p) => p.isActive).length} planes activos de {plans.length}
+          </>
+        }
+        actions={
+          <button onClick={() => setShowNew(true)} className="btn-primary">
+            <Plus size={16} /> Nuevo Plan
+          </button>
+        }
+      />
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
@@ -96,13 +103,13 @@ export function RecurringPlansPage() {
             className="input pl-9"
             placeholder="Buscar cliente o sala…"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
           className="input w-40"
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="active">Activos</option>
           <option value="inactive">Inactivos</option>
@@ -135,10 +142,12 @@ export function RecurringPlansPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(plan => (
+                {filtered.map((plan) => (
                   <tr key={plan.id} className="table-tr">
                     <td className="table-td">
-                      <p className="font-medium">{plan.client.firstName} {plan.client.lastName}</p>
+                      <p className="font-medium">
+                        {plan.client.firstName} {plan.client.lastName}
+                      </p>
                     </td>
                     <td className="table-td text-sm">{serviceLabel(plan.service)}</td>
                     <td className="table-td text-sm">{plan.room?.name ?? "—"}</td>

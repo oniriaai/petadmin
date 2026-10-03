@@ -3,7 +3,14 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../db";
-import { JWT_SECRET, TOKEN_VERSION, handleAuthzError, normalizeBusinessUnit, normalizeUserRole, requireAuth } from "../middleware/auth";
+import {
+  JWT_SECRET,
+  TOKEN_VERSION,
+  handleAuthzError,
+  normalizeBusinessUnit,
+  normalizeUserRole,
+  requireAuth,
+} from "../middleware/auth";
 import { loginLimiter } from "../middleware/security";
 import { resolveDaycareScope } from "../core/tenancy/scope";
 import { getEnabledProductModules } from "../platform/module-access";
@@ -104,7 +111,11 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
       res.status(403).json({ message: "La guardería está desactivada" });
       return;
     }
-    if (role !== "admin" && requestedUnit && requestedUnit !== normalizeBusinessUnit(user.businessUnit)) {
+    if (
+      role !== "admin" &&
+      requestedUnit &&
+      requestedUnit !== normalizeBusinessUnit(user.businessUnit)
+    ) {
       res.status(401).json({ message: "Credenciales incorrectas" });
       return;
     }
@@ -115,12 +126,29 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
   const emittedUnit = normalizeBusinessUnit(user.businessUnit) ?? user.businessUnit;
 
   const token = jwt.sign(
-    { userId: user.id, username: user.username, businessUnit: emittedUnit, role, daycareId: user.daycareId, tv: TOKEN_VERSION },
+    {
+      userId: user.id,
+      username: user.username,
+      businessUnit: emittedUnit,
+      role,
+      daycareId: user.daycareId,
+      tv: TOKEN_VERSION,
+    },
     JWT_SECRET,
-    { expiresIn: "12h" }
+    { expiresIn: "12h" },
   );
 
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, businessUnit: emittedUnit, role, daycareId: user.daycareId } });
+  res.json({
+    token,
+    user: {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      businessUnit: emittedUnit,
+      role,
+      daycareId: user.daycareId,
+    },
+  });
 });
 
 /**
@@ -141,7 +169,15 @@ authRouter.get("/me", requireAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user!.userId },
-      select: { id: true, username: true, name: true, role: true, businessUnit: true, isActive: true, daycareId: true },
+      select: {
+        id: true,
+        username: true,
+        name: true,
+        role: true,
+        businessUnit: true,
+        isActive: true,
+        daycareId: true,
+      },
     });
     if (!user || !user.isActive) {
       res.status(401).json({ message: "Sesión no válida" });
@@ -155,7 +191,15 @@ authRouter.get("/me", requireAuth, async (req, res) => {
     const daycare = daycareId
       ? await prisma.daycare.findUnique({
           where: { id: daycareId },
-          select: { id: true, slug: true, name: true, legalName: true, timezone: true, units: true, isActive: true },
+          select: {
+            id: true,
+            slug: true,
+            name: true,
+            legalName: true,
+            timezone: true,
+            units: true,
+            isActive: true,
+          },
         })
       : null;
 
@@ -185,9 +229,22 @@ authRouter.get("/me", requireAuth, async (req, res) => {
         businessUnit: normalizeBusinessUnit(user.businessUnit) ?? user.businessUnit,
         daycareId: user.daycareId,
       },
-      daycare: daycare ? { ...daycare, unitList: daycare.units.split(",").map((u) => u.trim()).filter(Boolean) } : null,
+      daycare: daycare
+        ? {
+            ...daycare,
+            unitList: daycare.units
+              .split(",")
+              .map((u) => u.trim())
+              .filter(Boolean),
+          }
+        : null,
       enabledModules,
-      units: daycare ? daycare.units.split(",").map((u) => u.trim()).filter(Boolean) : [],
+      units: daycare
+        ? daycare.units
+            .split(",")
+            .map((u) => u.trim())
+            .filter(Boolean)
+        : [],
       fullAccess: isSuperadmin,
     });
   } catch (error) {

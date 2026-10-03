@@ -2,14 +2,14 @@ import { useState, useMemo } from "react";
 import { Calendar, List, Plus, Search, RefreshCw } from "lucide-react";
 import { api, reservationsApi, checkInOutApi } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
-import { 
-  useOperacionesData, 
-  OperationalEvent, 
-  UnifiedCalendarView, 
-  UnifiedListView, 
-  CheckInModal, 
-  CheckOutModal, 
-  CheckInOutForm 
+import {
+  useOperacionesData,
+  OperationalEvent,
+  UnifiedCalendarView,
+  UnifiedListView,
+  CheckInModal,
+  CheckOutModal,
+  CheckInOutForm,
 } from "../../components/operational";
 import { NuevaReservaModal } from "../reservas/NuevaReservaModal";
 import { ReservationDetailModal } from "../reservas/ReservationDetailModal";
@@ -19,7 +19,9 @@ import { PageHeader } from "../../components/layout/PageHeader";
 export function OperacionesPage() {
   const { events, loading, error, refresh } = useOperacionesData();
   const [selectedTab, setSelectedTab] = useState<"calendar" | "list">("calendar");
-  const [statusFilter, setStatusFilter] = useState<"all" | "PENDING" | "CHECKED_IN" | "CHECKED_OUT">("all");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "PENDING" | "CHECKED_IN" | "CHECKED_OUT"
+  >("all");
   const [search, setSearch] = useState("");
   const [checkinTarget, setCheckinTarget] = useState<OperationalEvent | null>(null);
   const [checkoutTarget, setCheckoutTarget] = useState<OperationalEvent | null>(null);
@@ -51,20 +53,20 @@ export function OperacionesPage() {
   };
 
   const handleCheckout = async (
-    id: string, 
-    checkOutTime: string, 
-    performedByUserId?: string, 
-    createIncome?: boolean, 
-    paymentMethod?: string
+    id: string,
+    checkOutTime: string,
+    performedByUserId?: string,
+    createIncome?: boolean,
+    paymentMethod?: string,
   ) => {
     if (!checkoutTarget) return;
     setActionLoading(true);
     try {
       if (checkoutTarget.isReservation) {
         await reservationsApi.checkOut(id, {
-          time: checkOutTime, 
-          createIncome: createIncome ?? false, 
-          paymentMethod 
+          time: checkOutTime,
+          createIncome: createIncome ?? false,
+          paymentMethod,
         });
       } else {
         await checkInOutApi.checkOut(id, { checkOutTime, performedByUserId });
@@ -118,22 +120,22 @@ export function OperacionesPage() {
     <div className="p-4 sm:p-6 space-y-5">
       {/* Header */}
       <PageHeader
-          title="Operaciones"
-          subtitle="Gestión Unificada de Reservas y Visitas Ad-hoc"
-          actions={
-            <div className="flex gap-2">
-          <button onClick={refresh} disabled={loading || actionLoading} className="btn-ghost">
-            <RefreshCw size={16} /> Actualizar
-          </button>
-          <button onClick={() => setShowAdHocModal(true)} className="btn-secondary">
-            <Plus size={16} /> Ad-hoc
-          </button>
-          <button onClick={() => setShowNewReserva(true)} className="btn-primary">
-            <Plus size={16} /> Nueva Reserva
-          </button>
-            </div>
-          }
-        />
+        title="Operaciones"
+        subtitle="Gestión Unificada de Reservas y Visitas Ad-hoc"
+        actions={
+          <div className="flex gap-2">
+            <button onClick={refresh} disabled={loading || actionLoading} className="btn-ghost">
+              <RefreshCw size={16} /> Actualizar
+            </button>
+            <button onClick={() => setShowAdHocModal(true)} className="btn-secondary">
+              <Plus size={16} /> Ad-hoc
+            </button>
+            <button onClick={() => setShowNewReserva(true)} className="btn-primary">
+              <Plus size={16} /> Nueva Reserva
+            </button>
+          </div>
+        }
+      />
 
       {/* Controls */}
       <div className="card p-4 flex flex-wrap gap-3">
@@ -160,9 +162,7 @@ export function OperacionesPage() {
 
       {/* Error Display */}
       {error && (
-        <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded">
-          {error}
-        </div>
+        <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded">{error}</div>
       )}
 
       {/* Loading */}
@@ -244,13 +244,17 @@ export function OperacionesPage() {
               setShowCheckinModal(false);
               setCheckinTarget(null);
             }}
-            record={checkinTarget ? {
-              id: checkinTarget.originalId,
-              petName: checkinTarget.petNames,
-              clientName: checkinTarget.clientName,
-              roomName: checkinTarget.roomName,
-              status: checkinTarget.status,
-            } : null}
+            record={
+              checkinTarget
+                ? {
+                    id: checkinTarget.originalId,
+                    petName: checkinTarget.petNames,
+                    clientName: checkinTarget.clientName,
+                    roomName: checkinTarget.roomName,
+                    status: checkinTarget.status,
+                  }
+                : null
+            }
             onConfirm={handleCheckin}
           />
 
@@ -261,13 +265,17 @@ export function OperacionesPage() {
               setShowCheckoutModal(false);
               setCheckoutTarget(null);
             }}
-            record={checkoutTarget ? {
-              id: checkoutTarget.originalId,
-              petName: checkoutTarget.petNames,
-              clientName: checkoutTarget.clientName,
-              roomName: checkoutTarget.roomName,
-              status: checkoutTarget.status,
-            } : null}
+            record={
+              checkoutTarget
+                ? {
+                    id: checkoutTarget.originalId,
+                    petName: checkoutTarget.petNames,
+                    clientName: checkoutTarget.clientName,
+                    roomName: checkoutTarget.roomName,
+                    status: checkoutTarget.status,
+                  }
+                : null
+            }
             isReservation={checkoutTarget?.isReservation}
             onConfirm={handleCheckout}
           />

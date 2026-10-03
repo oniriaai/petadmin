@@ -14,7 +14,12 @@ import axios from "axios";
 
 const BASE_URL = process.env.API_URL ?? "http://localhost:3001/api/v1";
 
-interface TestResult { name: string; passed: boolean; error?: string; duration: number }
+interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+  duration: number;
+}
 const results: TestResult[] = [];
 
 async function test(name: string, fn: () => Promise<void>): Promise<void> {
@@ -151,13 +156,17 @@ async function run() {
     const staffRefused = await clientFor(staffToken, undefined, "GROOMING").get("/clients");
     expectStatus(staffRefused.status, 403, "El staff debería ser rechazado");
     if (staffRefused.data?.code !== "DAYCARE_INACTIVE") {
-      throw new Error(`Esperaba code=DAYCARE_INACTIVE, recibió ${JSON.stringify(staffRefused.data)}`);
+      throw new Error(
+        `Esperaba code=DAYCARE_INACTIVE, recibió ${JSON.stringify(staffRefused.data)}`,
+      );
     }
 
     const adminRefused = await clientFor(adminToken, undefined, "GROOMING").get("/clients");
     expectStatus(adminRefused.status, 403, "El admin del inquilino debería ser rechazado");
     if (adminRefused.data?.code !== "DAYCARE_INACTIVE") {
-      throw new Error(`Esperaba code=DAYCARE_INACTIVE, recibió ${JSON.stringify(adminRefused.data)}`);
+      throw new Error(
+        `Esperaba code=DAYCARE_INACTIVE, recibió ${JSON.stringify(adminRefused.data)}`,
+      );
     }
   });
 

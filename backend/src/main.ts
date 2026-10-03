@@ -111,6 +111,8 @@ app.listen(port, () => {
   if (runSchedulerInProcess) {
     startRecurringPlansScheduler();
   } else {
-    logger.info("[recurring-plans] scheduler en proceso desactivado; ejecútalo como job programado");
+    logger.info(
+      "[recurring-plans] scheduler en proceso desactivado; ejecútalo como job programado",
+    );
   }
 });

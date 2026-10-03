@@ -21,9 +21,21 @@ import { Spinner } from "../components/ui/Spinner";
 
 /** What the product actually does, in the order a new operator meets it. */
 const CAPABILITIES = [
-  { Icon: CalendarCheck2, title: "Reservas y agenda", line: "Estancias, citas y planes recurrentes en un calendario." },
-  { Icon: PawPrint, title: "Operación diaria", line: "Cupos por sala, entradas y salidas con control de aforo." },
-  { Icon: Wallet, title: "Finanzas por unidad", line: "Cobros e ingresos separados entre Guardería y Peluquería." },
+  {
+    Icon: CalendarCheck2,
+    title: "Reservas y agenda",
+    line: "Estancias, citas y planes recurrentes en un calendario.",
+  },
+  {
+    Icon: PawPrint,
+    title: "Operación diaria",
+    line: "Cupos por sala, entradas y salidas con control de aforo.",
+  },
+  {
+    Icon: Wallet,
+    title: "Finanzas por unidad",
+    line: "Cobros e ingresos separados entre Guardería y Peluquería.",
+  },
 ];
 
 export function Login() {
@@ -70,7 +82,9 @@ export function Login() {
       // The vendor belongs in the console; a tenant user returns to wherever they were sent from.
       navigate(signedIn.role === "superadmin" ? "/platform" : (from ?? "/"), { replace: true });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No pudimos iniciar sesión. Inténtalo de nuevo.");
+      setError(
+        err instanceof Error ? err.message : "No pudimos iniciar sesión. Inténtalo de nuevo.",
+      );
       setLoading(false);
 
       // The username exists in several daycares: reveal the field and send the user there
@@ -135,7 +149,9 @@ export function Login() {
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
             {needsDaycare && (
               <div>
-                <label className="label" htmlFor="login-daycare">Guardería</label>
+                <label className="label" htmlFor="login-daycare">
+                  Guardería
+                </label>
                 <input
                   id="login-daycare"
                   ref={daycareRef}
@@ -154,7 +170,9 @@ export function Login() {
             )}
 
             <div>
-              <label className="label" htmlFor="login-username">Usuario</label>
+              <label className="label" htmlFor="login-username">
+                Usuario
+              </label>
               <input
                 id="login-username"
                 className="input"
@@ -171,7 +189,9 @@ export function Login() {
             </div>
 
             <div>
-              <label className="label" htmlFor="login-password">Contraseña</label>
+              <label className="label" htmlFor="login-password">
+                Contraseña
+              </label>
               <div className="relative">
                 <input
                   id="login-password"
@@ -217,7 +237,11 @@ export function Login() {
               </p>
             )}
 
-            <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5">
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full justify-center py-2.5"
+            >
               {loading ? <Spinner size={16} /> : null}
               {loading ? "Entrando…" : "Ingresar al sistema"}
             </button>

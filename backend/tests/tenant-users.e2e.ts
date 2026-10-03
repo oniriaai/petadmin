@@ -15,7 +15,11 @@ import axios from "axios";
 const BASE_URL = process.env.API_URL ?? "http://localhost:3001/api/v1";
 const SLUG_PREFIX = "e2e-users";
 
-interface TestResult { name: string; passed: boolean; error?: string }
+interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+}
 const results: TestResult[] = [];
 
 async function test(name: string, fn: () => Promise<void>): Promise<void> {
@@ -189,11 +193,14 @@ async function run() {
     // And it must not have been modified.
     const after = await consoleApi.get("/platform/daycares/daycare_pethijos");
     const unchanged = after.data.users.find((u: any) => u.id === victim.id);
-    if (unchanged.name === "Secuestrado") throw new Error("Se modificó un usuario de otra guardería");
+    if (unchanged.name === "Secuestrado")
+      throw new Error("Se modificó un usuario de otra guardería");
   });
 
   await test("Un admin no puede desactivar su propia cuenta", async () => {
-    const denied = await clientFor(adminToken, "DAYCARE").patch(`/users/${adminId}`, { isActive: false });
+    const denied = await clientFor(adminToken, "DAYCARE").patch(`/users/${adminId}`, {
+      isActive: false,
+    });
     expectStatus(denied.status, 409, "Autodesactivación");
     if (denied.data?.code !== "SELF_DEMOTION") {
       throw new Error(`Esperaba code=SELF_DEMOTION, recibió ${JSON.stringify(denied.data)}`);
@@ -204,7 +211,9 @@ async function run() {
   });
 
   await test("Un admin no puede quitarse el rol de administrador", async () => {
-    const denied = await clientFor(adminToken, "DAYCARE").patch(`/users/${adminId}`, { role: "daycare" });
+    const denied = await clientFor(adminToken, "DAYCARE").patch(`/users/${adminId}`, {
+      role: "daycare",
+    });
     expectStatus(denied.status, 409, "Autodegradación");
   });
 
@@ -213,7 +222,9 @@ async function run() {
     const staffApi = clientFor(staff.data.token, "DAYCARE");
     expectStatus((await staffApi.get("/clients")).status, 200, "El personal debería operar");
 
-    const off = await clientFor(adminToken, "DAYCARE").patch(`/users/${staffId}`, { isActive: false });
+    const off = await clientFor(adminToken, "DAYCARE").patch(`/users/${staffId}`, {
+      isActive: false,
+    });
     expectStatus(off.status, 200, "Desactivación");
 
     const refused = await staffApi.get("/clients");
@@ -261,7 +272,9 @@ async function run() {
       const ambiguous = await login(shared, PASSWORD, "DAYCARE");
       expectStatus(ambiguous.status, 400, "Login ambiguo");
       if (ambiguous.data?.code !== "DAYCARE_REQUIRED") {
-        throw new Error(`Esperaba code=DAYCARE_REQUIRED, recibió ${JSON.stringify(ambiguous.data)}`);
+        throw new Error(
+          `Esperaba code=DAYCARE_REQUIRED, recibió ${JSON.stringify(ambiguous.data)}`,
+        );
       }
 
       // With the slug it resolves, and to the right one.

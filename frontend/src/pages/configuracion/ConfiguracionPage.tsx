@@ -31,7 +31,9 @@ interface SettingsResponse {
 export function ConfiguracionPage() {
   const { hasModule, fullAccess } = useAuth();
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, { timezone: string; vatPercent: string }>>({});
+  const [drafts, setDrafts] = useState<Record<string, { timezone: string; vatPercent: string }>>(
+    {},
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingUnit, setSavingUnit] = useState<string | null>(null);
@@ -53,7 +55,11 @@ export function ConfiguracionPage() {
         ),
       );
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al cargar la configuración");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Error al cargar la configuración",
+      );
     } finally {
       setLoading(false);
     }
@@ -75,7 +81,10 @@ export function ConfiguracionPage() {
       });
       setSettings((current) =>
         current
-          ? { ...current, units: current.units.map((u) => (u.businessUnit === unit.businessUnit ? updated : u)) }
+          ? {
+              ...current,
+              units: current.units.map((u) => (u.businessUnit === unit.businessUnit ? updated : u)),
+            }
           : current,
       );
       setSavedUnit(unit.businessUnit);
@@ -112,7 +121,10 @@ export function ConfiguracionPage() {
       <PageHeader title="Configuración" subtitle="Parámetros de tu guardería" />
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -145,12 +157,16 @@ export function ConfiguracionPage() {
               {/* Identity is the vendor's to change, not the tenant's. Saying so beats offering
                   fields that would be refused. */}
               <p className="text-xs text-muted">
-                Estos datos y las unidades de negocio contratadas los gestiona el proveedor del sistema.
+                Estos datos y las unidades de negocio contratadas los gestiona el proveedor del
+                sistema.
               </p>
             </div>
 
             {settings.units.map((unit) => {
-              const draft = drafts[unit.businessUnit] ?? { timezone: unit.timezone, vatPercent: String(unit.vatPercent) };
+              const draft = drafts[unit.businessUnit] ?? {
+                timezone: unit.timezone,
+                vatPercent: String(unit.vatPercent),
+              };
               const dirty = isDirty(unit);
               return (
                 <div key={unit.businessUnit} className="card p-5 space-y-4">
@@ -172,7 +188,10 @@ export function ConfiguracionPage() {
                         step="0.1"
                         value={draft.vatPercent}
                         onChange={(e) =>
-                          setDrafts((d) => ({ ...d, [unit.businessUnit]: { ...draft, vatPercent: e.target.value } }))
+                          setDrafts((d) => ({
+                            ...d,
+                            [unit.businessUnit]: { ...draft, vatPercent: e.target.value },
+                          }))
                         }
                       />
                       <p className="text-xs text-muted mt-1">
@@ -188,7 +207,10 @@ export function ConfiguracionPage() {
                         className="input"
                         value={draft.timezone}
                         onChange={(e) =>
-                          setDrafts((d) => ({ ...d, [unit.businessUnit]: { ...draft, timezone: e.target.value } }))
+                          setDrafts((d) => ({
+                            ...d,
+                            [unit.businessUnit]: { ...draft, timezone: e.target.value },
+                          }))
                         }
                       />
                       <p className="text-xs text-muted mt-1">
@@ -212,7 +234,9 @@ export function ConfiguracionPage() {
                         "Guardar cambios"
                       )}
                     </button>
-                    {!unit.isConfigured && <span className="text-xs text-muted">Usando valores por defecto</span>}
+                    {!unit.isConfigured && (
+                      <span className="text-xs text-muted">Usando valores por defecto</span>
+                    )}
                   </div>
                 </div>
               );
@@ -228,10 +252,30 @@ export function ConfiguracionPage() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    { label: "Clientes", path: "/export/clients", filename: "clientes.xlsx", key: "clients" },
-                    { label: "Reservas", path: "/export/reservations", filename: "reservas.xlsx", key: "reservations" },
-                    { label: "Ingresos", path: "/export/incomes", filename: "ingresos.xlsx", key: "incomes" },
-                    { label: "Gastos y Compras", path: "/export/expenses", filename: "gastos-compras.xlsx", key: "expenses" },
+                    {
+                      label: "Clientes",
+                      path: "/export/clients",
+                      filename: "clientes.xlsx",
+                      key: "clients",
+                    },
+                    {
+                      label: "Reservas",
+                      path: "/export/reservations",
+                      filename: "reservas.xlsx",
+                      key: "reservations",
+                    },
+                    {
+                      label: "Ingresos",
+                      path: "/export/incomes",
+                      filename: "ingresos.xlsx",
+                      key: "incomes",
+                    },
+                    {
+                      label: "Gastos y Compras",
+                      path: "/export/expenses",
+                      filename: "gastos-compras.xlsx",
+                      key: "expenses",
+                    },
                   ].map(({ label, path, filename, key }) => (
                     <button
                       key={key}

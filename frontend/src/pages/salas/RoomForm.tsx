@@ -87,23 +87,21 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
       }
     >
       <div className="space-y-4">
-        {error && (
-          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-        )}
+        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
         <div>
           <label className="label">Nombre de la sala *</label>
           <input
             className="input"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Patio Principal"
           />
         </div>
 
         <div>
           <label className="label">Tipo de espacio</label>
-          <select className="input" value={type} onChange={e => setType(e.target.value)}>
+          <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
             <option value="daycare">Guardería</option>
             <option value="grooming">Peluquería</option>
             <option value="training">Entrenamiento</option>
@@ -119,7 +117,7 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
             type="number"
             min="1"
             value={capacity}
-            onChange={e => setCapacity(Math.max(1, parseInt(e.target.value) || 1))}
+            onChange={(e) => setCapacity(Math.max(1, parseInt(e.target.value) || 1))}
           />
         </div>
       </div>

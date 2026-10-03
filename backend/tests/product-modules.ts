@@ -44,31 +44,35 @@ assert.throws(
 
 // Catalog-level failures are caught too.
 assert.throws(
-  () => validateProductModules([
-    { id: "a", label: "A", description: "", backendModuleIds: ["auth"] },
-    { id: "a", label: "A2", description: "", backendModuleIds: ["pets"] },
-  ]),
+  () =>
+    validateProductModules([
+      { id: "a", label: "A", description: "", backendModuleIds: ["auth"] },
+      { id: "a", label: "A2", description: "", backendModuleIds: ["pets"] },
+    ]),
   /Duplicate product module id/,
 );
 assert.throws(
-  () => validateProductModules([
-    { id: "a", label: "A", description: "", backendModuleIds: ["auth"] },
-    { id: "b", label: "B", description: "", backendModuleIds: ["auth"] },
-  ]),
+  () =>
+    validateProductModules([
+      { id: "a", label: "A", description: "", backendModuleIds: ["auth"] },
+      { id: "b", label: "B", description: "", backendModuleIds: ["auth"] },
+    ]),
   /claimed by both/,
   "two product modules must not claim the same backend module",
 );
 assert.throws(
-  () => validateProductModules([
-    { id: "a", label: "A", description: "", backendModuleIds: ["auth"], requires: ["nope"] },
-  ]),
+  () =>
+    validateProductModules([
+      { id: "a", label: "A", description: "", backendModuleIds: ["auth"], requires: ["nope"] },
+    ]),
   /requires unknown module/,
 );
 assert.throws(
-  () => validateProductModules([
-    { id: "a", label: "A", description: "", backendModuleIds: ["auth"], requires: ["b"] },
-    { id: "b", label: "B", description: "", backendModuleIds: ["pets"], requires: ["a"] },
-  ]),
+  () =>
+    validateProductModules([
+      { id: "a", label: "A", description: "", backendModuleIds: ["auth"], requires: ["b"] },
+      { id: "b", label: "B", description: "", backendModuleIds: ["pets"], requires: ["a"] },
+    ]),
   /dependency cycle/,
 );
 assert.throws(
@@ -128,4 +132,6 @@ for (const id of DEFAULT_ENABLED_PRODUCT_MODULES) {
   }
 }
 
-console.log(`✓ product module catalog (${PRODUCT_MODULES.length} modules, ${TOGGLEABLE_PRODUCT_MODULES.length} toggleable)`);
+console.log(
+  `✓ product module catalog (${PRODUCT_MODULES.length} modules, ${TOGGLEABLE_PRODUCT_MODULES.length} toggleable)`,
+);

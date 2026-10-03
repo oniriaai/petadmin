@@ -10,7 +10,7 @@ import { DEFAULT_LIMIT, MAX_PAGE_SIZE, readPage, sendPage } from "../src/utils/p
  * (or a 50-row page) would leave the client you need silently missing from the picker.
  */
 
-const req = (query: Record<string, unknown>) => ({ query } as any);
+const req = (query: Record<string, unknown>) => ({ query }) as any;
 
 // No pagination asked for: bounded, but shaped as it always was.
 {
@@ -38,8 +38,14 @@ const req = (query: Record<string, unknown>) => ({ query } as any);
 // (or, worse, interpret).
 for (const bad of ["0", "-5", "abc", "", "1e9999", "NaN"]) {
   const page = readPage(req({ page: bad, pageSize: bad }));
-  assert.ok(Number.isInteger(page.skip) && page.skip >= 0, `skip must stay a non-negative integer for ${JSON.stringify(bad)}`);
-  assert.ok(Number.isInteger(page.take) && page.take >= 1, `take must stay a positive integer for ${JSON.stringify(bad)}`);
+  assert.ok(
+    Number.isInteger(page.skip) && page.skip >= 0,
+    `skip must stay a non-negative integer for ${JSON.stringify(bad)}`,
+  );
+  assert.ok(
+    Number.isInteger(page.take) && page.take >= 1,
+    `take must stay a positive integer for ${JSON.stringify(bad)}`,
+  );
   assert.ok(page.take <= MAX_PAGE_SIZE, `take must stay capped for ${JSON.stringify(bad)}`);
 }
 
@@ -77,7 +83,13 @@ for (const bad of ["0", "-5", "abc", "", "1e9999", "NaN"]) {
 
   // Paginated: the envelope, with a pageCount the client does not have to compute.
   sendPage(res, readPage(req({ page: "2", pageSize: "10" })), [{ id: "a" }], 95);
-  const envelope = body as unknown as { items: unknown[]; total: number; page: number; pageSize: number; pageCount: number };
+  const envelope = body as unknown as {
+    items: unknown[];
+    total: number;
+    page: number;
+    pageSize: number;
+    pageCount: number;
+  };
   assert.equal(envelope.total, 95);
   assert.equal(envelope.page, 2);
   assert.equal(envelope.pageSize, 10);

@@ -4,7 +4,6 @@ import { platformApi, type ModuleCatalog } from "../../lib/platform-api";
 import { useAsync } from "./shared";
 import { businessUnitLabel } from "../../modules/shared/contracts";
 
-
 /** Turns a display name into a candidate url-safe identifier. */
 function slugify(value: string): string {
   return value
@@ -64,11 +63,16 @@ export function NewDaycareModal({
   };
 
   const toggleUnit = (unit: string) => {
-    setUnits((current) => (current.includes(unit) ? current.filter((u) => u !== unit) : [...current, unit]));
+    setUnits((current) =>
+      current.includes(unit) ? current.filter((u) => u !== unit) : [...current, unit],
+    );
   };
 
   const suggestion = useMemo(
-    () => (effectiveSlug && adminUsername && !adminUsername.startsWith(`${effectiveSlug}_`) ? `${effectiveSlug}_${adminUsername}` : null),
+    () =>
+      effectiveSlug && adminUsername && !adminUsername.startsWith(`${effectiveSlug}_`)
+        ? `${effectiveSlug}_${adminUsername}`
+        : null,
     [effectiveSlug, adminUsername],
   );
 
@@ -97,12 +101,20 @@ export function NewDaycareModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 overflow-auto" role="dialog" aria-modal="true">
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 overflow-auto"
+      role="dialog"
+      aria-modal="true"
+    >
       <form
         onSubmit={submit}
         data-theme="platform"
         className="card w-full max-w-2xl p-6 my-8"
-        style={{ background: "var(--color-surface)", borderColor: "var(--color-border)", color: "var(--color-ink)" }}
+        style={{
+          background: "var(--color-surface)",
+          borderColor: "var(--color-border)",
+          color: "var(--color-ink)",
+        }}
       >
         <div className="flex items-start justify-between mb-5">
           <div>
@@ -117,43 +129,108 @@ export function NewDaycareModal({
         </div>
 
         {error && (
-          <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+          <div
+            className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+            role="alert"
+          >
             {error}
           </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-name">Nombre</label>
-            <input id="nd-name" className="input" value={name} onChange={(e) => setName(e.target.value)} required
-              style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-name">
+              Nombre
+            </label>
+            <input
+              id="nd-name"
+              className="input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              style={{
+                background: "var(--color-canvas)",
+                color: "var(--color-ink)",
+                borderColor: "var(--color-border)",
+              }}
+            />
           </div>
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-slug">Identificador</label>
-            <input id="nd-slug" className="input font-mono" value={effectiveSlug}
-              onChange={(e) => { setSlugTouched(true); setSlug(e.target.value); }}
-              pattern="[a-z0-9][a-z0-9-]*[a-z0-9]" required
-              style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-slug">
+              Identificador
+            </label>
+            <input
+              id="nd-slug"
+              className="input font-mono"
+              value={effectiveSlug}
+              onChange={(e) => {
+                setSlugTouched(true);
+                setSlug(e.target.value);
+              }}
+              pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
+              required
+              style={{
+                background: "var(--color-canvas)",
+                color: "var(--color-ink)",
+                borderColor: "var(--color-border)",
+              }}
+            />
           </div>
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-legal">Razón social (opcional)</label>
-            <input id="nd-legal" className="input" value={legalName} onChange={(e) => setLegalName(e.target.value)}
-              style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-legal">
+              Razón social (opcional)
+            </label>
+            <input
+              id="nd-legal"
+              className="input"
+              value={legalName}
+              onChange={(e) => setLegalName(e.target.value)}
+              style={{
+                background: "var(--color-canvas)",
+                color: "var(--color-ink)",
+                borderColor: "var(--color-border)",
+              }}
+            />
           </div>
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-tz">Zona horaria</label>
-            <input id="nd-tz" className="input" value={timezone} onChange={(e) => setTimezone(e.target.value)}
-              style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-tz">
+              Zona horaria
+            </label>
+            <input
+              id="nd-tz"
+              className="input"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+              style={{
+                background: "var(--color-canvas)",
+                color: "var(--color-ink)",
+                borderColor: "var(--color-border)",
+              }}
+            />
           </div>
         </div>
 
         <fieldset className="mt-5">
-          <legend className="label" style={{ color: "var(--color-muted)" }}>Unidades de negocio</legend>
+          <legend className="label" style={{ color: "var(--color-muted)" }}>
+            Unidades de negocio
+          </legend>
           <div className="flex gap-2">
             {catalog.units.map((unit) => (
-              <button key={unit} type="button" onClick={() => toggleUnit(unit)}
+              <button
+                key={unit}
+                type="button"
+                onClick={() => toggleUnit(unit)}
                 className={`btn btn-sm ${units.includes(unit) ? "btn-primary" : "btn-secondary"}`}
-                style={units.includes(unit) ? undefined : { background: "var(--color-canvas)", color: "var(--color-muted)", borderColor: "var(--color-border)" }}>
+                style={
+                  units.includes(unit)
+                    ? undefined
+                    : {
+                        background: "var(--color-canvas)",
+                        color: "var(--color-muted)",
+                        borderColor: "var(--color-border)",
+                      }
+                }
+              >
                 {businessUnitLabel(unit)}
               </button>
             ))}
@@ -161,12 +238,22 @@ export function NewDaycareModal({
         </fieldset>
 
         <fieldset className="mt-5">
-          <legend className="label" style={{ color: "var(--color-muted)" }}>Módulos incluidos</legend>
+          <legend className="label" style={{ color: "var(--color-muted)" }}>
+            Módulos incluidos
+          </legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {catalog.modules.map((module) => (
-              <label key={module.id} className="flex items-start gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-white/5"
-                style={{ border: "1px solid var(--color-border)" }}>
-                <input type="checkbox" className="mt-0.5" checked={modules.includes(module.id)} onChange={() => toggleModule(module.id)} />
+              <label
+                key={module.id}
+                className="flex items-start gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-white/5"
+                style={{ border: "1px solid var(--color-border)" }}
+              >
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={modules.includes(module.id)}
+                  onChange={() => toggleModule(module.id)}
+                />
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">{module.label}</span>
                   {module.requires.length > 0 && (
@@ -181,28 +268,85 @@ export function NewDaycareModal({
         </fieldset>
 
         <fieldset className="mt-5">
-          <legend className="label" style={{ color: "var(--color-muted)" }}>Primer administrador</legend>
+          <legend className="label" style={{ color: "var(--color-muted)" }}>
+            Primer administrador
+          </legend>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nd-an">Nombre</label>
-              <input id="nd-an" className="input" value={adminName} onChange={(e) => setAdminName(e.target.value)} required
-                style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+              <label
+                className="label text-xs"
+                style={{ color: "var(--color-muted)" }}
+                htmlFor="nd-an"
+              >
+                Nombre
+              </label>
+              <input
+                id="nd-an"
+                className="input"
+                value={adminName}
+                onChange={(e) => setAdminName(e.target.value)}
+                required
+                style={{
+                  background: "var(--color-canvas)",
+                  color: "var(--color-ink)",
+                  borderColor: "var(--color-border)",
+                }}
+              />
             </div>
             <div>
-              <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nd-au">Usuario</label>
-              <input id="nd-au" className="input font-mono" value={adminUsername} onChange={(e) => setAdminUsername(e.target.value)} required minLength={3}
-                style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+              <label
+                className="label text-xs"
+                style={{ color: "var(--color-muted)" }}
+                htmlFor="nd-au"
+              >
+                Usuario
+              </label>
+              <input
+                id="nd-au"
+                className="input font-mono"
+                value={adminUsername}
+                onChange={(e) => setAdminUsername(e.target.value)}
+                required
+                minLength={3}
+                style={{
+                  background: "var(--color-canvas)",
+                  color: "var(--color-ink)",
+                  borderColor: "var(--color-border)",
+                }}
+              />
               {suggestion && (
-                <button type="button" className="text-[11px] mt-1 hover:underline" style={{ color: "var(--color-muted)" }}
-                  onClick={() => setAdminUsername(suggestion)}>
+                <button
+                  type="button"
+                  className="text-[11px] mt-1 hover:underline"
+                  style={{ color: "var(--color-muted)" }}
+                  onClick={() => setAdminUsername(suggestion)}
+                >
                   Usar {suggestion}
                 </button>
               )}
             </div>
             <div>
-              <label className="label text-xs" style={{ color: "var(--color-muted)" }} htmlFor="nd-ap">Contraseña</label>
-              <input id="nd-ap" type="password" className="input" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} required minLength={8}
-                style={{ background: "var(--color-canvas)", color: "var(--color-ink)", borderColor: "var(--color-border)" }} />
+              <label
+                className="label text-xs"
+                style={{ color: "var(--color-muted)" }}
+                htmlFor="nd-ap"
+              >
+                Contraseña
+              </label>
+              <input
+                id="nd-ap"
+                type="password"
+                className="input"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                required
+                minLength={8}
+                style={{
+                  background: "var(--color-canvas)",
+                  color: "var(--color-ink)",
+                  borderColor: "var(--color-border)",
+                }}
+              />
             </div>
           </div>
           <p className="text-[11px] mt-2" style={{ color: "var(--color-muted)" }}>
@@ -211,8 +355,16 @@ export function NewDaycareModal({
         </fieldset>
 
         <div className="flex justify-end gap-2 mt-6">
-          <button type="button" className="btn btn-secondary" onClick={onClose}
-            style={{ background: "var(--color-canvas)", color: "var(--color-muted)", borderColor: "var(--color-border)" }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+            style={{
+              background: "var(--color-canvas)",
+              color: "var(--color-muted)",
+              borderColor: "var(--color-border)",
+            }}
+          >
             Cancelar
           </button>
           <button type="submit" className="btn btn-primary" disabled={!canSubmit || isLoading}>

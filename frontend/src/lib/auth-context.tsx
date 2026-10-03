@@ -138,7 +138,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("user", JSON.stringify(normalized));
     setDaycare(data.daycare);
     setEnabledModules((data.enabledModules ?? []) as ProductModuleId[]);
-    setUnits((data.units ?? []).map(normalizeBusinessUnit).filter((u): u is BusinessUnit => u !== null));
+    setUnits(
+      (data.units ?? []).map(normalizeBusinessUnit).filter((u): u is BusinessUnit => u !== null),
+    );
     setFullAccess(Boolean(data.fullAccess));
     return normalized;
   }, []);
@@ -277,7 +279,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const hasModules = useCallback(
-    (ids: readonly ProductModuleId[] | undefined) => !ids || ids.every((id) => enabledModules.includes(id)),
+    (ids: readonly ProductModuleId[] | undefined) =>
+      !ids || ids.every((id) => enabledModules.includes(id)),
     [enabledModules],
   );
 

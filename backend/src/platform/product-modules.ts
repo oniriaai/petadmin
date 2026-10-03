@@ -71,7 +71,8 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
   {
     id: "inventario",
     label: "Inventario",
-    description: "Artículos, niveles de stock con aviso de mínimo y movimientos de entrada, salida y ajuste.",
+    description:
+      "Artículos, niveles de stock con aviso de mínimo y movimientos de entrada, salida y ajuste.",
     backendModuleIds: ["inventory"],
   },
   {
@@ -104,7 +105,11 @@ export const TOGGLEABLE_PRODUCT_MODULES: readonly ProductModule[] = PRODUCT_MODU
 );
 
 /** Enabled by default when the console creates a daycare, subject to its purchased units. */
-export const DEFAULT_ENABLED_PRODUCT_MODULES: readonly string[] = ["reservas", "finanzas", "informes"];
+export const DEFAULT_ENABLED_PRODUCT_MODULES: readonly string[] = [
+  "reservas",
+  "finanzas",
+  "informes",
+];
 
 const byId = new Map(PRODUCT_MODULES.map((m) => [m.id, m]));
 const byBackendId = new Map<string, ProductModule>();
@@ -171,7 +176,9 @@ export function validateProductModules(modules: readonly ProductModule[] = PRODU
   for (const productModule of modules) {
     for (const required of productModule.requires ?? []) {
       if (!ids.has(required)) {
-        throw new Error(`Product module '${productModule.id}' requires unknown module '${required}'`);
+        throw new Error(
+          `Product module '${productModule.id}' requires unknown module '${required}'`,
+        );
       }
       if (required === productModule.id) {
         throw new Error(`Product module '${productModule.id}' cannot require itself`);

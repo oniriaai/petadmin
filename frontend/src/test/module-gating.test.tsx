@@ -20,7 +20,12 @@ interface SessionOptions {
   businessUnit?: string;
 }
 
-function session({ role = "admin", modules = [], fullAccess = false, businessUnit = "GLOBAL" }: SessionOptions = {}) {
+function session({
+  role = "admin",
+  modules = [],
+  fullAccess = false,
+  businessUnit = "GLOBAL",
+}: SessionOptions = {}) {
   const enabled = new Set<string>(modules);
   return {
     user: { id: "u1", username: "u", name: "U", role, businessUnit, daycareId: "d1" },
@@ -103,7 +108,10 @@ describe("entitlement gating", () => {
   it("explains a unit mismatch and offers the way out", () => {
     // The backend now refuses a module that does not serve the narrowed unit, so the route has
     // to say the same thing rather than mounting a page that fills with 403s.
-    mockUseAuth.mockReturnValue({ ...session({ modules: ["guarderia"] }), activeBusinessUnit: "GROOMING" });
+    mockUseAuth.mockReturnValue({
+      ...session({ modules: ["guarderia"] }),
+      activeBusinessUnit: "GROOMING",
+    });
     renderGuarded({ path: "/guarderia", requires: ["guarderia"], unit: "DAYCARE" });
 
     expect(screen.queryByText("contenido")).not.toBeInTheDocument();
@@ -113,14 +121,20 @@ describe("entitlement gating", () => {
   });
 
   it("allows a unit-specific route when that unit is selected", () => {
-    mockUseAuth.mockReturnValue({ ...session({ modules: ["guarderia"] }), activeBusinessUnit: "DAYCARE" });
+    mockUseAuth.mockReturnValue({
+      ...session({ modules: ["guarderia"] }),
+      activeBusinessUnit: "DAYCARE",
+    });
     renderGuarded({ path: "/guarderia", requires: ["guarderia"], unit: "DAYCARE" });
     expect(screen.getByText("contenido")).toBeInTheDocument();
   });
 
   it("allows a unit-specific route in the consolidated view", () => {
     // No unit selected means both, which is what the backend's scope resolves to as well.
-    mockUseAuth.mockReturnValue({ ...session({ modules: ["guarderia"] }), activeBusinessUnit: null });
+    mockUseAuth.mockReturnValue({
+      ...session({ modules: ["guarderia"] }),
+      activeBusinessUnit: null,
+    });
     renderGuarded({ path: "/guarderia", requires: ["guarderia"], unit: "DAYCARE" });
     expect(screen.getByText("contenido")).toBeInTheDocument();
   });
@@ -177,7 +191,14 @@ describe("platform console routing", () => {
     render(
       <MemoryRouter initialEntries={["/platform"]}>
         <Routes>
-          <Route path="/platform" element={<SuperAdminRoute><div>consola</div></SuperAdminRoute>} />
+          <Route
+            path="/platform"
+            element={
+              <SuperAdminRoute>
+                <div>consola</div>
+              </SuperAdminRoute>
+            }
+          />
           <Route path="/" element={<div>inicio</div>} />
         </Routes>
       </MemoryRouter>,
@@ -191,7 +212,14 @@ describe("platform console routing", () => {
     render(
       <MemoryRouter initialEntries={["/platform"]}>
         <Routes>
-          <Route path="/platform" element={<SuperAdminRoute><div>consola</div></SuperAdminRoute>} />
+          <Route
+            path="/platform"
+            element={
+              <SuperAdminRoute>
+                <div>consola</div>
+              </SuperAdminRoute>
+            }
+          />
         </Routes>
       </MemoryRouter>,
     );
@@ -212,7 +240,9 @@ describe("registry", () => {
         {
           id: "x",
           label: "X",
-          routes: [{ path: "/x", component: () => null, requires: ["no-such-module" as ProductModuleId] }],
+          routes: [
+            { path: "/x", component: () => null, requires: ["no-such-module" as ProductModuleId] },
+          ],
         },
       ]),
     ).toThrow(/Unknown product module/);
@@ -228,7 +258,14 @@ describe("registry", () => {
           navigation: {
             label: "X",
             icon: (() => null) as never,
-            items: [{ to: "/x", label: "X", icon: (() => null) as never, requires: ["nope" as ProductModuleId] }],
+            items: [
+              {
+                to: "/x",
+                label: "X",
+                icon: (() => null) as never,
+                requires: ["nope" as ProductModuleId],
+              },
+            ],
           },
         },
       ]),
@@ -245,6 +282,13 @@ describe("registry", () => {
       .map((route) => route.path)
       .sort();
 
-    expect(free).toEqual(["/", "/animales", "/clientes", "/configuracion", "/guia", "/herramientas"]);
+    expect(free).toEqual([
+      "/",
+      "/animales",
+      "/clientes",
+      "/configuracion",
+      "/guia",
+      "/herramientas",
+    ]);
   });
 });

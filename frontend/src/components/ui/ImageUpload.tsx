@@ -53,7 +53,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
           },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || 1)
+              (progressEvent.loaded * 100) / (progressEvent.total || 1),
             );
             setProgress(percentCompleted);
           },
@@ -77,15 +77,15 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
 
   const removeImage = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     try {
       setDeleting(true);
-      
+
       // Call delete callback if provided
       if (value && onDelete) {
         await onDelete(value);
       }
-      
+
       setPreview(null);
       onChange("");
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -100,16 +100,20 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
   return (
     <div className="space-y-2">
       <label className="label">Foto de perfil</label>
-      <div 
+      <div
         onClick={() => fileInputRef.current?.click()}
         className={`relative w-40 h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden
           ${preview ? "border-transparent" : "border-gray-300 hover:border-violet-500 hover:bg-violet-50"}`}
       >
         {preview ? (
           <>
-            <img src={preview} alt="Vista previa de la foto" className="w-full h-full object-cover" />
+            <img
+              src={preview}
+              alt="Vista previa de la foto"
+              className="w-full h-full object-cover"
+            />
             {!uploading && !deleting && (
-              <button 
+              <button
                 onClick={removeImage}
                 className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
               >
@@ -126,21 +130,23 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
 
         {uploading && (
           <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-white">
-            <div className="mb-2"><Spinner size={24} /></div>
+            <div className="mb-2">
+              <Spinner size={24} />
+            </div>
             <span className="text-xs font-bold">{progress}%</span>
             <div className="w-24 h-1.5 bg-gray-700 rounded-full mt-2 overflow-hidden">
-              <div 
-                className="h-full bg-violet-500 transition-all duration-300" 
+              <div
+                className="h-full bg-violet-500 transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
           </div>
         )}
 
-        <input 
-          type="file" 
-          className="hidden" 
-          ref={fileInputRef} 
+        <input
+          type="file"
+          className="hidden"
+          ref={fileInputRef}
           accept="image/*"
           onChange={handleFileChange}
           disabled={uploading}

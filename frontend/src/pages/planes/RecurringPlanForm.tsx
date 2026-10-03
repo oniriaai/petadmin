@@ -55,7 +55,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const selectedClient = clients.find(c => c.id === clientId);
+  const selectedClient = clients.find((c) => c.id === clientId);
 
   useEffect(() => {
     if (!open) return;
@@ -151,16 +151,12 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
   }
 
   function toggleDay(day: string) {
-    setDaysOfWeek(prev =>
-      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-    );
+    setDaysOfWeek((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
 
   function togglePet(petId: string) {
-    setSelectedPets(prev =>
-      prev.includes(petId)
-        ? prev.filter(p => p !== petId)
-        : [...prev, petId]
+    setSelectedPets((prev) =>
+      prev.includes(petId) ? prev.filter((p) => p !== petId) : [...prev, petId],
     );
   }
 
@@ -200,11 +196,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -212,13 +204,13 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
               <select
                 className="input"
                 value={clientId}
-                onChange={e => {
+                onChange={(e) => {
                   setClientId(e.target.value);
                   setSelectedPets([]);
                 }}
               >
                 <option value="">— Seleccionar cliente —</option>
-                {clients.map(c => (
+                {clients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.lastName}, {c.firstName}
                   </option>
@@ -231,7 +223,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
               <select
                 className="input"
                 value={service}
-                onChange={e => setService(e.target.value)}
+                onChange={(e) => setService(e.target.value)}
               >
                 <option value="GUARDERIA">Guardería</option>
                 <option value="PELUQUERIA_CANINA">Peluquería Canina</option>
@@ -247,7 +239,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                 className="input"
                 type="date"
                 value={startDate}
-                onChange={e => setStartDate(e.target.value)}
+                onChange={(e) => setStartDate(e.target.value)}
               />
             </div>
 
@@ -257,7 +249,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                 className="input"
                 type="date"
                 value={endDate}
-                onChange={e => setEndDate(e.target.value)}
+                onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
 
@@ -267,7 +259,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                 className="input"
                 type="time"
                 value={startTime}
-                onChange={e => setStartTime(e.target.value)}
+                onChange={(e) => setStartTime(e.target.value)}
               />
             </div>
 
@@ -277,19 +269,15 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                 className="input"
                 type="time"
                 value={endTime}
-                onChange={e => setEndTime(e.target.value)}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
 
             <div className="col-span-2">
               <label className="label">Sala (opcional)</label>
-              <select
-                className="input"
-                value={roomId}
-                onChange={e => setRoomId(e.target.value)}
-              >
+              <select className="input" value={roomId} onChange={(e) => setRoomId(e.target.value)}>
                 <option value="">— Sin sala asignada —</option>
-                {rooms.map(r => (
+                {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name} (cap. {r.capacity})
                   </option>
@@ -301,7 +289,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
           <div>
             <label className="label mb-2">Días de la semana *</label>
             <div className="grid grid-cols-7 gap-2">
-              {dayLabels.map(day => (
+              {dayLabels.map((day) => (
                 <button
                   key={day.num}
                   type="button"
@@ -323,7 +311,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
             <div>
               <label className="label">Mascotas</label>
               <div className="flex flex-wrap gap-2">
-                {selectedClient.pets.map(pet => (
+                {selectedClient.pets.map((pet) => (
                   <button
                     key={pet.id}
                     type="button"
@@ -347,7 +335,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
               className="input"
               rows={2}
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
               placeholder="Instrucciones o detalles adicionales…"
             />
           </div>

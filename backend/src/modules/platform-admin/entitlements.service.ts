@@ -77,7 +77,10 @@ function assertToggleable(moduleId: string): void {
   // would be silently ignored by the gate, so refusing here keeps the console honest about
   // what it actually changed.
   if (productModule.core) {
-    throw new AuthzError(400, `El módulo "${productModule.label}" es parte del núcleo y no se puede deshabilitar`);
+    throw new AuthzError(
+      400,
+      `El módulo "${productModule.label}" es parte del núcleo y no se puede deshabilitar`,
+    );
   }
   if (productModule.platformOnly) {
     throw new AuthzError(400, `El módulo "${productModule.label}" no se asigna a una guardería`);

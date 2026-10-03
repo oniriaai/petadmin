@@ -32,10 +32,10 @@ export const logger = pino({
   redact: {
     // Tokens, cookies and passwords must never be written to a log that someone else reads.
     paths: [
-      'req.headers.authorization',
-      'req.headers.cookie',
-      'req.body.password',
-      'req.body.admin.password',
+      "req.headers.authorization",
+      "req.headers.cookie",
+      "req.body.password",
+      "req.body.admin.password",
     ],
     remove: true,
   },
@@ -75,7 +75,12 @@ export const requestLogger = pinoHttp({
     if (!user) return {};
     // The tenant is the field worth filtering on; the username is here because a support
     // request names a person, not an id.
-    return { daycareId: user.daycareId, userId: user.userId, username: user.username, role: user.role };
+    return {
+      daycareId: user.daycareId,
+      userId: user.userId,
+      username: user.username,
+      role: user.role,
+    };
   },
   serializers: {
     req(req) {
@@ -131,12 +136,7 @@ export function initErrorReporting(): void {
  * deliberately generic — internals are not the caller's business — but the request id is
  * returned so a user report and a log line can be joined.
  */
-export function errorHandler(
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
+export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction): void {
   const requestId = req.id ?? "unknown";
   const context = {
     requestId,

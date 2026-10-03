@@ -53,9 +53,14 @@ function fakeReq(overrides: Record<string, unknown> = {}) {
 {
   const res = fakeRes();
   let nextCalled = false;
-  errorHandler(new Error("la contraseña de la base de datos es hunter2"), fakeReq(), res as any, () => {
-    nextCalled = true;
-  });
+  errorHandler(
+    new Error("la contraseña de la base de datos es hunter2"),
+    fakeReq(),
+    res as any,
+    () => {
+      nextCalled = true;
+    },
+  );
 
   assert.equal(res.statusCode, 500, "An unhandled error must answer 500");
   const body = res.body as { message: string; requestId: string };

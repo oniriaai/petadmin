@@ -26,10 +26,11 @@ providersRouter.get("/", async (req, res) => {
     const where: Record<string, unknown> = { ...buildDaycareWhere(req) };
     if (status === "active") where.isActive = true;
     else if (status === "inactive") where.isActive = false;
-    if (search) where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { product: { contains: search, mode: "insensitive" } },
-    ];
+    if (search)
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { product: { contains: search, mode: "insensitive" } },
+      ];
     const page = readPage(req);
     const [providers, total] = await Promise.all([
       prisma.provider.findMany({
@@ -56,7 +57,10 @@ providersRouter.get("/:id", async (req, res) => {
       where: { id: req.params.id, ...buildDaycareWhere(req) },
       include: { payables: { orderBy: { createdAt: "desc" }, take: 20 } },
     });
-    if (!p) { res.status(404).json({ message: "Proveedor no encontrado" }); return; }
+    if (!p) {
+      res.status(404).json({ message: "Proveedor no encontrado" });
+      return;
+    }
     res.json(p);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
@@ -68,7 +72,10 @@ providersRouter.get("/:id", async (req, res) => {
 providersRouter.post("/", async (req, res) => {
   try {
     const parsed = schema.safeParse(req.body);
-    if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
+    if (!parsed.success) {
+      res.status(400).json({ message: "Datos inválidos" });
+      return;
+    }
     const { email, ...rest } = parsed.data;
     const p = await prisma.provider.create({
       data: { ...rest, email: email || null, daycareId: getRequiredDaycareId(req) },
@@ -84,16 +91,22 @@ providersRouter.post("/", async (req, res) => {
 providersRouter.put("/:id", async (req, res) => {
   try {
     const parsed = schema.partial().safeParse(req.body);
-    if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
+    if (!parsed.success) {
+      res.status(400).json({ message: "Datos inválidos" });
+      return;
+    }
     const existing = await prisma.provider.findFirst({
       where: { id: req.params.id, ...buildDaycareWhere(req) },
       select: { id: true },
     });
-    if (!existing) { res.status(404).json({ message: "Proveedor no encontrado" }); return; }
+    if (!existing) {
+      res.status(404).json({ message: "Proveedor no encontrado" });
+      return;
+    }
     const { email, ...rest } = parsed.data;
     const p = await prisma.provider.update({
       where: { id: existing.id },
-      data: { ...rest, email: email !== undefined ? (email || null) : undefined },
+      data: { ...rest, email: email !== undefined ? email || null : undefined },
     });
     res.json(p);
   } catch (error) {
@@ -109,7 +122,10 @@ providersRouter.delete("/:id", async (req, res) => {
       where: { id: req.params.id, ...buildDaycareWhere(req) },
       select: { id: true },
     });
-    if (!existing) { res.status(404).json({ message: "Proveedor no encontrado" }); return; }
+    if (!existing) {
+      res.status(404).json({ message: "Proveedor no encontrado" });
+      return;
+    }
     await prisma.provider.update({ where: { id: existing.id }, data: { isActive: false } });
     res.json({ ok: true });
   } catch (error) {

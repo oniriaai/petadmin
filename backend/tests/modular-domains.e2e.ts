@@ -32,7 +32,11 @@ async function test(name: string, fn: () => Promise<void>): Promise<void> {
   }
 }
 
-async function loginAs(username: string, password: string, businessUnit?: "DAYCARE" | "GROOMING"): Promise<string> {
+async function loginAs(
+  username: string,
+  password: string,
+  businessUnit?: "DAYCARE" | "GROOMING",
+): Promise<string> {
   const client = axios.create({ baseURL: BASE_URL });
   const response = await client.post("/auth/login", {
     username,
@@ -64,7 +68,10 @@ async function run() {
 
   // 2. Setup client and pet
   await test("Preparar cliente y mascota compartida en Core", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${adminToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${adminToken}` },
+    });
     const cRes = await client.post("/clients", {
       firstName: "Modular",
       lastName: "Tester",
@@ -83,7 +90,10 @@ async function run() {
     testPetId = pRes.data.id;
 
     // Crear sala con capacidad para pruebas de guardería
-    const kdClient = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${daycareToken}` } });
+    const kdClient = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${daycareToken}` },
+    });
     const newRoom = await kdClient.post("/rooms", {
       name: `Sala Test Modular ${Date.now()}`,
       capacity: 50,
@@ -95,14 +105,21 @@ async function run() {
 
   // 3. Peluquería Tests
   await test("Peluquería: Consultar catálogo de servicios con duraciones", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${groomingToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${groomingToken}` },
+    });
     const res = await client.get("/peluqueria/services");
     if (!Array.isArray(res.data) || res.data.length === 0) throw new Error("Catálogo vacío");
-    if (!res.data[0].durationMinutes || !res.data[0].basePrice) throw new Error("Falta duración o precio base");
+    if (!res.data[0].durationMinutes || !res.data[0].basePrice)
+      throw new Error("Falta duración o precio base");
   });
 
   await test("Peluquería: Agendar cita por fecha, servicio y duración", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${groomingToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${groomingToken}` },
+    });
     const startTime = new Date();
     startTime.setHours(startTime.getHours() + 2);
 
@@ -120,12 +137,16 @@ async function run() {
 
     if (!res.data.id) throw new Error("ID de cita no retornado");
     createdAppointmentId = res.data.id;
-    if (res.data.businessUnit !== "GROOMING") throw new Error("Unidad de negocio debe ser GROOMING");
+    if (res.data.businessUnit !== "GROOMING")
+      throw new Error("Unidad de negocio debe ser GROOMING");
   });
 
   await test("Peluquería: Transición de estados de cita (Recepcionada -> En Proceso -> Listo)", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${groomingToken}` } });
-    
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${groomingToken}` },
+    });
+
     // Recepcionada
     let res = await client.patch(`/peluqueria/appointments/${createdAppointmentId}/status`, {
       status: "RECEPCIONADA",
@@ -147,32 +168,43 @@ async function run() {
   });
 
   await test("Peluquería: Completar y registrar cobro independiente para Pethijos", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${groomingToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${groomingToken}` },
+    });
     const res = await client.post(`/peluqueria/appointments/${createdAppointmentId}/complete`, {
       paymentMethod: "EFECTIVO",
-      amount: 15.70, // Saldo
+      amount: 15.7, // Saldo
       notes: "Cobro en mostrador Pethijos",
     });
 
     if (res.data.status !== "COMPLETADA") throw new Error("Estado no es COMPLETADA");
-    if (!res.data.incomes || res.data.incomes.length === 0) throw new Error("Ingreso no registrado");
+    if (!res.data.incomes || res.data.incomes.length === 0)
+      throw new Error("Ingreso no registrado");
     const lastIncome = res.data.incomes[res.data.incomes.length - 1];
     if (lastIncome.businessUnit !== "GROOMING") throw new Error("Ingreso no pertenece a GROOMING");
   });
 
   await test("Peluquería: Aislamiento - Rol daycare no puede acceder a Peluquería", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${daycareToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${daycareToken}` },
+    });
     try {
       await client.get("/peluqueria/appointments");
       throw new Error("Kinderdog no debería tener acceso a peluquería");
     } catch (err: any) {
-      if (err.response?.status !== 403) throw new Error(`Esperado 403, recibido ${err.response?.status}`);
+      if (err.response?.status !== 403)
+        throw new Error(`Esperado 403, recibido ${err.response?.status}`);
     }
   });
 
   // 4. Guardería Tests
   await test("Guardería: Consultar ocupación en vivo y semáforo de salas", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${daycareToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${daycareToken}` },
+    });
     const res = await client.get("/guarderia/occupancy");
     if (!Array.isArray(res.data) || res.data.length === 0) throw new Error("Salas no retornadas");
     const room = res.data.find((r: any) => r.id === testRoomId);
@@ -183,7 +215,10 @@ async function run() {
   });
 
   await test("Guardería: Registrar check-in con validación de capacidad de sala", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${daycareToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${daycareToken}` },
+    });
     const res = await client.post("/guarderia/attendance/check-in", {
       petId: testPetId,
       clientId: testClientId,
@@ -203,7 +238,10 @@ async function run() {
   });
 
   await test("Guardería: Registrar check-out con cobro independiente para Kinderdog", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${daycareToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${daycareToken}` },
+    });
     const res = await client.post("/guarderia/attendance/check-out", {
       checkInOutId: createdCheckInOutId,
       createIncome: true,
@@ -215,7 +253,10 @@ async function run() {
     if (!res.data.checkOutTime) throw new Error("checkOutTime no registrado");
 
     // Verificar que el ingreso de guardería quedó en Kinderdog
-    const incClient = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${daycareToken}` } });
+    const incClient = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${daycareToken}` },
+    });
     const incRes = await incClient.get("/incomes");
     const foundIncome = incRes.data.find((inc: any) => inc.concept?.includes("Toby Modular"));
     if (!foundIncome || foundIncome.businessUnit !== "DAYCARE") {
@@ -224,20 +265,24 @@ async function run() {
   });
 
   await test("Guardería: Aislamiento - Rol grooming no puede acceder a Guardería", async () => {
-    const client = axios.create({ baseURL: BASE_URL, headers: { Authorization: `Bearer ${groomingToken}` } });
+    const client = axios.create({
+      baseURL: BASE_URL,
+      headers: { Authorization: `Bearer ${groomingToken}` },
+    });
     try {
       await client.get("/guarderia/occupancy");
       throw new Error("Pethijos no debería tener acceso a guardería");
     } catch (err: any) {
-      if (err.response?.status !== 403) throw new Error(`Esperado 403, recibido ${err.response?.status}`);
+      if (err.response?.status !== 403)
+        throw new Error(`Esperado 403, recibido ${err.response?.status}`);
     }
   });
 
   // Report
   console.log("\n============================================================");
   console.log("📊 Resumen de Pruebas de Módulos:");
-  const passed = results.filter(r => r.passed).length;
-  const failed = results.filter(r => !r.passed).length;
+  const passed = results.filter((r) => r.passed).length;
+  const failed = results.filter((r) => !r.passed).length;
   console.log(`   Pasadas: ${passed}/${results.length}`);
   console.log(`   Fallidas: ${failed}/${results.length}`);
   console.log("============================================================\n");

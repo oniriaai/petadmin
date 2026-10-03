@@ -4,11 +4,7 @@ import { z } from "zod";
 import { ASSIGNABLE_TENANT_ROLES, handleAuthzError } from "../../middleware/auth";
 import { getRequiredDaycareId } from "../../core/tenancy/scope";
 import { invalidatePrincipal } from "../../core/tenancy/principal";
-import {
-  listTenantUsers,
-  provisionUser,
-  updateUser,
-} from "../platform-admin/daycares.service";
+import { listTenantUsers, provisionUser, updateUser } from "../platform-admin/daycares.service";
 
 /**
  * A daycare administering its own staff.
@@ -33,7 +29,11 @@ import {
 export const usersRouter = Router();
 
 const createSchema = z.object({
-  username: z.string().min(3).max(40).regex(/^[a-zA-Z0-9._-]+$/, "Usuario inválido"),
+  username: z
+    .string()
+    .min(3)
+    .max(40)
+    .regex(/^[a-zA-Z0-9._-]+$/, "Usuario inválido"),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
   name: z.string().min(1).max(120),
   role: z.enum(ASSIGNABLE_TENANT_ROLES),
@@ -88,7 +88,10 @@ usersRouter.patch("/:id", async (req, res) => {
     // mid-request, and the last-admin guard below cannot see the difference between "someone
     // else" and "me". Changing one's own name or password is fine.
     const isSelf = req.params.id === req.user?.userId;
-    if (isSelf && (parsed.data.isActive === false || (parsed.data.role && parsed.data.role !== "admin"))) {
+    if (
+      isSelf &&
+      (parsed.data.isActive === false || (parsed.data.role && parsed.data.role !== "admin"))
+    ) {
       res.status(409).json({
         message: "No puedes desactivar ni cambiar el rol de tu propia cuenta",
         code: "SELF_DEMOTION",

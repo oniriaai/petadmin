@@ -15,7 +15,12 @@ import axios from "axios";
 const BASE_URL = "http://localhost:3001/api/v1";
 const LOGIN_LIMIT = Number(process.env.RATE_LIMIT_LOGIN ?? 10);
 
-interface TestResult { name: string; passed: boolean; error?: string; duration: number }
+interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+  duration: number;
+}
 const results: TestResult[] = [];
 
 async function test(name: string, fn: () => Promise<void>): Promise<void> {

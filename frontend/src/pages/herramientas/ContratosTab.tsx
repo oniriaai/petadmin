@@ -56,7 +56,11 @@ export function ContratosTab() {
     try {
       setContracts(await api.get<Contract[]>("/contracts"));
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al cargar los contratos");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Error al cargar los contratos",
+      );
     } finally {
       setLoading(false);
     }
@@ -71,7 +75,11 @@ export function ContratosTab() {
       await api.patch(`/contracts/${contract.id}/status`, { status });
       await load();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al cambiar el estado");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Error al cambiar el estado",
+      );
     }
   }
 
@@ -90,13 +98,20 @@ export function ContratosTab() {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
           {error}
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <select className="input w-auto" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+        <select
+          className="input w-auto"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
           <option value="">Todos los estados</option>
           {STATUSES.map((status) => (
             <option key={status} value={status}>
@@ -115,7 +130,9 @@ export function ContratosTab() {
         <div className="card p-10 text-center">
           <FileText size={28} className="mx-auto mb-2 text-gray-300" />
           <p className="text-sm text-muted">
-            {contracts.length === 0 ? "Todavía no hay contratos registrados." : "Ningún contrato con ese estado."}
+            {contracts.length === 0
+              ? "Todavía no hay contratos registrados."
+              : "Ningún contrato con ese estado."}
           </p>
         </div>
       ) : (
@@ -132,12 +149,15 @@ export function ContratosTab() {
                     <Badge color={STATUS_COLORS[status]}>{STATUS_LABELS[status]}</Badge>
                   </div>
                   <p className="text-sm text-muted mt-0.5">
-                    {contract.client ? `${contract.client.firstName} ${contract.client.lastName}` : "Sin tutor"}
+                    {contract.client
+                      ? `${contract.client.firstName} ${contract.client.lastName}`
+                      : "Sin tutor"}
                     {contract.pet ? ` · ${contract.pet.name}` : ""}
                   </p>
                   {(contract.startDate || contract.endDate) && (
                     <p className="text-xs text-muted mt-1">
-                      {contract.startDate ? fmt(contract.startDate) : "—"} → {contract.endDate ? fmt(contract.endDate) : "—"}
+                      {contract.startDate ? fmt(contract.startDate) : "—"} →{" "}
+                      {contract.endDate ? fmt(contract.endDate) : "—"}
                     </p>
                   )}
                   {contract.notes && <p className="text-xs text-muted mt-1">{contract.notes}</p>}
@@ -155,7 +175,11 @@ export function ContratosTab() {
                       </option>
                     ))}
                   </select>
-                  <button className="btn-ghost btn-sm text-red-600" onClick={() => void remove(contract)} aria-label={`Eliminar ${contract.name}`}>
+                  <button
+                    className="btn-ghost btn-sm text-red-600"
+                    onClick={() => void remove(contract)}
+                    aria-label={`Eliminar ${contract.name}`}
+                  >
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -191,7 +215,10 @@ function ContractForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    clientsApi.list().then(setClients).catch(() => setClients([]));
+    clientsApi
+      .list()
+      .then(setClients)
+      .catch(() => setClients([]));
   }, []);
 
   // The pet list depends on the tutor: a contract must not pair a pet with someone else's owner.
@@ -233,18 +260,38 @@ function ContractForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
     <Modal open onClose={onClose} title="Nuevo contrato">
       <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <div
+            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+            role="alert"
+          >
             {error}
           </div>
         )}
         <div>
-          <label className="label" htmlFor="ct-name">Nombre del contrato</label>
-          <input id="ct-name" className="input" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Contrato de estancia 2026" />
+          <label className="label" htmlFor="ct-name">
+            Nombre del contrato
+          </label>
+          <input
+            id="ct-name"
+            className="input"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Contrato de estancia 2026"
+          />
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="label" htmlFor="ct-client">Tutor</label>
-            <select id="ct-client" className="input" required value={clientId} onChange={(e) => setClientId(e.target.value)}>
+            <label className="label" htmlFor="ct-client">
+              Tutor
+            </label>
+            <select
+              id="ct-client"
+              className="input"
+              required
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+            >
               <option value="">Selecciona un tutor</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
@@ -254,29 +301,65 @@ function ContractForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="ct-pet">Perrhijo (opcional)</label>
-            <select id="ct-pet" className="input" value={petId} onChange={(e) => setPetId(e.target.value)} disabled={!clientId}>
+            <label className="label" htmlFor="ct-pet">
+              Perrhijo (opcional)
+            </label>
+            <select
+              id="ct-pet"
+              className="input"
+              value={petId}
+              onChange={(e) => setPetId(e.target.value)}
+              disabled={!clientId}
+            >
               <option value="">Todos / no aplica</option>
               {pets.map((pet) => (
-                <option key={pet.id} value={pet.id}>{pet.name}</option>
+                <option key={pet.id} value={pet.id}>
+                  {pet.name}
+                </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="label" htmlFor="ct-start">Inicio</label>
-            <input id="ct-start" className="input" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <label className="label" htmlFor="ct-start">
+              Inicio
+            </label>
+            <input
+              id="ct-start"
+              className="input"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
           <div>
-            <label className="label" htmlFor="ct-end">Fin</label>
-            <input id="ct-end" className="input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <label className="label" htmlFor="ct-end">
+              Fin
+            </label>
+            <input
+              id="ct-end"
+              className="input"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </div>
         </div>
         <div>
-          <label className="label" htmlFor="ct-notes">Notas</label>
-          <textarea id="ct-notes" className="input" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <label className="label" htmlFor="ct-notes">
+            Notas
+          </label>
+          <textarea
+            id="ct-notes"
+            className="input"
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
         </div>
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button type="button" className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
           <button type="submit" className="btn-primary" disabled={saving || !clientId}>
             {saving ? <Spinner size={14} /> : null} Crear contrato
           </button>

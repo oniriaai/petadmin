@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { buildPetPhotoKey, daycarePrefix, resolveObjectKey, sanitizeSegment } from "../src/core/storage/object-keys";
+import {
+  buildPetPhotoKey,
+  daycarePrefix,
+  resolveObjectKey,
+  sanitizeSegment,
+} from "../src/core/storage/object-keys";
 
 const BUCKET = "pethijos-media";
 const ENDPOINT = "s3.us-east-005.backblazeb2.com";
@@ -23,25 +28,56 @@ assert.equal(sanitizeSegment("   "), null);
 assert.ok((sanitizeSegment("x".repeat(500)) ?? "").length <= 80, "segments are length-capped");
 
 // --- buildPetPhotoKey -------------------------------------------------------
-const key = buildPetPhotoKey({ daycareId: "daycare_pethijos", petName: "Max", ownerName: "María", fileName: "foto perfil.jpg", timestamp: 1 });
+const key = buildPetPhotoKey({
+  daycareId: "daycare_pethijos",
+  petName: "Max",
+  ownerName: "María",
+  fileName: "foto perfil.jpg",
+  timestamp: 1,
+});
 assert.equal(key, "daycares/daycare_pethijos/pets/Max_Mar_a/1-foto_perfil.jpg");
 
 // Two daycares with the same pet and owner names must not share a prefix.
-const a = buildPetPhotoKey({ daycareId: "daycare_a", petName: "Toby", ownerName: "García", fileName: "x.jpg", timestamp: 1 });
-const b = buildPetPhotoKey({ daycareId: "daycare_b", petName: "Toby", ownerName: "García", fileName: "x.jpg", timestamp: 1 });
+const a = buildPetPhotoKey({
+  daycareId: "daycare_a",
+  petName: "Toby",
+  ownerName: "García",
+  fileName: "x.jpg",
+  timestamp: 1,
+});
+const b = buildPetPhotoKey({
+  daycareId: "daycare_b",
+  petName: "Toby",
+  ownerName: "García",
+  fileName: "x.jpg",
+  timestamp: 1,
+});
 assert.notEqual(a, b, "identical pet/owner names in different daycares must not collide");
 assert.ok(a.startsWith(daycarePrefix("daycare_a")), a);
 assert.ok(b.startsWith(daycarePrefix("daycare_b")), b);
-assert.equal(a.startsWith(daycarePrefix("daycare_b")), false, "one tenant's prefix must not match another's");
+assert.equal(
+  a.startsWith(daycarePrefix("daycare_b")),
+  false,
+  "one tenant's prefix must not match another's",
+);
 
 // A hostile daycareId cannot break out of the tenant segment either.
-const injected = buildPetPhotoKey({ daycareId: "../other", petName: "Max", ownerName: "M", fileName: "x.jpg", timestamp: 1 });
+const injected = buildPetPhotoKey({
+  daycareId: "../other",
+  petName: "Max",
+  ownerName: "M",
+  fileName: "x.jpg",
+  timestamp: 1,
+});
 assert.equal(injected.split("/").length, 5, injected);
 assert.ok(injected.startsWith("daycares/"), injected);
 for (const segment of injected.split("/")) {
   assert.ok(segment !== "." && segment !== ".." && segment.length > 0, injected);
 }
-assert.throws(() => buildPetPhotoKey({ daycareId: "...", petName: "Max", ownerName: "M", fileName: "x.jpg" }), /daycareId inválido/);
+assert.throws(
+  () => buildPetPhotoKey({ daycareId: "...", petName: "Max", ownerName: "M", fileName: "x.jpg" }),
+  /daycareId inválido/,
+);
 
 // A hostile petName cannot escape the pets/ prefix (this was the live traversal bug).
 const hostile = buildPetPhotoKey({
@@ -51,7 +87,10 @@ const hostile = buildPetPhotoKey({
   fileName: "../../x.jpg",
   timestamp: 1,
 });
-assert.ok(hostile.startsWith("daycares/daycare_pethijos/pets/"), `expected tenant prefix, got ${hostile}`);
+assert.ok(
+  hostile.startsWith("daycares/daycare_pethijos/pets/"),
+  `expected tenant prefix, got ${hostile}`,
+);
 const hostileSegments = hostile.split("/");
 assert.equal(hostileSegments.length, 5, `expected exactly 5 segments, got ${hostile}`);
 for (const segment of hostileSegments) {
@@ -60,11 +99,20 @@ for (const segment of hostileSegments) {
 }
 
 // Empty-ish input still produces a well-formed key rather than "pets//-".
-const fallback = buildPetPhotoKey({ daycareId: "d1", petName: "  ", ownerName: "...", fileName: "", timestamp: 7 });
+const fallback = buildPetPhotoKey({
+  daycareId: "d1",
+  petName: "  ",
+  ownerName: "...",
+  fileName: "",
+  timestamp: 7,
+});
 assert.equal(fallback, "daycares/d1/pets/mascota_tutor/7-archivo");
 
 // --- resolveObjectKey -------------------------------------------------------
-assert.equal(resolveObjectKey("pets/Max_Maria/1-a.jpg", BUCKET, ENDPOINT), "pets/Max_Maria/1-a.jpg");
+assert.equal(
+  resolveObjectKey("pets/Max_Maria/1-a.jpg", BUCKET, ENDPOINT),
+  "pets/Max_Maria/1-a.jpg",
+);
 // virtual-host style
 assert.equal(
   resolveObjectKey(`https://${BUCKET}.${ENDPOINT}/pets/Max/1-a.jpg`, BUCKET, ENDPOINT),
@@ -83,7 +131,11 @@ assert.equal(
 // refusals
 assert.equal(resolveObjectKey("", BUCKET, ENDPOINT), null);
 assert.equal(resolveObjectKey("   ", BUCKET, ENDPOINT), null);
-assert.equal(resolveObjectKey("../../etc/passwd", BUCKET, ENDPOINT), null, "traversal must be refused");
+assert.equal(
+  resolveObjectKey("../../etc/passwd", BUCKET, ENDPOINT),
+  null,
+  "traversal must be refused",
+);
 assert.equal(resolveObjectKey("pets/../../etc", BUCKET, ENDPOINT), null);
 assert.equal(resolveObjectKey("pets//double", BUCKET, ENDPOINT), null);
 assert.equal(resolveObjectKey("pets\\win", BUCKET, ENDPOINT), null);

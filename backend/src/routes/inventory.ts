@@ -18,19 +18,19 @@ const itemSchema = z.object({
 
 inventoryRouter.get("/items", async (req, res) => {
   try {
-  const { lowStock } = req.query as Record<string, string>;
-  // Bounded but deliberately NOT paginated. `lowStock` is applied below in JS because it is a
-  // column-to-column comparison (`currentStock <= minStock`) that Prisma cannot express in a
-  // `where`; filtering after a page has been taken would return a short page and a total that
-  // disagrees with it. A tenant's stock list is small, so a cap is the right trade here —
-  // moving the filter into the query would mean raw SQL, outside the tenancy helpers.
-  const items = await prisma.inventoryItem.findMany({
-    where: { ...buildScopeWhere(req), isActive: true },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-    take: DEFAULT_LIMIT,
-  });
-  const result = lowStock === "true" ? items.filter(i => i.currentStock <= i.minStock) : items;
-  res.json(result);
+    const { lowStock } = req.query as Record<string, string>;
+    // Bounded but deliberately NOT paginated. `lowStock` is applied below in JS because it is a
+    // column-to-column comparison (`currentStock <= minStock`) that Prisma cannot express in a
+    // `where`; filtering after a page has been taken would return a short page and a total that
+    // disagrees with it. A tenant's stock list is small, so a cap is the right trade here —
+    // moving the filter into the query would mean raw SQL, outside the tenancy helpers.
+    const items = await prisma.inventoryItem.findMany({
+      where: { ...buildScopeWhere(req), isActive: true },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+      take: DEFAULT_LIMIT,
+    });
+    const result = lowStock === "true" ? items.filter((i) => i.currentStock <= i.minStock) : items;
+    res.json(result);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -40,11 +40,16 @@ inventoryRouter.get("/items", async (req, res) => {
 
 inventoryRouter.post("/items", async (req, res) => {
   try {
-  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
-  const parsed = itemSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
-  const item = await prisma.inventoryItem.create({ data: { ...parsed.data, businessUnit: bu, daycareId: getRequiredDaycareId(req) } });
-  res.status(201).json(item);
+    const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
+    const parsed = itemSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Datos inválidos" });
+      return;
+    }
+    const item = await prisma.inventoryItem.create({
+      data: { ...parsed.data, businessUnit: bu, daycareId: getRequiredDaycareId(req) },
+    });
+    res.status(201).json(item);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -54,13 +59,25 @@ inventoryRouter.post("/items", async (req, res) => {
 
 inventoryRouter.put("/items/:id", async (req, res) => {
   try {
-  const parsed = itemSchema.partial().safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
-  const current = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
-  if (!current) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertRecordAccess(req, current);
-  const item = await prisma.inventoryItem.update({ where: { id: req.params.id }, data: parsed.data });
-  res.json(item);
+    const parsed = itemSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Datos inválidos" });
+      return;
+    }
+    const current = await prisma.inventoryItem.findUnique({
+      where: { id: req.params.id },
+      select: { businessUnit: true, daycareId: true },
+    });
+    if (!current) {
+      res.status(404).json({ message: "Item no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, current);
+    const item = await prisma.inventoryItem.update({
+      where: { id: req.params.id },
+      data: parsed.data,
+    });
+    res.json(item);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -70,11 +87,17 @@ inventoryRouter.put("/items/:id", async (req, res) => {
 
 inventoryRouter.delete("/items/:id", async (req, res) => {
   try {
-  const current = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
-  if (!current) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertRecordAccess(req, current);
-  await prisma.inventoryItem.update({ where: { id: req.params.id }, data: { isActive: false } });
-  res.json({ ok: true });
+    const current = await prisma.inventoryItem.findUnique({
+      where: { id: req.params.id },
+      select: { businessUnit: true, daycareId: true },
+    });
+    if (!current) {
+      res.status(404).json({ message: "Item no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, current);
+    await prisma.inventoryItem.update({ where: { id: req.params.id }, data: { isActive: false } });
+    res.json({ ok: true });
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -92,14 +115,20 @@ const movementSchema = z.object({
 
 inventoryRouter.get("/items/:id/movements", async (req, res) => {
   try {
-  const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
-  if (!item) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertRecordAccess(req, item);
-  const movements = await prisma.inventoryMovement.findMany({
-    where: { itemId: req.params.id },
-    orderBy: { date: "desc" },
-  });
-  res.json(movements);
+    const item = await prisma.inventoryItem.findUnique({
+      where: { id: req.params.id },
+      select: { businessUnit: true, daycareId: true },
+    });
+    if (!item) {
+      res.status(404).json({ message: "Item no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, item);
+    const movements = await prisma.inventoryMovement.findMany({
+      where: { itemId: req.params.id },
+      orderBy: { date: "desc" },
+    });
+    res.json(movements);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -109,25 +138,47 @@ inventoryRouter.get("/items/:id/movements", async (req, res) => {
 
 inventoryRouter.post("/items/:id/movements", async (req, res) => {
   try {
-  const parsed = movementSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
-  const { date, type, quantity, ...rest } = parsed.data;
-  const item = await prisma.inventoryItem.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true, currentStock: true } });
-  if (!item) { res.status(404).json({ message: "Item no encontrado" }); return; }
-  assertRecordAccess(req, item);
+    const parsed = movementSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Datos inválidos" });
+      return;
+    }
+    const { date, type, quantity, ...rest } = parsed.data;
+    const item = await prisma.inventoryItem.findUnique({
+      where: { id: req.params.id },
+      select: { businessUnit: true, daycareId: true, currentStock: true },
+    });
+    if (!item) {
+      res.status(404).json({ message: "Item no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, item);
 
-  const movement = await prisma.inventoryMovement.create({
-    data: { itemId: req.params.id, type, quantity, date: date ? new Date(date) : new Date(), ...rest },
-  });
+    const movement = await prisma.inventoryMovement.create({
+      data: {
+        itemId: req.params.id,
+        type,
+        quantity,
+        date: date ? new Date(date) : new Date(),
+        ...rest,
+      },
+    });
 
-  const delta = type === "SALIDA" ? -quantity : type === "AJUSTE" ? quantity - item.currentStock : quantity;
-  if (type === "AJUSTE") {
-    await prisma.inventoryItem.update({ where: { id: req.params.id }, data: { currentStock: quantity } });
-  } else {
-    await prisma.inventoryItem.update({ where: { id: req.params.id }, data: { currentStock: { increment: delta } } });
-  }
+    const delta =
+      type === "SALIDA" ? -quantity : type === "AJUSTE" ? quantity - item.currentStock : quantity;
+    if (type === "AJUSTE") {
+      await prisma.inventoryItem.update({
+        where: { id: req.params.id },
+        data: { currentStock: quantity },
+      });
+    } else {
+      await prisma.inventoryItem.update({
+        where: { id: req.params.id },
+        data: { currentStock: { increment: delta } },
+      });
+    }
 
-  res.status(201).json(movement);
+    res.status(201).json(movement);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

@@ -16,7 +16,11 @@ import axios from "axios";
 const BASE_URL = process.env.API_URL ?? "http://localhost:3001/api/v1";
 const SLUG_PREFIX = "e2e-offb";
 
-interface TestResult { name: string; passed: boolean; error?: string }
+interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+}
 const results: TestResult[] = [];
 
 async function test(name: string, fn: () => Promise<void>): Promise<void> {
@@ -89,7 +93,11 @@ async function run() {
     expectStatus(session.status, 200, "Login del admin");
     const api = clientFor(session.data.token, "DAYCARE");
 
-    const client = await api.post("/clients", { firstName: "Tutor", lastName: "Baja", phone: "0988888888" });
+    const client = await api.post("/clients", {
+      firstName: "Tutor",
+      lastName: "Baja",
+      phone: "0988888888",
+    });
     expectStatus(client.status, 201, "Alta de tutor");
     clientId = client.data.id;
 
@@ -149,7 +157,9 @@ async function run() {
   });
 
   await test("No se elimina sin repetir el identificador", async () => {
-    const noConfirm = await consoleApi.delete(`/platform/daycares/${daycareId}`, { data: {} } as any);
+    const noConfirm = await consoleApi.delete(`/platform/daycares/${daycareId}`, {
+      data: {},
+    } as any);
     expectStatus(noConfirm.status, 400, "Sin confirmación");
 
     const wrongConfirm = await consoleApi.delete(`/platform/daycares/${daycareId}`, {
@@ -183,7 +193,16 @@ async function run() {
 
     const rows = deleted.data.rows;
     // The operational data must actually have been counted, not silently skipped.
-    for (const table of ["clients", "pets", "rooms", "reservations", "reservationPets", "incomes", "users", "daycare"]) {
+    for (const table of [
+      "clients",
+      "pets",
+      "rooms",
+      "reservations",
+      "reservationPets",
+      "incomes",
+      "users",
+      "daycare",
+    ]) {
       if (!(table in rows)) throw new Error(`El resumen no informa de ${table}`);
     }
     if (rows.daycare !== 1) throw new Error(`Esperaba borrar 1 guardería, informa ${rows.daycare}`);

@@ -48,7 +48,7 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
     vatPercent: "0",
     dueDate: "",
     isRecurring: false,
-    notes: ""
+    notes: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -79,7 +79,7 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
         vatPercent: "0",
         dueDate: "",
         isRecurring: false,
-        notes: ""
+        notes: "",
       });
     }
   }, [payable, open]);
@@ -92,9 +92,9 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
         ...form,
         subtotal: +form.subtotal,
         vatPercent: +form.vatPercent,
-        providerId: form.providerId || undefined
+        providerId: form.providerId || undefined,
       };
-      
+
       if (payable?.id) {
         await api.put(`/payables/${payable.id}`, payload);
       } else {
@@ -117,7 +117,9 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
       size="lg"
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="btn-primary" onClick={save} disabled={saving}>
             {saving && <Spinner size={14} />} Guardar
           </button>
@@ -127,46 +129,93 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label">Tipo</label>
-          <select className="input" value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+          <select
+            className="input"
+            value={form.type}
+            onChange={(e) => setForm({ ...form, type: e.target.value })}
+          >
             <option value="GASTO">Gasto</option>
             <option value="COMPRA">Compra</option>
           </select>
         </div>
         <div>
           <label className="label">Categoría</label>
-          <select className="input" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-            {EXPENSE_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          <select
+            className="input"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          >
+            {EXPENSE_CATEGORIES.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="col-span-2">
           <label className="label">Descripción *</label>
-          <input className="input" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+          <input
+            className="input"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Proveedor</label>
-          <select className="input" value={form.providerId} onChange={e => setForm({ ...form, providerId: e.target.value })}>
+          <select
+            className="input"
+            value={form.providerId}
+            onChange={(e) => setForm({ ...form, providerId: e.target.value })}
+          >
             <option value="">— Sin proveedor —</option>
-            {providers.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            {providers.map((p: any) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label className="label">No. Factura</label>
-          <input className="input" value={form.invoiceNumber} onChange={e => setForm({ ...form, invoiceNumber: e.target.value })} />
+          <input
+            className="input"
+            value={form.invoiceNumber}
+            onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Subtotal ($) *</label>
-          <input className="input" type="number" value={form.subtotal} onChange={e => setForm({ ...form, subtotal: e.target.value })} />
+          <input
+            className="input"
+            type="number"
+            value={form.subtotal}
+            onChange={(e) => setForm({ ...form, subtotal: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">IVA (%)</label>
-          <input className="input" type="number" value={form.vatPercent} onChange={e => setForm({ ...form, vatPercent: e.target.value })} />
+          <input
+            className="input"
+            type="number"
+            value={form.vatPercent}
+            onChange={(e) => setForm({ ...form, vatPercent: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Vencimiento</label>
-          <input className="input" type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} />
+          <input
+            className="input"
+            type="date"
+            value={form.dueDate}
+            onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+          />
         </div>
         <div className="col-span-2 flex items-center gap-2">
-          <input type="checkbox" checked={form.isRecurring} onChange={e => setForm({ ...form, isRecurring: e.target.checked })} />
+          <input
+            type="checkbox"
+            checked={form.isRecurring}
+            onChange={(e) => setForm({ ...form, isRecurring: e.target.checked })}
+          />
           <label className="text-sm">Gasto recurrente</label>
         </div>
       </div>

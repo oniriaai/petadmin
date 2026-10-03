@@ -25,10 +25,20 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     await Promise.all([
       prisma.user.findMany({
         where: { daycareId },
-        select: { username: true, name: true, role: true, businessUnit: true, isActive: true, createdAt: true },
+        select: {
+          username: true,
+          name: true,
+          role: true,
+          businessUnit: true,
+          isActive: true,
+          createdAt: true,
+        },
         orderBy: { username: "asc" },
       }),
-      prisma.client.findMany({ where: { daycareId }, orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
+      prisma.client.findMany({
+        where: { daycareId },
+        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      }),
       prisma.pet.findMany({
         where: { daycareId },
         include: { client: { select: { firstName: true, lastName: true } }, vaccinations: true },
@@ -37,7 +47,10 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
       prisma.room.findMany({ where: { daycareId }, orderBy: { name: "asc" } }),
       prisma.reservation.findMany({
         where: { daycareId },
-        include: { client: { select: { firstName: true, lastName: true } }, pets: { include: { pet: { select: { name: true } } } } },
+        include: {
+          client: { select: { firstName: true, lastName: true } },
+          pets: { include: { pet: { select: { name: true } } } },
+        },
         orderBy: { createdAt: "asc" },
       }),
       prisma.income.findMany({ where: { daycareId }, orderBy: { date: "asc" } }),
@@ -82,14 +95,52 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
   // Passwords are not in here, by design: a hash is not data the customer needs, and handing
   // one over is handing over something to crack offline.
   const us = sheet("Usuarios", ["Usuario", "Nombre", "Rol", "Unidad", "Activo", "Creado"]);
-  users.forEach((u) => us.addRow([u.username, u.name, u.role, u.businessUnit, u.isActive ? "Sí" : "No", u.createdAt]));
-
-  const cs = sheet("Tutores", ["Apellido", "Nombre", "Cédula", "Teléfono", "WhatsApp", "Email", "Dirección", "Ciudad", "Provincia", "Activo", "Notas"]);
-  clients.forEach((c) =>
-    cs.addRow([c.lastName, c.firstName, c.idNumber, c.phone, c.whatsapp, c.email, c.address, c.city, c.province, c.isActive ? "Sí" : "No", c.notes]),
+  users.forEach((u) =>
+    us.addRow([u.username, u.name, u.role, u.businessUnit, u.isActive ? "Sí" : "No", u.createdAt]),
   );
 
-  const ps = sheet("Perrhijos", ["Nombre", "Tutor", "Especie", "Raza", "Sexo", "Nacimiento", "Peso", "Microchip", "Alergias", "Activo", "Vacunas"]);
+  const cs = sheet("Tutores", [
+    "Apellido",
+    "Nombre",
+    "Cédula",
+    "Teléfono",
+    "WhatsApp",
+    "Email",
+    "Dirección",
+    "Ciudad",
+    "Provincia",
+    "Activo",
+    "Notas",
+  ]);
+  clients.forEach((c) =>
+    cs.addRow([
+      c.lastName,
+      c.firstName,
+      c.idNumber,
+      c.phone,
+      c.whatsapp,
+      c.email,
+      c.address,
+      c.city,
+      c.province,
+      c.isActive ? "Sí" : "No",
+      c.notes,
+    ]),
+  );
+
+  const ps = sheet("Perrhijos", [
+    "Nombre",
+    "Tutor",
+    "Especie",
+    "Raza",
+    "Sexo",
+    "Nacimiento",
+    "Peso",
+    "Microchip",
+    "Alergias",
+    "Activo",
+    "Vacunas",
+  ]);
   pets.forEach((p) =>
     ps.addRow([
       p.name,
@@ -107,9 +158,23 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
   );
 
   const rs = sheet("Salas", ["Nombre", "Unidad", "Capacidad", "Tipo", "Activa"]);
-  rooms.forEach((r) => rs.addRow([r.name, r.businessUnit, r.capacity, r.type, r.isActive ? "Sí" : "No"]));
+  rooms.forEach((r) =>
+    rs.addRow([r.name, r.businessUnit, r.capacity, r.type, r.isActive ? "Sí" : "No"]),
+  );
 
-  const vs = sheet("Reservas", ["Unidad", "Servicio", "Estado", "Tutor", "Perrhijos", "Entrada", "Salida", "Base", "IVA", "Total", "Pendiente"]);
+  const vs = sheet("Reservas", [
+    "Unidad",
+    "Servicio",
+    "Estado",
+    "Tutor",
+    "Perrhijos",
+    "Entrada",
+    "Salida",
+    "Base",
+    "IVA",
+    "Total",
+    "Pendiente",
+  ]);
   reservations.forEach((r) =>
     vs.addRow([
       r.businessUnit,
@@ -126,12 +191,47 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     ]),
   );
 
-  const is = sheet("Cobros", ["Fecha", "Unidad", "Tipo", "Concepto", "Monto", "IVA", "Total", "Método", "Factura", "Estado"]);
+  const is = sheet("Cobros", [
+    "Fecha",
+    "Unidad",
+    "Tipo",
+    "Concepto",
+    "Monto",
+    "IVA",
+    "Total",
+    "Método",
+    "Factura",
+    "Estado",
+  ]);
   incomes.forEach((i) =>
-    is.addRow([i.date, i.businessUnit, i.type, i.concept, i.amount, i.vatAmount, i.total, i.paymentMethod, i.invoiceNumber, i.invoiceStatus]),
+    is.addRow([
+      i.date,
+      i.businessUnit,
+      i.type,
+      i.concept,
+      i.amount,
+      i.vatAmount,
+      i.total,
+      i.paymentMethod,
+      i.invoiceNumber,
+      i.invoiceStatus,
+    ]),
   );
 
-  const pys = sheet("Cuentas por pagar", ["Unidad", "Tipo", "Categoría", "Descripción", "Proveedor", "Subtotal", "IVA", "Total", "Pagado", "Saldo", "Estado", "Pagos"]);
+  const pys = sheet("Cuentas por pagar", [
+    "Unidad",
+    "Tipo",
+    "Categoría",
+    "Descripción",
+    "Proveedor",
+    "Subtotal",
+    "IVA",
+    "Total",
+    "Pagado",
+    "Saldo",
+    "Estado",
+    "Pagos",
+  ]);
   payables.forEach((p) =>
     pys.addRow([
       p.businessUnit,
@@ -149,11 +249,37 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     ]),
   );
 
-  const invs = sheet("Inventario", ["Nombre", "Unidad", "Categoría", "Medida", "Stock", "Mínimo", "Costo"]);
-  inventory.forEach((i) => invs.addRow([i.name, i.businessUnit, i.category, i.unit, i.currentStock, i.minStock, i.unitCost]));
+  const invs = sheet("Inventario", [
+    "Nombre",
+    "Unidad",
+    "Categoría",
+    "Medida",
+    "Stock",
+    "Mínimo",
+    "Costo",
+  ]);
+  inventory.forEach((i) =>
+    invs.addRow([
+      i.name,
+      i.businessUnit,
+      i.category,
+      i.unit,
+      i.currentStock,
+      i.minStock,
+      i.unitCost,
+    ]),
+  );
 
   const cts = sheet("Contratos", ["Nombre", "Tutor", "Estado", "Inicio", "Fin"]);
-  contracts.forEach((c) => cts.addRow([c.name, `${c.client.firstName} ${c.client.lastName}`, c.status, c.startDate, c.endDate]));
+  contracts.forEach((c) =>
+    cts.addRow([
+      c.name,
+      `${c.client.firstName} ${c.client.lastName}`,
+      c.status,
+      c.startDate,
+      c.endDate,
+    ]),
+  );
 
   return wb;
 }
@@ -182,7 +308,10 @@ export interface DeletionSummary {
  * The audit entry survives: `PlatformAuditLog.daycareId` is a plain column with no foreign key,
  * precisely so the record of a deletion outlives what it deleted.
  */
-export async function deleteDaycare(daycareId: string, confirmSlug: string): Promise<DeletionSummary> {
+export async function deleteDaycare(
+  daycareId: string,
+  confirmSlug: string,
+): Promise<DeletionSummary> {
   const daycare = await prisma.daycare.findUnique({
     where: { id: daycareId },
     select: { id: true, slug: true, name: true, isActive: true },
@@ -209,11 +338,17 @@ export async function deleteDaycare(daycareId: string, confirmSlug: string): Pro
 
   await prisma.$transaction(async (tx) => {
     // Children that inherit tenancy through a parent, first.
-    count("inventoryMovements", await tx.inventoryMovement.deleteMany({ where: { item: { daycareId } } }));
+    count(
+      "inventoryMovements",
+      await tx.inventoryMovement.deleteMany({ where: { item: { daycareId } } }),
+    );
     count("payments", await tx.payment.deleteMany({ where: { payable: { daycareId } } }));
     count("petVaccinations", await tx.petVaccination.deleteMany({ where: { pet: { daycareId } } }));
     count("petDocuments", await tx.petDocument.deleteMany({ where: { pet: { daycareId } } }));
-    count("reservationPets", await tx.reservationPet.deleteMany({ where: { reservation: { daycareId } } }));
+    count(
+      "reservationPets",
+      await tx.reservationPet.deleteMany({ where: { reservation: { daycareId } } }),
+    );
 
     // Then the rows that reference the operational core.
     count("checkInOuts", await tx.checkInOut.deleteMany({ where: { daycareId } }));

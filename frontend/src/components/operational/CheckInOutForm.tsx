@@ -48,7 +48,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
       loadPets(formData.clientId);
     } else {
       setPets([]);
-      setFormData(prev => ({ ...prev, petIds: [] }));
+      setFormData((prev) => ({ ...prev, petIds: [] }));
     }
   }, [formData.clientId]);
 
@@ -97,13 +97,20 @@ export function CheckInOutForm({ onSuccess }: Props) {
     }
   }
 
-  if (loading) return <div className="py-12"><PageLoader /></div>;
+  if (loading)
+    return (
+      <div className="py-12">
+        <PageLoader />
+      </div>
+    );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Cliente</label>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            Cliente
+          </label>
           <select
             className="input focus:ring-2 focus:ring-blue-500 transition-all"
             value={formData.clientId}
@@ -120,7 +127,9 @@ export function CheckInOutForm({ onSuccess }: Props) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Sala / Ubicación</label>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            Sala / Ubicación
+          </label>
           <select
             className="input focus:ring-2 focus:ring-blue-500 transition-all"
             value={formData.roomId}
@@ -138,11 +147,15 @@ export function CheckInOutForm({ onSuccess }: Props) {
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Mascotas del Cliente</label>
+        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+          Mascotas del Cliente
+        </label>
         {pets.length === 0 ? (
           <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
             <p className="text-sm text-gray-400">
-              {formData.clientId ? "Este cliente no tiene mascotas registradas." : "Selecciona un cliente para ver sus mascotas."}
+              {formData.clientId
+                ? "Este cliente no tiene mascotas registradas."
+                : "Selecciona un cliente para ver sus mascotas."}
             </p>
           </div>
         ) : (
@@ -154,9 +167,11 @@ export function CheckInOutForm({ onSuccess }: Props) {
                   key={pet.id}
                   className={`
                     flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all cursor-pointer
-                    ${isSelected 
-                      ? "border-blue-600 bg-blue-50 text-blue-700 shadow-sm" 
-                      : "border-gray-100 bg-white hover:border-gray-300 text-gray-600"}
+                    ${
+                      isSelected
+                        ? "border-blue-600 bg-blue-50 text-blue-700 shadow-sm"
+                        : "border-gray-100 bg-white hover:border-gray-300 text-gray-600"
+                    }
                   `}
                 >
                   <input
@@ -174,9 +189,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
                       }
                     }}
                   />
-                  <span className="text-xl mb-1">
-                    {pet.species === "cat" ? "🐈" : "🐕"}
-                  </span>
+                  <span className="text-xl mb-1">{pet.species === "cat" ? "🐈" : "🐕"}</span>
                   <span className="text-sm font-bold truncate w-full text-center">{pet.name}</span>
                 </label>
               );
@@ -197,7 +210,9 @@ export function CheckInOutForm({ onSuccess }: Props) {
 
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${formData.checkInNow ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400"}`}>
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${formData.checkInNow ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-400"}`}
+          >
             <Plus size={20} />
           </div>
           <div>
@@ -207,7 +222,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
         </div>
         <button
           type="button"
-          onClick={() => setFormData(prev => ({ ...prev, checkInNow: !prev.checkInNow }))}
+          onClick={() => setFormData((prev) => ({ ...prev, checkInNow: !prev.checkInNow }))}
           className={`
             relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none
             ${formData.checkInNow ? "bg-blue-600" : "bg-gray-200"}
@@ -226,7 +241,9 @@ export function CheckInOutForm({ onSuccess }: Props) {
         <button
           type="submit"
           className="btn-primary flex-1 py-3 text-base shadow-lg shadow-blue-200"
-          disabled={submitting || !formData.clientId || formData.petIds.length === 0 || !formData.roomId}
+          disabled={
+            submitting || !formData.clientId || formData.petIds.length === 0 || !formData.roomId
+          }
         >
           {submitting ? "Procesando..." : "Crear Registro"}
         </button>

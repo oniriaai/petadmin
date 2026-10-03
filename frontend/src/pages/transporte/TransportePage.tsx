@@ -14,25 +14,41 @@ interface TransportReservation {
   checkIn?: string;
   checkOut?: string;
   service: string;
-  client: { firstName: string; lastName: string; phone?: string; whatsapp?: string; address?: string; city?: string };
+  client: {
+    firstName: string;
+    lastName: string;
+    phone?: string;
+    whatsapp?: string;
+    address?: string;
+    city?: string;
+  };
   pets: Array<{ pet: { name: string; species: string; breed?: string; sex: string } }>;
 }
-interface TransportData { pickups: TransportReservation[]; deliveries: TransportReservation[] }
+interface TransportData {
+  pickups: TransportReservation[];
+  deliveries: TransportReservation[];
+}
 
 function TransportCard({ r, type }: { r: TransportReservation; type: "pickup" | "delivery" }) {
   const time = type === "pickup" ? r.checkIn : r.checkOut;
   return (
     <div className="card p-4 flex gap-4">
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${type === "pickup" ? "bg-blue-50" : "bg-green-50"}`}>
+      <div
+        className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 ${type === "pickup" ? "bg-blue-50" : "bg-green-50"}`}
+      >
         {type === "pickup" ? "📦" : "🏠"}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-gray-900">{r.client.firstName} {r.client.lastName}</p>
-            <p className="text-sm text-gray-500">{r.pets.map(p => p.pet.name).join(", ")}</p>
+            <p className="font-semibold text-gray-900">
+              {r.client.firstName} {r.client.lastName}
+            </p>
+            <p className="text-sm text-gray-500">{r.pets.map((p) => p.pet.name).join(", ")}</p>
           </div>
-          {time && <span className="text-lg font-bold text-gray-700 shrink-0">{fmtTime(time)}</span>}
+          {time && (
+            <span className="text-lg font-bold text-gray-700 shrink-0">{fmtTime(time)}</span>
+          )}
         </div>
         {(r.transportAddress || r.client.address) && (
           <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
@@ -42,12 +58,20 @@ function TransportCard({ r, type }: { r: TransportReservation; type: "pickup" | 
         )}
         <div className="flex items-center gap-3 mt-2">
           {r.client.phone && (
-            <a href={`tel:${r.client.phone}`} className="text-xs text-indigo-600 flex items-center gap-1">
+            <a
+              href={`tel:${r.client.phone}`}
+              className="text-xs text-indigo-600 flex items-center gap-1"
+            >
               <Phone size={11} /> {r.client.phone}
             </a>
           )}
           {r.client.whatsapp && (
-            <a href={`https://wa.me/${r.client.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="text-xs text-green-600 flex items-center gap-1">
+            <a
+              href={`https://wa.me/${r.client.whatsapp.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-green-600 flex items-center gap-1"
+            >
               💬 WhatsApp
             </a>
           )}
@@ -66,7 +90,8 @@ export function TransportePage() {
   useEffect(() => {
     setLoading(true);
     const d = format(date, "yyyy-MM-dd");
-    api.get<TransportData>(`/reports/transport?date=${d}`)
+    api
+      .get<TransportData>(`/reports/transport?date=${d}`)
       .then(setData)
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -75,19 +100,29 @@ export function TransportePage() {
   return (
     <div className="p-4 sm:p-6 space-y-5">
       <PageHeader
-          title="Transporte"
-          subtitle="Recogidas y entregas del día"
-          actions={
-            <div className="flex items-center gap-2">
-          <button onClick={() => setDate(d => subDays(d, 1))} className="btn-secondary p-2"><ChevronLeft size={16} /></button>
-          <span className="font-medium text-gray-800 min-w-44 text-center">{format(date, "EEEE d 'de' MMMM", { locale: es })}</span>
-          <button onClick={() => setDate(d => addDays(d, 1))} className="btn-secondary p-2"><ChevronRight size={16} /></button>
-          <button onClick={() => setDate(new Date())} className="btn-secondary text-xs">Hoy</button>
-            </div>
-          }
-        />
+        title="Transporte"
+        subtitle="Recogidas y entregas del día"
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={() => setDate((d) => subDays(d, 1))} className="btn-secondary p-2">
+              <ChevronLeft size={16} />
+            </button>
+            <span className="font-medium text-gray-800 min-w-44 text-center">
+              {format(date, "EEEE d 'de' MMMM", { locale: es })}
+            </span>
+            <button onClick={() => setDate((d) => addDays(d, 1))} className="btn-secondary p-2">
+              <ChevronRight size={16} />
+            </button>
+            <button onClick={() => setDate(new Date())} className="btn-secondary text-xs">
+              Hoy
+            </button>
+          </div>
+        }
+      />
 
-      {loading ? <PageLoader /> : (
+      {loading ? (
+        <PageLoader />
+      ) : (
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -96,9 +131,11 @@ export function TransportePage() {
               <span className="badge bg-blue-100 text-blue-700">{data.pickups.length}</span>
             </div>
             {data.pickups.length === 0 ? (
-              <div className="card p-8 text-center text-gray-400">Sin recogidas programadas para hoy</div>
+              <div className="card p-8 text-center text-gray-400">
+                Sin recogidas programadas para hoy
+              </div>
             ) : (
-              data.pickups.map(r => <TransportCard key={r.id} r={r} type="pickup" />)
+              data.pickups.map((r) => <TransportCard key={r.id} r={r} type="pickup" />)
             )}
           </div>
 
@@ -109,9 +146,11 @@ export function TransportePage() {
               <span className="badge bg-green-100 text-green-700">{data.deliveries.length}</span>
             </div>
             {data.deliveries.length === 0 ? (
-              <div className="card p-8 text-center text-gray-400">Sin entregas programadas para hoy</div>
+              <div className="card p-8 text-center text-gray-400">
+                Sin entregas programadas para hoy
+              </div>
             ) : (
-              data.deliveries.map(r => <TransportCard key={r.id} r={r} type="delivery" />)
+              data.deliveries.map((r) => <TransportCard key={r.id} r={r} type="delivery" />)
             )}
           </div>
         </div>
@@ -120,7 +159,9 @@ export function TransportePage() {
       <div className="card p-4 bg-blue-50 border-blue-200">
         <p className="text-sm text-blue-700 font-medium">Capacidad de transporte</p>
         <p className="text-sm text-blue-600 mt-1">
-          Recogidas: <strong>{data.pickups.length}</strong> · Entregas: <strong>{data.deliveries.length}</strong> · Total viajes: <strong>{data.pickups.length + data.deliveries.length}</strong>
+          Recogidas: <strong>{data.pickups.length}</strong> · Entregas:{" "}
+          <strong>{data.deliveries.length}</strong> · Total viajes:{" "}
+          <strong>{data.pickups.length + data.deliveries.length}</strong>
         </p>
       </div>
     </div>

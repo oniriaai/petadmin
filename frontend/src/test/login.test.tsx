@@ -61,7 +61,11 @@ describe("login", () => {
   });
 
   it("asks for the daycare only when the server says the username is ambiguous", async () => {
-    const ambiguous = new ApiError(400, "Este usuario existe en varias guarderías.", "DAYCARE_REQUIRED");
+    const ambiguous = new ApiError(
+      400,
+      "Este usuario existe en varias guarderías.",
+      "DAYCARE_REQUIRED",
+    );
     login.mockRejectedValueOnce(ambiguous);
     renderLogin();
 

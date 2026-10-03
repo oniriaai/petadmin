@@ -96,23 +96,26 @@ assertSecureConfigWith({
 
 // The CORS allowlist itself: an arbitrary origin is refused, a configured one is allowed, and
 // a request with no Origin header at all (curl, the e2e suites, server-to-server) is allowed.
-withEnv({ NODE_ENV: "production", CORS_ORIGINS: "https://admin.example.com, https://b.example" }, () => {
-  const { corsOptions } = require(SECURITY_MODULE);
-  const { origin } = corsOptions();
+withEnv(
+  { NODE_ENV: "production", CORS_ORIGINS: "https://admin.example.com, https://b.example" },
+  () => {
+    const { corsOptions } = require(SECURITY_MODULE);
+    const { origin } = corsOptions();
 
-  const decide = (value: string | undefined): boolean => {
-    let allowed = false;
-    origin(value, (_err: Error | null, ok?: boolean) => {
-      allowed = ok === true;
-    });
-    return allowed;
-  };
+    const decide = (value: string | undefined): boolean => {
+      let allowed = false;
+      origin(value, (_err: Error | null, ok?: boolean) => {
+        allowed = ok === true;
+      });
+      return allowed;
+    };
 
-  assert.equal(decide("https://admin.example.com"), true, "A configured origin must be allowed");
-  assert.equal(decide("https://b.example"), true, "Every listed origin must be allowed");
-  assert.equal(decide("https://admin.example.com/"), true, "A trailing slash must not matter");
-  assert.equal(decide("https://evil.example"), false, "An unlisted origin must be refused");
-  assert.equal(decide(undefined), true, "A request with no Origin header must be allowed");
-});
+    assert.equal(decide("https://admin.example.com"), true, "A configured origin must be allowed");
+    assert.equal(decide("https://b.example"), true, "Every listed origin must be allowed");
+    assert.equal(decide("https://admin.example.com/"), true, "A trailing slash must not matter");
+    assert.equal(decide("https://evil.example"), false, "An unlisted origin must be refused");
+    assert.equal(decide(undefined), true, "A request with no Origin header must be allowed");
+  },
+);
 
 console.log("✓ production security configuration guard");
