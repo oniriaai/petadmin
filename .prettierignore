@@ -1,0 +1,22 @@
+# Prettier is scoped to TypeScript source on purpose.
+#
+# The README, the compose files and the workflows carry hand-wrapped Spanish prose comments
+# that explain *why* each guard exists. Reflowing them would cost more than the consistency
+# it buys, so Markdown and YAML are formatted by hand.
+*.md
+*.yml
+*.yaml
+*.json
+
+node_modules/
+dist/
+dist-seed/
+build/
+coverage/
+*.tsbuildinfo
+
+# Generated or hand-written SQL; neither is Prettier's business.
+prisma/migrations/
+prisma/legacy-migrations/
+backend/prisma/migrations/
+backend/prisma/legacy-migrations/
