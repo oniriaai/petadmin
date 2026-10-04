@@ -10,12 +10,15 @@ export default tseslint.config(
   { ignores: ["dist/", "node_modules/"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  reactHooks.configs["recommended-latest"],
   {
+    // Registered by hand rather than through the plugin's preset: since v7 the preset also turns
+    // on the React Compiler rules, which this codebase does not target.
+    plugins: { "react-hooks": reactHooks },
     languageOptions: {
       globals: { ...globals.browser },
     },
     rules: {
+      "react-hooks/rules-of-hooks": "error",
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_" },
