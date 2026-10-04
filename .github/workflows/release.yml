@@ -39,7 +39,7 @@ jobs:
     outputs:
       version: ${{ steps.meta-backend.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Fail before publishing, not after. The frontend bakes VITE_API_URL at build time, and
       # lib/api.ts falls back with `??`, which only catches undefined — an *empty* build arg
@@ -57,10 +57,10 @@ jobs:
           fi
           echo "PUBLIC_API_URL=$PUBLIC_API_URL"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -70,7 +70,7 @@ jobs:
       # version tags but must not become what an unpinned host pulls.
       - name: Backend image metadata
         id: meta-backend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}-backend
           tags: |
@@ -81,7 +81,7 @@ jobs:
 
       - name: Frontend image metadata
         id: meta-frontend
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}-frontend
           tags: |
@@ -91,7 +91,7 @@ jobs:
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
       - name: Build and push backend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: true
@@ -101,7 +101,7 @@ jobs:
           cache-to: type=gha,scope=backend,mode=max
 
       - name: Build and push frontend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: true
@@ -118,7 +118,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
