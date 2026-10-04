@@ -64,7 +64,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Desktop navigation. Hidden below lg, where the drawer takes over. */}
       <aside
         className={cls(
-          "hidden lg:flex shrink-0 h-screen sticky top-0 transition-[width] duration-200",
+          // Navigation and topbar stay off paper: prescriptions and histories print from here.
+          "hidden lg:flex print:hidden shrink-0 h-screen sticky top-0 transition-[width] duration-200",
           isCollapsed ? "w-sidebar-collapsed" : "w-sidebar",
         )}
       >
@@ -87,7 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-shell bg-raised border-b border-line-subtle shadow-raised">
+        <header className="sticky top-0 z-shell bg-raised border-b border-line-subtle shadow-raised print:hidden">
           <div className="flex items-center gap-2 px-3 sm:px-4 h-14">
             <button
               className="icon-button lg:hidden text-muted"

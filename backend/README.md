@@ -28,6 +28,7 @@ backend/src/
 │   ├── tenancy/guard.ts                # Red de seguridad: falla si un `where` no filtra inquilino
 │   ├── tenancy/principal.ts            # Estado vivo de la cuenta (activa / guardería activa)
 │   ├── tenancy/unit-settings.ts        # Ajustes por (guardería, unidad)
+│   ├── tenancy/local-time.ts           # El día de una unidad en su zona horaria
 │   └── modules.ts                      # Superficie pública del Core
 │
 ├── platform/                            # Composición y control de acceso
@@ -78,7 +79,7 @@ siendo exactamente el objeto que se monta.
 3. Rol no permitido → **403** sin código.
 4. Módulo de producto `core` → permitido.
 5. Unidad de negocio que el módulo no sirve → **403** con `{ code: "WRONG_BUSINESS_UNIT" }`.
-   Solo muerde para un rol que abarca ambas unidades y que ha acotado con `X-Business-Unit`:
+   Solo muerde para un rol que abarca varias unidades y que ha acotado con `X-Business-Unit`:
    pedir la ocupación de Guardería estando en Peluquería devolvía datos de Guardería e ignoraba
    la cabecera en silencio.
 6. Módulo no contratado por la guardería → **403** con
@@ -162,7 +163,7 @@ caducaba su token, hasta 12 horas después.
 | Cabecera | Quién | Efecto |
 |---|---|---|
 | `Authorization: Bearer <jwt>` | Todos | Sesión. Los tokens llevan `tv` (versión); uno anterior a la tenancy recibe 401 limpio |
-| `X-Business-Unit: DAYCARE\|GROOMING` | `admin` y `superadmin` | Acota la vista a una unidad. Sin ella, consolidado |
+| `X-Business-Unit: DAYCARE\|GROOMING\|VETERINARY` | `admin` y `superadmin` | Acota la vista a una unidad. Sin ella, consolidado |
 | `X-Daycare-Id: <id>` | `superadmin` | Fija el inquilino. Un usuario de guardería solo puede enviar el suyo (403 en otro caso) |
 | `X-Request-Id: <id>` | Opcional, entrante | Se acepta el de la pasarela para que una traza abarque proxy y API; si no viene se genera. Siempre se devuelve |
 
@@ -311,6 +312,74 @@ clave ajena precisamente para que el registro de una eliminación dure más que 
 | `POST` | `/peluqueria/appointments/:id/complete` | Completa y registra el cobro para `GROOMING` |
 | `DELETE` | `/peluqueria/appointments/:id` | Cancela la cita |
 
+### Módulo de Veterinaria (`/api/v1/veterinaria`)
+*Roles `admin` y `veterinary`, unidad `VETERINARY`. Requiere el módulo de producto `veterinaria`.*
+
+Cada consulta es una reserva de la unidad `VETERINARY` (ocupa agenda y sala, y de ella cuelgan los
+cobros) más su registro clínico, uno a uno. Una consulta `CERRADA` queda congelada.
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/veterinaria/services` | Catálogo de servicios de la clínica (`?includeInactive=true`) |
+| `POST` `PUT` `DELETE` | `/veterinaria/services[/:id]` | Alta, edición y baja lógica. Solo `admin` |
+| `GET` | `/veterinaria/staff` | Veterinarios de planta y externos |
+| `POST` `PUT` `DELETE` | `/veterinaria/staff[/:id]` | Alta, edición y baja lógica, con vínculo opcional a un usuario. Solo `admin` |
+| `GET` | `/veterinaria/visits` | Agenda con filtros `date`, `from`/`to`, `veterinarianId`, `status`, `petId`, `search`; paginable |
+| `POST` | `/veterinaria/visits` | Agenda una consulta; sin `startTime` entra a sala de espera. Rechaza con 409 un veterinario o una sala ya ocupados, salvo `triage: URGENCIA` |
+| `GET` | `/veterinaria/visits/:id` | Detalle: paciente, signos vitales, diagnósticos, cargos y cobros |
+| `PATCH` | `/veterinaria/visits/:id` | Registro clínico (motivo, anamnesis, examen, valoración, plan, control) |
+| `PATCH` | `/veterinaria/visits/:id/status` | `PROGRAMADA` → `EN_ESPERA` → `EN_CONSULTA`, o `CANCELADA` / `NO_ASISTIO` (liberan el hueco) |
+| `DELETE` | `/veterinaria/visits/:id` | Elimina una consulta no cerrada |
+| `POST` `DELETE` | `/veterinaria/visits/:id/vitals[/:childId]` | Tomas de signos vitales; el peso se refleja en la ficha |
+| `POST` `DELETE` | `/veterinaria/visits/:id/diagnoses[/:childId]` | Diagnósticos presuntivos o definitivos |
+| `POST` `DELETE` | `/veterinaria/visits/:id/charges[/:childId]` | Cargos del catálogo o libres |
+| `POST` | `/veterinaria/visits/:id/documents` | Adjunta un documento del paciente a la consulta |
+| `POST` | `/veterinaria/visits/:id/close` | Cierra, calcula IVA y total, y registra el cobro para `VETERINARY` |
+| `POST` | `/veterinaria/visits/:id/payments` | Abono sobre el saldo de una consulta cerrada |
+| `GET` | `/veterinaria/patients/:petId/history` | Historia clínica: consultas, diagnósticos, signos vitales, vacunas y documentos |
+| `PATCH` | `/veterinaria/patients/:petId` | Datos clínicos del paciente: grupo sanguíneo, alergias, condiciones crónicas, fallecimiento |
+| `POST` `DELETE` | `/veterinaria/visits/:id/vaccinations[/:childId]` | Vacuna aplicada en la consulta, con lote, laboratorio y refuerzo |
+| `POST` | `/veterinaria/visits/:id/preventives` | Desparasitación u otro preventivo aplicado en la consulta |
+| `POST` `DELETE` | `/veterinaria/patients/:petId/preventives[/:childId]` | Preventivo sin consulta detrás (aplicado fuera o antes de llevar registro) |
+| `POST` `DELETE` | `/veterinaria/visits/:id/prescriptions[/:childId]` | Receta con sus medicamentos; no se elimina si ya se dispensó algo |
+| `GET` | `/veterinaria/prescriptions/:id` | Receta con paciente, tutor y prescriptor, para imprimir |
+| `POST` | `/veterinaria/prescription-items/:itemId/dispense` | Dispensa una línea **una sola vez**: descuenta stock (409 si no alcanza) y, con `unitPrice`, añade el cargo a la consulta abierta |
+| `GET` | `/veterinaria/pharmacy/items` | Stock de la unidad `VETERINARY`, para el selector de dispensación |
+| `GET` | `/veterinaria/pharmacy/queue` | Líneas recetadas en los últimos 30 días sin dispensar; paginable |
+| `GET` | `/veterinaria/pharmacy/controlled-log` | Libro de controlados: dispensaciones de artículos marcados `isControlled` (`from`, `to`); paginable |
+| `GET` | `/veterinaria/pharmacy/expiring` | Lotes recibidos que caducan en 90 días o ya caducaron |
+| `GET` | `/veterinaria/hospitalizations` | Ingresos (`status`: `INGRESADO` por defecto, `ALTA`, `ALL`) con sus indicaciones y la próxima dosis de cada una; paginable |
+| `GET` | `/veterinaria/hospitalizations/wards` | Salas de tipo `hospital` con su aforo y ocupación |
+| `GET` | `/veterinaria/hospitalizations/:id` | Un ingreso, también para la hoja de alta |
+| `POST` | `/veterinaria/visits/:id/hospitalizations` | Ingresa al paciente: sala de hospitalización con cupo (409 si está completa o el paciente ya está ingresado) |
+| `POST` | `/veterinaria/hospitalizations/:id/discharge` | Alta **una sola vez**: suspende las indicaciones y, con tarifa diaria, añade los días de estancia como cargo de la consulta |
+| `POST` | `/veterinaria/hospitalizations/:id/vitals` `/orders` | Signos vitales en sala; nueva indicación (`everyHours` opcional) |
+| `POST` | `/veterinaria/treatment-orders/:orderId/doses` `/stop` | Firma una dosis (administrada u omitida con motivo; 409 si ese horario ya se firmó); suspende la indicación |
+| `POST` `DELETE` | `/veterinaria/visits/:id/procedures[/:childId]` | Cirugía, procedimiento o eutanasia; solo se elimina si no se inició |
+| `PATCH` `POST` | `/veterinaria/procedures/:id` `/start` `/finish` | Edita, inicia y finaliza. Una cirugía o eutanasia **no inicia sin consentimiento firmado** del mismo tipo; finalizar una eutanasia registra el fallecimiento |
+| `POST` `DELETE` | `/veterinaria/visits/:id/lab-orders[/:childId]` | Orden de laboratorio o imagen; solo se elimina mientras está `SOLICITADO` |
+| `GET` | `/veterinaria/lab-orders` | Órdenes (`status`: `PENDIENTE`, `RESULTADO`…, `kind`, `petId`); paginable |
+| `PATCH` `POST` | `/veterinaria/lab-orders/:id/status` `/result` | Marca en proceso; registra o corrige el resultado (resumen y valores), **aunque la consulta ya esté cerrada** |
+| `POST` `DELETE` | `/veterinaria/visits/:id/consents[/:childId]` | Consentimiento del tutor; firmado no se elimina |
+| `GET` `POST` | `/veterinaria/consents/:id` `/sign` | Consentimiento para imprimir; registra la firma una sola vez |
+| `GET` | `/veterinaria/reminders` | Recordatorios calculados (`kind`, `days`): refuerzos y preventivos por vencer, controles sin consulta posterior y exámenes sin resultado. Arreglo simple con tope: se combina en memoria y no se pagina |
+| `GET` | `/veterinaria/reports/summary` | Solo admin. Consultas por tipo y veterinario, facturación por categoría, cobrado, diagnósticos frecuentes y hospitalización (`from`, `to`; últimos 30 días por defecto) |
+
+Una consulta no se cierra, cancela ni elimina mientras su paciente siga ingresado o tenga un
+procedimiento en curso. Una mascota registrada como fallecida no admite reservas, citas de
+peluquería, check-in ni nuevas ocurrencias de un plan recurrente, y tampoco puede añadirse a una
+reserva existente: todas responden `409`. El planificador omite el plan y lo cuenta en
+`skippedDeceased`, no como fallo.
+
+La agenda de un día (`date=YYYY-MM-DD`, en la clínica y en peluquería) es el día de la zona horaria
+de la unidad, no el del servidor (`core/tenancy/local-time.ts`). La disponibilidad de veterinario y
+sala se comprueba con la fila bloqueada, así que dos reservas simultáneas del mismo hueco no pasan
+las dos.
+
+El stock se mueve a través de `core/inventory/stock.ts`, compartido con `/inventory`: movimiento y
+nivel se escriben en una sola transacción. `/inventory/items` acepta `isControlled`, y una entrada
+acepta `lotNumber` y `expiresAt`.
+
 ---
 
 ## Protecciones de borde
@@ -421,10 +490,15 @@ daycares/{daycareId}/pets/{mascota}_{tutor}/{timestamp}-{archivo}
 - `resolveObjectKey` rechaza travesías, segmentos vacíos y **URLs cuyo host no sea este bucket**.
   Importa el orden: el parser de URL normaliza `/../../x` a `/x` en silencio, así que lo que
   realmente protege es la comprobación de host. Sin `B2_ENDPOINT` configurado se rechaza cualquier URL.
-- `DELETE /storage` autoriza **contra la base de datos**: la clave debe estar referenciada por un
+- `POST /storage/remove` autoriza **contra la base de datos**: la clave debe estar referenciada por un
   `Pet.photoUrl` o un `PetDocument.filePath` **de la guardería que llama**. Autorizar por la forma
   de la clave no serviría, y así las claves antiguas sin prefijo siguen funcionando mientras que
   adivinar la de otro inquilino no logra nada.
+- La referencia sola tampoco basta, porque es el propio inquilino quien la escribe: podría apuntar
+  una foto o un documento suyo a la clave de otra guardería y luego "borrar su archivo". Por eso
+  una clave bajo `daycares/{id}/` solo la borra esa guardería, y una clave antigua sin prefijo
+  solo se borra si ninguna otra guardería la referencia. Además, `photoUrl` y el `filePath` de un
+  documento de consulta se rechazan con `400` si nombran el prefijo de otra guardería.
 
 ---
 
@@ -438,6 +512,9 @@ hace). `prisma db push` queda como salida de emergencia en desarrollo.
 | `20260901000000_baseline` | Esquema completo previo a la tenancy |
 | `20260902000000_rename_business_units` | `KINDERDOG`→`DAYCARE`, `PETHIJOS`→`GROOMING` y sus roles |
 | `20260903000000_add_daycare_tenancy` | `daycares`, `daycare_modules`, `platform_audit_logs`, `daycareId` con backfill, FKs, índices y el CHECK `users_superadmin_untenanted` |
+| `20261004000000_veterinary_core` | Clínica veterinaria: `vet_services`, `vet_visits`, `vet_vitals`, `vet_diagnoses`, `vet_visit_charges`; matrícula, especialidad y usuario en `veterinarians`; datos clínicos en `pets`. Solo añade: la unidad `VETERINARY` y el rol `veterinary` son valores de texto y no necesitan migración |
+| `20261005000000_veterinary_pharmacy` | `vet_preventives`, `vet_prescriptions`, `vet_prescription_items`; lote, laboratorio, veterinario y consulta en `pet_vaccinations`; `isControlled` en `inventory_items`; lote, caducidad y línea de receta en `inventory_movements`. Solo añade |
+| `20261006000000_veterinary_inpatient` | `vet_hospitalizations`, `vet_treatment_orders`, `vet_treatment_administrations` (único por indicación y horario), `vet_procedures`, `vet_lab_orders`, `vet_lab_result_values`, `vet_consents`; `hospitalizationId` en `vet_vitals`. Solo añade |
 | `20260904000000_add_unit_vat_percent` | `business_unit_settings.vatPercent`, con el valor por defecto que ya estaba escrito a mano |
 | `20260905000000_drop_unused_backfill_tenant` | Elimina la guardería `daycare_pethijos` **solo si no posee ningún dato**. La migración de tenancy la inserta sin condiciones (correcto para adoptar una instalación de un solo inquilino), con lo que una base de datos **nueva** arrancaba con un inquilino que nadie creó, activo y con los siete módulos vendibles habilitados |
 | `20260906000000_per_tenant_usernames` | `username` pasa a ser único por `(daycareId, username)`, más un índice **parcial** sobre `username` donde `daycareId IS NULL` para las cuentas de plataforma: Postgres considera los `NULL` distintos entre sí, así que el índice compuesto no las cubriría |
@@ -501,9 +578,9 @@ npm run test:scheduler       # Idempotencia del generador de planes recurrentes
 ```bash
 docker compose up --build
 
-# Las once suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
+# Las doce suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
 # sesión a propósito y throttlearía los logins que necesitan las demás.
-for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler ratelimit; do
+for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler veterinaria ratelimit; do
   docker exec pethijos-backend npm run "test:$s" || break
 done
 ```

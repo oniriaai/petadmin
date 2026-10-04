@@ -36,12 +36,18 @@ async function test(name: string, fn: () => Promise<void>): Promise<void> {
   }
 }
 
-async function loginAs(username: string, password: string, businessUnit?: "DAYCARE" | "GROOMING") {
+async function loginAs(
+  username: string,
+  password: string,
+  businessUnit?: "DAYCARE" | "GROOMING",
+  daycare?: string,
+) {
   const client = axios.create({ baseURL: BASE_URL });
   const response = await client.post("/auth/login", {
     username,
     password,
     ...(businessUnit ? { businessUnit } : {}),
+    ...(daycare ? { daycare } : {}),
   });
   return response.data.token as string;
 }
@@ -115,6 +121,19 @@ async function run() {
         throw new Error(
           `GET ${path}: se esperaba code MODULE_DISABLED, se recibió ${JSON.stringify(denied.data)}`,
         );
+      }
+    }
+  });
+
+  await test("La clínica veterinaria no contratada se deniega con 403 MODULE_DISABLED", async () => {
+    // Separate from the loop above: its "tenant with the module" side logs in with the
+    // `daycare` role, which the clinic refuses by role before entitlements are consulted.
+    const b = clientFor(demo);
+    for (const path of ["/veterinaria/visits", "/veterinaria/services", "/veterinaria/staff"]) {
+      const denied = await b.get(path);
+      expectStatus(denied.status, 403, `GET ${path} (tenant sin el módulo)`);
+      if (denied.data?.code !== "MODULE_DISABLED") {
+        throw new Error(`GET ${path}: se esperaba MODULE_DISABLED, ${JSON.stringify(denied.data)}`);
       }
     }
   });
@@ -330,6 +349,490 @@ async function run() {
       await prisma.client.deleteMany({ where: { firstName: "Aislamiento" } });
       await prisma.$disconnect();
     }
+  });
+
+  await test("La clínica no lee ni escribe sobre registros de otra guardería", async () => {
+    // `demo` did not buy the clinic, so the gate answers before tenancy is ever consulted. A
+    // second tenant that DID buy it is the only way to exercise the clinic's own scoping.
+    const CLINIC_PREFIX = "e2e-vetiso";
+    const platform = clientFor(superadmin);
+    const removeClinic = async (id: string, slug: string) => {
+      await platform.patch(`/platform/daycares/${id}`, { isActive: false });
+      await platform.delete(`/platform/daycares/${id}`, { data: { confirm: slug } } as any);
+    };
+    // Whatever an interrupted earlier run left behind.
+    for (const stale of (await platform.get("/platform/daycares")).data as any[]) {
+      if (stale.slug.startsWith(CLINIC_PREFIX)) await removeClinic(stale.id, stale.slug);
+    }
+
+    const slug = `${CLINIC_PREFIX}-${Date.now()}`;
+    const created = await platform.post("/platform/daycares", {
+      slug,
+      name: "Clínica Aislamiento",
+      units: ["VETERINARY"],
+      modules: ["reservas", "veterinaria"],
+      admin: { username: `${slug}_admin`, password: "aislamiento123", name: "Admin Clínica" },
+    });
+    expectStatus(created.status, 201, "Alta de la clínica de prueba");
+    const clinicId: string = created.data.daycare?.id ?? created.data.id;
+
+    try {
+      const owner = clientFor(await loginAs("admin_global", "admin123"), undefined, "VETERINARY");
+      const other = clientFor(
+        await loginAs(`${slug}_admin`, "aislamiento123", undefined, slug),
+        undefined,
+        "VETERINARY",
+      );
+
+      // The main tenant's records, each of which the other clinic will try to use.
+      const foreignClient = ((await owner.get("/clients")).data as any[]).find(
+        (c) => c.pets?.length > 0,
+      );
+      const foreignPetId: string = foreignClient.pets[0].id;
+      const foreignVet = (await owner.get("/veterinaria/staff")).data[0];
+      const foreignService = (await owner.get("/veterinaria/services")).data[0];
+      const foreignRoom = (await owner.get("/rooms")).data[0];
+      const foreignUser = (await owner.get("/users")).data[0];
+      if (!foreignVet || !foreignService || !foreignRoom || !foreignUser) {
+        throw new Error("Faltan datos sembrados de la clínica principal");
+      }
+      const foreignVisit = await owner.post("/veterinaria/visits", {
+        clientId: foreignClient.id,
+        petId: foreignPetId,
+        triage: "URGENCIA",
+        reason: "Aislamiento",
+      });
+      expectStatus(foreignVisit.status, 201, "Consulta en la clínica principal");
+      const foreignVisitId: string = foreignVisit.data.id;
+      const foreignItem = await owner.post("/inventory/items", {
+        name: `Aislamiento ${Date.now()}`,
+        category: "Medicamentos",
+        currentStock: 5,
+      });
+      expectStatus(foreignItem.status, 201, "Artículo en la clínica principal");
+      const foreignPrescription = await owner.post(
+        `/veterinaria/visits/${foreignVisitId}/prescriptions`,
+        {
+          items: [
+            {
+              drug: "Aislamiento",
+              dose: "1",
+              frequency: "cada 12 h",
+              inventoryItemId: foreignItem.data.id,
+            },
+          ],
+        },
+      );
+      expectStatus(foreignPrescription.status, 201, "Receta en la clínica principal");
+      const foreignLineId: string = foreignPrescription.data.items[0].id;
+
+      // An inpatient stay with an order, a procedure, a lab order and a consent, to aim at.
+      const foreignWard = (await owner.get("/veterinaria/hospitalizations/wards")).data[0];
+      if (!foreignWard) throw new Error("Falta la sala de hospitalización sembrada");
+      const foreignStay = await owner.post(
+        `/veterinaria/visits/${foreignVisitId}/hospitalizations`,
+        {
+          roomId: foreignWard.id,
+          reason: "Aislamiento",
+        },
+      );
+      expectStatus(foreignStay.status, 201, "Ingreso en la clínica principal");
+      const foreignStayPath = `/veterinaria/hospitalizations/${foreignStay.data.id}`;
+      const foreignOrder = await owner.post(`${foreignStayPath}/orders`, {
+        description: "Aislamiento",
+        everyHours: 8,
+      });
+      const foreignProcedure = await owner.post(
+        `/veterinaria/visits/${foreignVisitId}/procedures`,
+        {
+          name: "Aislamiento",
+        },
+      );
+      const foreignLab = await owner.post(`/veterinaria/visits/${foreignVisitId}/lab-orders`, {
+        test: "Aislamiento",
+      });
+      const foreignConsent = await owner.post(`/veterinaria/visits/${foreignVisitId}/consents`, {
+        type: "HOSPITALIZACION",
+        text: "Aislamiento",
+      });
+      for (const [what, created] of [
+        ["Indicación", foreignOrder],
+        ["Procedimiento", foreignProcedure],
+        ["Orden de laboratorio", foreignLab],
+        ["Consentimiento", foreignConsent],
+      ] as const) {
+        expectStatus(created.status, 201, `${what} en la clínica principal`);
+      }
+
+      try {
+        // Reads.
+        expectStatus((await other.get("/veterinaria/visits")).data.length, 0, "Listado ajeno");
+        expectStatus(
+          (await other.get(`/veterinaria/visits/${foreignVisitId}`)).status,
+          404,
+          "Lectura de consulta ajena",
+        );
+        expectStatus(
+          (await other.get(`/veterinaria/patients/${foreignPetId}/history`)).status,
+          404,
+          "Historia clínica ajena",
+        );
+        expectStatus(
+          (await other.get("/veterinaria/hospitalizations?status=ALL")).data.length,
+          0,
+          "Hospitalizaciones ajenas en el listado",
+        );
+        expectStatus(
+          (await other.get("/veterinaria/lab-orders")).data.length,
+          0,
+          "Órdenes de laboratorio ajenas en el listado",
+        );
+        // The main clinic has a lab order pending; the other clinic's reminders and figures
+        // must not see it.
+        if (
+          !(await owner.get("/veterinaria/reminders?kind=LABORATORIO")).data.some(
+            (r: any) => r.id === `LABORATORIO:${foreignLab.data.id}`,
+          )
+        ) {
+          throw new Error("El recordatorio no aparece en su propia clínica");
+        }
+        expectStatus(
+          (await other.get("/veterinaria/reminders")).data.length,
+          0,
+          "Recordatorios ajenos",
+        );
+        expectStatus(
+          (await other.get("/veterinaria/reports/summary")).data.visits.total,
+          0,
+          "Consultas ajenas en el informe",
+        );
+
+        // Writes addressed at the other tenant's visit and patient.
+        const visitPath = `/veterinaria/visits/${foreignVisitId}`;
+        const writes: Array<[string, Promise<{ status: number }>]> = [
+          ["Editar consulta ajena", other.patch(visitPath, { reason: "Hack" })],
+          ["Cambiar estado ajeno", other.patch(`${visitPath}/status`, { status: "CANCELADA" })],
+          ["Signos vitales ajenos", other.post(`${visitPath}/vitals`, { weightKg: 1 })],
+          ["Diagnóstico ajeno", other.post(`${visitPath}/diagnoses`, { description: "Hack" })],
+          ["Cargo ajeno", other.post(`${visitPath}/charges`, { description: "Hack" })],
+          ["Cerrar consulta ajena", other.post(`${visitPath}/close`, {})],
+          ["Vacuna ajena", other.post(`${visitPath}/vaccinations`, { name: "Hack" })],
+          ["Preventivo ajeno", other.post(`${visitPath}/preventives`, { product: "Hack" })],
+          [
+            "Receta ajena",
+            other.post(`${visitPath}/prescriptions`, {
+              items: [{ drug: "Hack", dose: "1", frequency: "1" }],
+            }),
+          ],
+          [
+            "Preventivo sobre paciente ajeno",
+            other.post(`/veterinaria/patients/${foreignPetId}/preventives`, { product: "Hack" }),
+          ],
+          [
+            "Dispensar una receta ajena",
+            other.post(`/veterinaria/prescription-items/${foreignLineId}/dispense`, {
+              quantity: 1,
+            }),
+          ],
+          [
+            "Leer una receta ajena",
+            other.get(`/veterinaria/prescriptions/${foreignPrescription.data.id}`),
+          ],
+          ["Leer un ingreso ajeno", other.get(foreignStayPath)],
+          [
+            "Ingresar a un paciente ajeno",
+            other.post(`${visitPath}/hospitalizations`, { roomId: foreignWard.id, reason: "Hack" }),
+          ],
+          [
+            "Dar el alta a un ingreso ajeno",
+            other.post(`${foreignStayPath}/discharge`, { dischargeSummary: "Hack" }),
+          ],
+          [
+            "Signos vitales en un ingreso ajeno",
+            other.post(`${foreignStayPath}/vitals`, { weightKg: 1 }),
+          ],
+          [
+            "Indicación en un ingreso ajeno",
+            other.post(`${foreignStayPath}/orders`, { description: "Hack" }),
+          ],
+          [
+            "Firmar una dosis ajena",
+            other.post(`/veterinaria/treatment-orders/${foreignOrder.data.id}/doses`, {}),
+          ],
+          [
+            "Suspender una indicación ajena",
+            other.post(`/veterinaria/treatment-orders/${foreignOrder.data.id}/stop`),
+          ],
+          [
+            "Procedimiento en consulta ajena",
+            other.post(`${visitPath}/procedures`, { name: "Hack" }),
+          ],
+          [
+            "Editar un procedimiento ajeno",
+            other.patch(`/veterinaria/procedures/${foreignProcedure.data.id}`, { name: "Hack" }),
+          ],
+          [
+            "Iniciar un procedimiento ajeno",
+            other.post(`/veterinaria/procedures/${foreignProcedure.data.id}/start`),
+          ],
+          [
+            "Finalizar un procedimiento ajeno",
+            other.post(`/veterinaria/procedures/${foreignProcedure.data.id}/finish`, {}),
+          ],
+          [
+            "Eliminar un procedimiento ajeno",
+            other.delete(`${visitPath}/procedures/${foreignProcedure.data.id}`),
+          ],
+          [
+            "Orden de laboratorio en consulta ajena",
+            other.post(`${visitPath}/lab-orders`, { test: "Hack" }),
+          ],
+          [
+            "Cambiar el estado de una orden ajena",
+            other.patch(`/veterinaria/lab-orders/${foreignLab.data.id}/status`, {
+              status: "EN_PROCESO",
+            }),
+          ],
+          [
+            "Resultado sobre una orden ajena",
+            other.post(`/veterinaria/lab-orders/${foreignLab.data.id}/result`, {
+              resultSummary: "Hack",
+            }),
+          ],
+          [
+            "Consentimiento en consulta ajena",
+            other.post(`${visitPath}/consents`, { type: "CIRUGIA", text: "Hack" }),
+          ],
+          [
+            "Leer un consentimiento ajeno",
+            other.get(`/veterinaria/consents/${foreignConsent.data.id}`),
+          ],
+          [
+            "Firmar un consentimiento ajeno",
+            other.post(`/veterinaria/consents/${foreignConsent.data.id}/sign`, {
+              signedByName: "Hack",
+            }),
+          ],
+          ["Eliminar consulta ajena", other.delete(visitPath)],
+          [
+            "Editar paciente ajeno",
+            other.patch(`/veterinaria/patients/${foreignPetId}`, { bloodType: "Hack" }),
+          ],
+          [
+            "Editar servicio ajeno",
+            other.put(`/veterinaria/services/${foreignService.id}`, { basePrice: 0 }),
+          ],
+          [
+            "Editar veterinario ajeno",
+            other.put(`/veterinaria/staff/${foreignVet.id}`, { name: "Hack" }),
+          ],
+          [
+            "Consulta con tutor y paciente ajenos",
+            other.post("/veterinaria/visits", { clientId: foreignClient.id, petId: foreignPetId }),
+          ],
+          [
+            "Vincular un usuario ajeno",
+            other.post("/veterinaria/staff", { name: "Hack", userId: foreignUser.id }),
+          ],
+        ];
+        for (const [what, pending] of writes) expectStatus((await pending).status, 404, what);
+
+        // Writes inside its own tenant that smuggle a foreign id in the body.
+        const ownClient = await other.post("/clients", { firstName: "Propio", lastName: "Tutor" });
+        expectStatus(ownClient.status, 201, "Alta de tutor propio");
+        const ownPet = await other.post("/pets", {
+          clientId: ownClient.data.id,
+          name: "Propio",
+          species: "dog",
+          sex: "F",
+        });
+        expectStatus(ownPet.status, 201, "Alta de paciente propio");
+        const own = { clientId: ownClient.data.id, petId: ownPet.data.id };
+
+        for (const [what, body] of [
+          ["veterinario ajeno", { ...own, veterinarianId: foreignVet.id }],
+          ["sala ajena", { ...own, roomId: foreignRoom.id }],
+          ["servicio ajeno", { ...own, serviceId: foreignService.id }],
+        ] as const) {
+          expectStatus(
+            (await other.post("/veterinaria/visits", body)).status,
+            404,
+            `Consulta con ${what}`,
+          );
+        }
+
+        const ownVisit = await other.post("/veterinaria/visits", own);
+        expectStatus(ownVisit.status, 201, "Consulta propia");
+        expectStatus(
+          (
+            await other.post(`/veterinaria/visits/${ownVisit.data.id}/charges`, {
+              vetServiceId: foreignService.id,
+            })
+          ).status,
+          404,
+          "Cargo con servicio ajeno",
+        );
+        expectStatus(
+          (
+            await other.patch(`/veterinaria/visits/${ownVisit.data.id}`, {
+              veterinarianId: foreignVet.id,
+            })
+          ).status,
+          404,
+          "Asignar veterinario ajeno",
+        );
+
+        // Its own patient cannot be admitted into the other tenant's ward, nor operated on by
+        // the other tenant's veterinarian.
+        expectStatus(
+          (
+            await other.post(`/veterinaria/visits/${ownVisit.data.id}/hospitalizations`, {
+              roomId: foreignWard.id,
+              reason: "Hack",
+            })
+          ).status,
+          404,
+          "Ingreso en una sala ajena",
+        );
+        expectStatus(
+          (
+            await other.post(`/veterinaria/visits/${ownVisit.data.id}/procedures`, {
+              name: "Hack",
+              veterinarianId: foreignVet.id,
+            })
+          ).status,
+          404,
+          "Procedimiento con veterinario ajeno",
+        );
+
+        // Its own prescription cannot draw on the other tenant's stock.
+        expectStatus(
+          (
+            await other.post(`/veterinaria/visits/${ownVisit.data.id}/prescriptions`, {
+              items: [
+                { drug: "X", dose: "1", frequency: "1", inventoryItemId: foreignItem.data.id },
+              ],
+            })
+          ).status,
+          404,
+          "Receta con artículo de inventario ajeno",
+        );
+        const ownPrescription = await other.post(
+          `/veterinaria/visits/${ownVisit.data.id}/prescriptions`,
+          { items: [{ drug: "X", dose: "1", frequency: "1" }] },
+        );
+        expectStatus(ownPrescription.status, 201, "Receta propia");
+        expectStatus(
+          (
+            await other.post(
+              `/veterinaria/prescription-items/${ownPrescription.data.items[0].id}/dispense`,
+              { quantity: 1, inventoryItemId: foreignItem.data.id },
+            )
+          ).status,
+          404,
+          "Dispensar desde el inventario ajeno",
+        );
+        const stock = await owner.get("/veterinaria/pharmacy/items");
+        const untouchedItem = stock.data.find((i: any) => i.id === foreignItem.data.id);
+        if (untouchedItem?.currentStock !== 5) {
+          throw new Error("El stock de la clínica principal fue alterado desde otra");
+        }
+
+        // And none of it reached the visit it was aimed at.
+        const untouched = await owner.get(visitPath);
+        expectStatus(untouched.status, 200, "La consulta principal sigue existiendo");
+        if (untouched.data.reason !== "Aislamiento" || untouched.data.charges.length !== 0) {
+          throw new Error("La consulta de la clínica principal fue modificada desde otra");
+        }
+        const stay = untouched.data.hospitalizations[0];
+        if (
+          stay?.status !== "INGRESADO" ||
+          untouched.data.procedures[0]?.name !== "Aislamiento" ||
+          untouched.data.labOrders[0]?.status !== "SOLICITADO" ||
+          untouched.data.consents[0]?.signedAt !== null
+        ) {
+          throw new Error("El ingreso o las órdenes de la clínica principal fueron alterados");
+        }
+      } finally {
+        // A visit cannot be deleted from under an admitted patient.
+        await owner.post(`${foreignStayPath}/discharge`, { dischargeSummary: "Aislamiento" });
+        await owner.delete(`/veterinaria/visits/${foreignVisitId}`);
+        await owner.delete(`/inventory/items/${foreignItem.data.id}`);
+      }
+    } finally {
+      await removeClinic(clinicId, slug);
+    }
+  });
+
+  await test("Una guardería no puede referenciar ni borrar archivos de otra", async () => {
+    // Deleting an object is authorized by a row of the caller's tenant referencing its key, so
+    // a tenant that could write a reference into another's prefix could delete the file behind
+    // it. Both halves are pinned: the reference is refused, and so is the delete.
+    const attacker = clientFor(await loginAs("admin_global", "admin123"), undefined, "VETERINARY");
+    const foreignKey = `daycares/${DEMO_ID}/pets/Toby_Demo/1-foto.jpg`;
+
+    const client = (
+      (await attacker.get("/clients")).data as { id: string; pets?: { id: string }[] }[]
+    ).find((c) => (c.pets?.length ?? 0) > 0);
+    if (!client?.pets) throw new Error("Faltan clientes sembrados con mascotas");
+    const petId = client.pets[0].id;
+    const before = (await attacker.get(`/pets/${petId}`)).data.photoUrl ?? null;
+
+    for (const photoUrl of [
+      `https://s3.us-east-005.backblazeb2.com/bucket/${foreignKey}`,
+      `https://evil.example.com/${foreignKey}`,
+    ]) {
+      expectStatus(
+        (await attacker.put(`/pets/${petId}`, { photoUrl })).status,
+        400,
+        "Foto que apunta al prefijo de otra guardería",
+      );
+    }
+    expectStatus(
+      (
+        await attacker.post("/pets", {
+          clientId: client.id,
+          name: "Aislamiento",
+          sex: "M",
+          photoUrl: `https://evil.example.com/${foreignKey}`,
+        })
+      ).status,
+      400,
+      "Alta de mascota con foto ajena",
+    );
+    const after = (await attacker.get(`/pets/${petId}`)).data.photoUrl ?? null;
+    if (after !== before) throw new Error("La foto de la mascota cambió pese al rechazo");
+
+    const visit = await attacker.post("/veterinaria/visits", {
+      clientId: client.id,
+      petId,
+      triage: "URGENCIA",
+      reason: "Aislamiento de archivos",
+    });
+    expectStatus(visit.status, 201, "Consulta propia");
+    try {
+      for (const filePath of [foreignKey, `https://evil.example.com/${foreignKey}`, "../x"]) {
+        expectStatus(
+          (
+            await attacker.post(`/veterinaria/visits/${visit.data.id}/documents`, {
+              type: "INFORME",
+              name: "Aislamiento",
+              filePath,
+            })
+          ).status,
+          400,
+          `Documento con ruta ajena (${filePath})`,
+        );
+      }
+    } finally {
+      await attacker.delete(`/veterinaria/visits/${visit.data.id}`);
+    }
+
+    expectStatus(
+      (await attacker.post("/storage/remove", { key: foreignKey })).status,
+      404,
+      "Borrado de un archivo de otra guardería",
+    );
   });
 
   const passed = results.filter((r) => r.passed).length;

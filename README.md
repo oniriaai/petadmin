@@ -1,17 +1,22 @@
 # Pethijos Admin — Plataforma Modular Multi-Guardería
 
 Sistema administrativo modular (**Modular Monolith**) multi-inquilino para la gestión operativa y
-financiera de guarderías y peluquerías caninas. Cada guardería cliente es un **inquilino** (`Daycare`)
+financiera de guarderías, peluquerías y clínicas veterinarias. Cada guardería cliente es un **inquilino** (`Daycare`)
 con sus propios datos, usuarios y **módulos contratados**; el proveedor los administra desde una
 consola propia.
 
-Cada inquilino opera hasta dos **unidades de negocio**: `DAYCARE` ("Guardería") y `GROOMING`
-("Peluquería").
+Cada inquilino opera hasta tres **unidades de negocio**: `DAYCARE` ("Guardería"), `GROOMING`
+("Peluquería") y `VETERINARY` ("Veterinaria").
 
 - 🐶 **Guardería**: semáforo de cupos por sala en tiempo real, estancias diarias, check-in/check-out
   con validación de aforo, planes recurrentes semanales y rutas de transporte.
 - ✂️ **Peluquería**: catálogo de servicios con duración estimada y tarifas base, agenda por franja
   horaria, tablero kanban (`Agendada` → `En Salón` → `En Baño/Corte` → `Listo` → `Entregada`) y cobro directo.
+- 🩺 **Veterinaria**: agenda de consultas por veterinario y sala, sala de espera con prioridad,
+  historia clínica (registro SOAP, signos vitales, diagnósticos), vacunas y preventivos, recetas y
+  farmacia sobre el inventario, hospitalización con hoja de tratamiento, cirugías con
+  consentimiento firmado, laboratorio e imagen, recordatorios e informe clínico, y cierre con
+  cobro acreditado a `VETERINARY`.
 - 🐾 **Núcleo compartido**: tutores y perrhijos (con historial, vacunas y fotos en Backblaze B2),
   autenticación JWT y aislamiento estricto entre inquilinos.
 - 💵 **Finanzas**: cobros e ingresos contables segregados por unidad, cuentas por pagar, inventario
@@ -76,9 +81,10 @@ distintos y se mantienen distinguibles a propósito.
 | Rol | Alcance |
 |---|---|
 | `superadmin` | Proveedor. **No pertenece a ninguna guardería** y ninguna guardería puede asignarlo. Acceso total; fija un inquilino con la cabecera `X-Daycare-Id`. |
-| `admin` | Administrador de su guardería, ambas unidades, con selector de workspace. |
+| `admin` | Administrador de su guardería, todas sus unidades, con selector de workspace. |
 | `daycare` | Operación de Guardería de su guardería. |
 | `grooming` | Operación de Peluquería de su guardería. |
+| `veterinary` | Operación de la clínica veterinaria de su guardería. El catálogo, el personal y el informe clínico son solo del `admin`. |
 
 La base de datos garantiza la invariante con la restricción `users_superadmin_untenanted`:
 `(role = 'superadmin') = ("daycareId" IS NULL)`.
@@ -94,6 +100,7 @@ del backend (definidos en `backend/src/platform/product-modules.ts`):
 | `reservas` | `reservations`, `rooms`, `check-in-out`, `recurring-plans` | Primitivos compartidos: las reservas de peluquería también ocupan sala y registran entrada/salida |
 | `guarderia` | `guarderia` | Requiere `reservas` |
 | `peluqueria` | `peluqueria` | Requiere `reservas` |
+| `veterinaria` | `veterinaria` | Requiere `reservas`: cada consulta es una reserva de la unidad `VETERINARY` |
 | `finanzas` | `incomes`, `payables`, `providers` | |
 | `inventario` | `inventory` | Stock con aviso de mínimo y movimientos |
 | `informes` | `reports`, `export` | |
@@ -284,7 +291,7 @@ trabajos:
 | Trabajo | Qué comprueba |
 |---|---|
 | `static` | Tipos (`npm run typecheck`), lint (`eslint`), formato (`prettier --check`) y la suite de arquitectura en el backend; tipos, lint, formato, build y pruebas en el frontend. Sin base de datos, así que falla lo obvio primero. |
-| `e2e` | Las **once** suites e2e contra un Postgres de servicio, con migraciones aplicadas y datos de demostración sembrados. Termina comprobando que el registro del backend no contiene ninguna consulta sin ámbito de inquilino. |
+| `e2e` | Las **doce** suites e2e contra un Postgres de servicio, con migraciones aplicadas y datos de demostración sembrados. Termina comprobando que el registro del backend no contiene ninguna consulta sin ámbito de inquilino. |
 | `production-image` | Construye las dos imágenes de producción y comprueba que el backend **se niega a arrancar** sin `JWT_SECRET` y que una base de datos nueva queda con la cuenta de plataforma y **sin** guarderías de demostración. |
 
 `test:ratelimit` va deliberadamente al final de `e2e`: agota el límite de inicios de sesión a
@@ -431,6 +438,7 @@ contratación deben evitar.
 | `admin_global` | `admin123` | `admin` | Vista consolidada con selector de unidad |
 | `kinderdog_admin` | `kinderdog123` | `daycare` | Operación y finanzas de Guardería |
 | `pethijos_admin` | `pethijos123` | `grooming` | Operación y finanzas de Peluquería |
+| `vet_admin` | `vet12345` | `veterinary` | Clínica veterinaria: agenda, historias clínicas, farmacia, hospitalización y laboratorio |
 
 ### Guardería `demo` — solo `GROOMING`, con `reservas` y `peluqueria`
 

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Compass, LayoutDashboard, LogOut, PawPrint, Scissors, X } from "lucide-react";
+import { Compass, LayoutDashboard, LogOut, PawPrint, Scissors, Stethoscope, X } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { frontendModules, ModuleNavigationItem } from "../../modules/registry";
 import { cls } from "../../lib/utils";
@@ -26,6 +26,7 @@ export function Sidebar({
     activeBusinessUnit ?? (user?.businessUnit === "GLOBAL" ? null : user?.businessUnit);
   const isDaycare = effectiveUnit === "DAYCARE";
   const isGrooming = effectiveUnit === "GROOMING";
+  const isVeterinary = effectiveUnit === "VETERINARY";
 
   // Collapsed mode has no room for labels, and a drawer is always full width.
   const compact = isCollapsed && !isDrawer;
@@ -35,9 +36,11 @@ export function Sidebar({
     ? "Guardería"
     : isGrooming
       ? "Peluquería"
-      : spansBothUnits
-        ? "Consolidado"
-        : "";
+      : isVeterinary
+        ? "Veterinaria"
+        : spansBothUnits
+          ? "Consolidado"
+          : "";
 
   const shouldShowItem = (item: ModuleNavigationItem) => {
     // No `?? "admin"` fallback: an undefined user used to be treated as an administrator and
@@ -70,13 +73,21 @@ export function Sidebar({
         <div
           className={cls(
             "w-9 h-9 rounded-xl grid place-items-center shrink-0 text-white",
-            isDaycare ? "bg-daycare-600" : isGrooming ? "bg-grooming-700" : "bg-white/15",
+            isDaycare
+              ? "bg-daycare-600"
+              : isGrooming
+                ? "bg-grooming-700"
+                : isVeterinary
+                  ? "bg-veterinary-700"
+                  : "bg-white/15",
           )}
         >
           {isDaycare ? (
             <PawPrint size={18} />
           ) : isGrooming ? (
             <Scissors size={18} />
+          ) : isVeterinary ? (
+            <Stethoscope size={18} />
           ) : (
             <Compass size={18} />
           )}

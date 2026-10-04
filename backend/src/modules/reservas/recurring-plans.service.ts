@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../../db";
 import { validateNoReservationConflicts, validateRoomCapacity } from "../../utils/validation";
 import { getUnitTimezone } from "../../core/tenancy/unit-settings";
+import { localDatePartsInTimezone, localDateTimeToUtc } from "../../core/tenancy/local-time";
 
 const HORIZON_DAYS = 30;
 
@@ -10,6 +11,8 @@ type GenerationStats = {
   evaluatedOccurrences: number;
   createdReservations: number;
   skippedExisting: number;
+  /** Occurrences not generated because the plan includes a pet recorded as deceased. */
+  skippedDeceased: number;
   failed: number;
   /** Why occurrences failed, counted by message. An empty object means a clean run. */
   failures: Record<string, number>;
@@ -20,7 +23,7 @@ type GenerationStats = {
  * wrote. "Already there" is the normal outcome of the daily re-run over a 30-day horizon, not a
  * failure, so it is a return value rather than an exception.
  */
-type OccurrenceOutcome = "created" | "exists";
+type OccurrenceOutcome = "created" | "exists" | "deceased";
 
 function parsePetIds(petIds: string): string[] {
   return petIds
@@ -42,57 +45,6 @@ function parseTime(time: string): { hour: number; minute: number } {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
   if (!match) throw new Error(`Hora inválida: ${time}`);
   return { hour: Number(match[1]), minute: Number(match[2]) };
-}
-
-function localDatePartsInTimezone(
-  date: Date,
-  timezone: string,
-): { year: number; month: number; day: number } {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const parts = formatter.formatToParts(date);
-  const year = Number(parts.find((p) => p.type === "year")?.value);
-  const month = Number(parts.find((p) => p.type === "month")?.value);
-  const day = Number(parts.find((p) => p.type === "day")?.value);
-  return { year, month, day };
-}
-
-function localDateTimeOffsetMs(utcDate: Date, timezone: string): number {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-  const parts = formatter.formatToParts(utcDate);
-  const year = Number(parts.find((p) => p.type === "year")?.value);
-  const month = Number(parts.find((p) => p.type === "month")?.value);
-  const day = Number(parts.find((p) => p.type === "day")?.value);
-  const hour = Number(parts.find((p) => p.type === "hour")?.value);
-  const minute = Number(parts.find((p) => p.type === "minute")?.value);
-  const second = Number(parts.find((p) => p.type === "second")?.value);
-  return Date.UTC(year, month - 1, day, hour, minute, second) - utcDate.getTime();
-}
-
-function localDateTimeToUtc(
-  local: { year: number; month: number; day: number; hour: number; minute: number },
-  timezone: string,
-): Date {
-  const targetMs = Date.UTC(local.year, local.month - 1, local.day, local.hour, local.minute, 0, 0);
-  let guessMs = targetMs;
-  for (let i = 0; i < 3; i += 1) {
-    const offset = localDateTimeOffsetMs(new Date(guessMs), timezone);
-    guessMs = targetMs - offset;
-  }
-  return new Date(guessMs);
 }
 
 function compareLocalDates(
@@ -161,12 +113,15 @@ async function createReservationFromPlan(
   }
 
   const ownedPets = await prisma.pet.findMany({
-    where: { id: { in: petIds }, clientId: plan.clientId },
-    select: { id: true },
+    where: { id: { in: petIds }, clientId: plan.clientId, daycareId: plan.daycareId },
+    select: { id: true, deceasedAt: true },
   });
   if (ownedPets.length !== petIds.length) {
     throw new Error("Plan contiene mascotas que no pertenecen al cliente");
   }
+  // Not a failure: nothing is broken, and the plan would otherwise fail on every run until
+  // someone edits it. It is counted apart so a clean run still reports `failed: 0`.
+  if (ownedPets.some((pet) => pet.deceasedAt)) return "deceased";
 
   // Has a previous run already created this occurrence?
   //
@@ -243,6 +198,7 @@ export async function generateRecurringReservations(
     evaluatedOccurrences: 0,
     createdReservations: 0,
     skippedExisting: 0,
+    skippedDeceased: 0,
     failed: 0,
     failures: {},
   };
@@ -317,11 +273,10 @@ export async function generateRecurringReservations(
       stats.evaluatedOccurrences += 1;
 
       try {
-        if ((await createReservationFromPlan(plan, checkIn, checkOut)) === "created") {
-          stats.createdReservations += 1;
-        } else {
-          stats.skippedExisting += 1;
-        }
+        const outcome = await createReservationFromPlan(plan, checkIn, checkOut);
+        if (outcome === "created") stats.createdReservations += 1;
+        else if (outcome === "deceased") stats.skippedDeceased += 1;
+        else stats.skippedExisting += 1;
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
           // Another run created it between the existence check and the insert. Still a skip.

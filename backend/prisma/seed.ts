@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 const BU = {
   DAYCARE: "DAYCARE",
   GROOMING: "GROOMING",
+  VETERINARY: "VETERINARY",
 } as const;
 
 /**
@@ -137,7 +138,7 @@ async function ensureDaycares() {
       slug: "pethijos",
       name: "Pethijos",
       timezone: "America/Guayaquil",
-      units: `${BU.DAYCARE},${BU.GROOMING}`,
+      units: `${BU.DAYCARE},${BU.GROOMING},${BU.VETERINARY}`,
     },
   });
 
@@ -206,6 +207,98 @@ async function ensureDaycares() {
   }
 }
 
+/**
+ * The clinic unit of the main tenant: its slot, a `veterinary` login, rooms, a staff
+ * veterinarian and a priced catalogue. Idempotent, and separate from the one-shot demo data
+ * below so a database seeded before the clinic existed picks it up on the next start.
+ *
+ * The demo tenant deliberately gets none of this: it stays grooming-only.
+ */
+async function ensureVeterinaryClinic() {
+  const daycare = await prisma.daycare.findUnique({
+    where: { id: PETHIJOS_ID },
+    select: { units: true },
+  });
+  if (!daycare) return;
+  if (!daycare.units.split(",").includes(BU.VETERINARY)) {
+    await prisma.daycare.update({
+      where: { id: PETHIJOS_ID },
+      data: { units: `${daycare.units},${BU.VETERINARY}` },
+    });
+  }
+
+  await prisma.businessUnitSetting.upsert({
+    where: { daycareId_businessUnit: { daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY } },
+    update: {},
+    create: { daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY, timezone: "America/Guayaquil" },
+  });
+
+  const vetUser = await prisma.user.upsert({
+    where: { daycareId_username: { daycareId: PETHIJOS_ID, username: "vet_admin" } },
+    update: {},
+    create: {
+      daycareId: PETHIJOS_ID,
+      username: "vet_admin",
+      name: "Dra. Camila Rivas",
+      passwordHash: bcrypt.hashSync("vet12345", 10),
+      role: "veterinary",
+      businessUnit: BU.VETERINARY,
+    },
+  });
+
+  const clinicRooms = await prisma.room.count({
+    where: { daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY },
+  });
+  if (clinicRooms === 0) {
+    await prisma.room.createMany({
+      data: [
+        { name: "Consultorio 1", capacity: 1, type: "consultorio" },
+        { name: "Consultorio 2", capacity: 1, type: "consultorio" },
+        { name: "Quirófano", capacity: 1, type: "quirofano" },
+        { name: "Hospitalización", capacity: 6, type: "hospital" },
+      ].map((room) => ({ ...room, daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY })),
+    });
+  }
+
+  const staff = await prisma.veterinarian.count({
+    where: { daycareId: PETHIJOS_ID, isExternal: false, userId: vetUser.id },
+  });
+  if (staff === 0) {
+    await prisma.veterinarian.create({
+      data: {
+        daycareId: PETHIJOS_ID,
+        name: "Dra. Camila Rivas",
+        licenseNumber: "MVZ-1042",
+        specialty: "Medicina general",
+        userId: vetUser.id,
+      },
+    });
+  }
+
+  const services = await prisma.vetService.count({ where: { daycareId: PETHIJOS_ID } });
+  if (services === 0) {
+    await prisma.vetService.createMany({
+      data: [
+        { name: "Consulta general", category: "CONSULTA", durationMinutes: 30, basePrice: 25 },
+        { name: "Control", category: "CONSULTA", durationMinutes: 20, basePrice: 15 },
+        { name: "Consulta de urgencia", category: "CONSULTA", durationMinutes: 45, basePrice: 45 },
+        { name: "Vacuna múltiple", category: "VACUNACION", durationMinutes: 15, basePrice: 28 },
+        { name: "Vacuna antirrábica", category: "VACUNACION", durationMinutes: 15, basePrice: 18 },
+        { name: "Desparasitación", category: "PROCEDIMIENTO", durationMinutes: 15, basePrice: 12 },
+        { name: "Hemograma", category: "LABORATORIO", durationMinutes: 20, basePrice: 22 },
+        { name: "Radiografía", category: "IMAGEN", durationMinutes: 30, basePrice: 40 },
+        { name: "Esterilización", category: "CIRUGIA", durationMinutes: 120, basePrice: 140 },
+        {
+          name: "Profilaxis dental",
+          category: "PROCEDIMIENTO",
+          durationMinutes: 60,
+          basePrice: 70,
+        },
+      ].map((service) => ({ ...service, daycareId: PETHIJOS_ID })),
+    });
+  }
+}
+
 async function main() {
   // Always first, and independent of the demo data: a production database needs exactly this.
   await ensureSuperadmin();
@@ -222,6 +315,8 @@ async function main() {
 
   const existing = await prisma.user.count({ where: { daycareId: PETHIJOS_ID } });
   if (existing > 0) {
+    // A database seeded before the clinic existed still gets it.
+    await ensureVeterinaryClinic();
     console.log("DB already seeded, skipping.");
     return;
   }
@@ -337,10 +432,23 @@ async function main() {
         name: "Dra. Verónica Mena",
         phone: "0995550001",
         clinic: "Clínica Animal Norte",
+        isExternal: true,
         isActive: true,
       },
-      { name: "Dr. Pablo Cedeño", phone: "0995550002", clinic: "VetCenter Sur", isActive: true },
-      { name: "Dra. Lina Forero", phone: "3001112211", clinic: "Pets Care PH", isActive: false },
+      {
+        name: "Dr. Pablo Cedeño",
+        phone: "0995550002",
+        clinic: "VetCenter Sur",
+        isExternal: true,
+        isActive: true,
+      },
+      {
+        name: "Dra. Lina Forero",
+        phone: "3001112211",
+        clinic: "Pets Care PH",
+        isExternal: true,
+        isActive: false,
+      },
     ]),
   });
 
@@ -1233,6 +1341,8 @@ async function main() {
     alerts: alertCount,
     contracts: contractCount,
   });
+
+  await ensureVeterinaryClinic();
 
   void users;
   void buSettings;

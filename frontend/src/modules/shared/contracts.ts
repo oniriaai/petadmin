@@ -1,23 +1,30 @@
-export type BusinessUnit = "DAYCARE" | "GROOMING";
+export type BusinessUnit = "DAYCARE" | "GROOMING" | "VETERINARY";
 /** `superadmin` is the vendor role: it has no daycare and no tenant user can hold it. */
-export type UserRole = "superadmin" | "admin" | "daycare" | "grooming";
+export type UserRole = "superadmin" | "admin" | "daycare" | "grooming" | "veterinary";
 /** The roles a daycare user can actually have, used for per-route role checks. */
 export type TenantRole = Exclude<UserRole, "superadmin">;
 
-export const BUSINESS_UNITS: readonly BusinessUnit[] = ["DAYCARE", "GROOMING"];
-export const USER_ROLES: readonly UserRole[] = ["superadmin", "admin", "daycare", "grooming"];
+export const BUSINESS_UNITS: readonly BusinessUnit[] = ["DAYCARE", "GROOMING", "VETERINARY"];
+export const USER_ROLES: readonly UserRole[] = [
+  "superadmin",
+  "admin",
+  "daycare",
+  "grooming",
+  "veterinary",
+];
 
 /**
  * The Spanish name for each unit slot.
  *
- * `DAYCARE`/`GROOMING` are internal slot ids; the interface is Spanish and never shows them. The
+ * `DAYCARE`/`GROOMING`/`VETERINARY` are internal slot ids; the interface is Spanish and never shows them. The
  * platform console was printing the raw values beside roles it *had* translated, so this lives
- * here rather than in one screen. `GLOBAL` is the stored unit of a role that spans both.
+ * here rather than in one screen. `GLOBAL` is the stored unit of a role that spans all of them.
  */
 export const BUSINESS_UNIT_LABELS: Record<string, string> = {
   DAYCARE: "Guardería",
   GROOMING: "Peluquería",
-  GLOBAL: "Ambas unidades",
+  VETERINARY: "Veterinaria",
+  GLOBAL: "Todas las unidades",
 };
 
 export function businessUnitLabel(value: string | null | undefined): string {
@@ -38,6 +45,7 @@ export const PRODUCT_MODULE_IDS = [
   "reservas",
   "guarderia",
   "peluqueria",
+  "veterinaria",
   "finanzas",
   "inventario",
   "informes",

@@ -4,6 +4,7 @@ import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 import { DEFAULT_LIMIT } from "../utils/pagination";
+import { recordStockMovement } from "../core/inventory/stock";
 
 export const inventoryRouter = Router();
 
@@ -14,6 +15,7 @@ const itemSchema = z.object({
   minStock: z.number().min(0).default(0),
   currentStock: z.number().min(0).default(0),
   unitCost: z.number().min(0).default(0),
+  isControlled: z.boolean().optional(),
 });
 
 inventoryRouter.get("/items", async (req, res) => {
@@ -111,6 +113,8 @@ const movementSchema = z.object({
   cost: z.number().optional(),
   reason: z.string().optional(),
   date: z.string().optional(),
+  lotNumber: z.string().trim().max(80).optional(),
+  expiresAt: z.string().optional(),
 });
 
 inventoryRouter.get("/items/:id/movements", async (req, res) => {
@@ -143,10 +147,10 @@ inventoryRouter.post("/items/:id/movements", async (req, res) => {
       res.status(400).json({ message: "Datos inválidos" });
       return;
     }
-    const { date, type, quantity, ...rest } = parsed.data;
+    const { date, expiresAt, ...rest } = parsed.data;
     const item = await prisma.inventoryItem.findUnique({
       where: { id: req.params.id },
-      select: { businessUnit: true, daycareId: true, currentStock: true },
+      select: { businessUnit: true, daycareId: true },
     });
     if (!item) {
       res.status(404).json({ message: "Item no encontrado" });
@@ -154,29 +158,16 @@ inventoryRouter.post("/items/:id/movements", async (req, res) => {
     }
     assertRecordAccess(req, item);
 
-    const movement = await prisma.inventoryMovement.create({
-      data: {
-        itemId: req.params.id,
-        type,
-        quantity,
-        date: date ? new Date(date) : new Date(),
+    // One transaction: the movement and the stock level it implies succeed or fail together.
+    const movement = await prisma.$transaction((tx) =>
+      recordStockMovement(tx, {
         ...rest,
-      },
-    });
-
-    const delta =
-      type === "SALIDA" ? -quantity : type === "AJUSTE" ? quantity - item.currentStock : quantity;
-    if (type === "AJUSTE") {
-      await prisma.inventoryItem.update({
-        where: { id: req.params.id },
-        data: { currentStock: quantity },
-      });
-    } else {
-      await prisma.inventoryItem.update({
-        where: { id: req.params.id },
-        data: { currentStock: { increment: delta } },
-      });
-    }
+        daycareId: item.daycareId,
+        itemId: req.params.id,
+        date: date ? new Date(date) : undefined,
+        expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+      }),
+    );
 
     res.status(201).json(movement);
   } catch (error) {

@@ -50,8 +50,8 @@ async function main(): Promise<void> {
 
   check(
     "Las ocurrencias existentes se cuentan como omitidas",
-    second.skippedExisting === second.evaluatedOccurrences,
-    `omitidas ${second.skippedExisting} de ${second.evaluatedOccurrences} evaluadas`,
+    second.skippedExisting + second.skippedDeceased === second.evaluatedOccurrences,
+    `omitidas ${second.skippedExisting + second.skippedDeceased} de ${second.evaluatedOccurrences} evaluadas`,
   );
 
   check(
@@ -66,6 +66,37 @@ async function main(): Promise<void> {
     Object.keys(second.failures).length === 0,
     JSON.stringify(second.failures),
   );
+
+  // A plan whose pet has since died is not a failure: it used to fail on every run, for every
+  // occurrence, until someone edited the plan. Built on a seeded plan and removed afterwards.
+  const template = await prisma.recurringPlan.findFirst({ where: { isActive: true } });
+  if (template) {
+    const pet = await prisma.pet.create({
+      data: {
+        daycareId: template.daycareId,
+        clientId: template.clientId,
+        name: "Idempotencia",
+        sex: "M",
+        deceasedAt: new Date(),
+      },
+    });
+    const { id: _id, createdAt: _createdAt, ...planData } = template;
+    const plan = await prisma.recurringPlan.create({ data: { ...planData, petIds: pet.id } });
+    try {
+      const run = await generateRecurringReservations();
+      console.log("  con un plan de mascota fallecida:", JSON.stringify(run));
+      check(
+        "Un plan con una mascota fallecida se omite sin contarse como fallo",
+        run.skippedDeceased > 0 && run.failed === 0 && run.createdReservations === 0,
+        JSON.stringify(run),
+      );
+      const written = await prisma.reservation.count({ where: { recurringPlanId: plan.id } });
+      check("El plan de la mascota fallecida no genera reservas", written === 0, `${written}`);
+    } finally {
+      await prisma.recurringPlan.delete({ where: { id: plan.id } });
+      await prisma.pet.delete({ where: { id: pet.id } });
+    }
+  }
 
   // No duplicates: the unique key is what the early existence check is built on.
   const duplicates = await prisma.$queryRaw<Array<{ count: bigint }>>`

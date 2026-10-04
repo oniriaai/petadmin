@@ -143,6 +143,14 @@ makes it scoped and gated — there is nothing to remember per route.
   frontend module registry.
 - Only the `auth` module may be `public: true`; everything else is mounted behind
   authentication and the entitlement gate.
+- A new table with a `daycareId` has three more places to go, and nothing fails at boot if one is
+  missed: `TENANT_OWNED` in `backend/src/core/tenancy/guard.ts`; `deleteDaycare` in
+  `backend/src/modules/platform-admin/offboarding.service.ts`, children first (and the mirror
+  cleanup in `backend/tests/offboarding.e2e.ts`); and, if the customer would want the data when it
+  leaves, a sheet in `buildDaycareExport` in the same service.
+- A new business unit is not only `BUSINESS_UNITS`. `moduleServesUnits` treats an access list as
+  unconstrained only when it names every unit, so adding a unit turns every existing list that
+  does not name it into a restriction. Review each `access.businessUnits` in the registry.
 - `superadmin` is the vendor role and belongs to no daycare. Never add it to a
   module's `access.roles` — the gate lets it through before the role check — and
   never make it assignable: `ASSIGNABLE_TENANT_ROLES` is the only allowlist, and the

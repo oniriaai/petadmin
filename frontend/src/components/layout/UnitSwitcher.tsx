@@ -1,8 +1,8 @@
 import { useAuth } from "../../lib/auth-context";
-import { businessUnitLabel } from "../../modules/shared/contracts";
+import { businessUnitLabel, normalizeBusinessUnit } from "../../modules/shared/contracts";
 
 /**
- * Consolidated / Guardería / Peluquería, for roles that span both units.
+ * Consolidated or one unit, for roles that span every unit.
  *
  * Moved out of the sidebar header: it scopes the whole workspace, so it belongs in the topbar
  * next to the daycare it scopes, and it has to stay reachable when the sidebar is collapsed.
@@ -34,8 +34,7 @@ export function UnitSwitcher({ variant = "topbar" }: { variant?: "topbar" | "dra
       <select
         value={activeBusinessUnit ?? ""}
         onChange={(event) => {
-          const value = event.target.value;
-          setActiveBusinessUnit(value === "DAYCARE" || value === "GROOMING" ? value : null);
+          setActiveBusinessUnit(normalizeBusinessUnit(event.target.value));
         }}
         className={
           isDrawer
@@ -43,7 +42,7 @@ export function UnitSwitcher({ variant = "topbar" }: { variant?: "topbar" | "dra
             : "input py-1.5 text-xs w-auto"
         }
       >
-        <option value="">Consolidado (Ambos)</option>
+        <option value="">Consolidado</option>
         {units.map((unit) => (
           <option key={unit} value={unit}>
             {businessUnitLabel(unit)}

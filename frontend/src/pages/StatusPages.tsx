@@ -1,15 +1,15 @@
 import { Link } from "react-router-dom";
 import { ArrowLeftRight, Lock, PackageX, SearchX } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
+import { businessUnitLabel } from "../modules/shared/contracts";
 import type { BusinessUnit, ProductModuleId } from "../modules/shared/contracts";
-
-const UNIT_LABELS: Record<BusinessUnit, string> = { DAYCARE: "Guardería", GROOMING: "Peluquería" };
 
 const MODULE_LABELS: Record<ProductModuleId, string> = {
   nucleo: "Núcleo",
   reservas: "Reservas y Agenda",
   guarderia: "Guardería",
   peluqueria: "Peluquería",
+  veterinaria: "Veterinaria",
   finanzas: "Gestión Financiera",
   inventario: "Inventario",
   informes: "Informes y Exportación",
@@ -89,7 +89,7 @@ export function ModuleUnavailable({
  */
 function WrongUnit({ unit }: { unit?: BusinessUnit }) {
   const { setActiveBusinessUnit } = useAuth();
-  const label = unit ? (UNIT_LABELS[unit] ?? unit) : "otra unidad";
+  const label = unit ? businessUnitLabel(unit) : "otra unidad";
 
   return (
     <Shell icon={<ArrowLeftRight size={22} />} title={`Esta sección es de ${label}`}>

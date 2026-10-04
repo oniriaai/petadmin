@@ -1,19 +1,25 @@
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import { isProductModuleId } from "./shared/contracts";
-import type { ProductModuleId, TenantRole } from "./shared/contracts";
+import type { BusinessUnit, ProductModuleId, TenantRole } from "./shared/contracts";
 import {
   BarChart3,
+  BedDouble,
+  BellRing,
   BookOpen,
   CalendarDays,
+  ClipboardList,
   DollarSign,
+  FlaskConical,
   Grid3X3,
   Home,
   Package,
   PawPrint,
+  Pill,
   Repeat,
   Scissors,
   Settings,
+  Stethoscope,
   Truck,
   Users,
   Wrench,
@@ -34,9 +40,22 @@ import { FinancialPage } from "../pages/transacciones/FinancialPage";
 import { InventarioPage } from "../pages/inventario/InventarioPage";
 import { AgendaPeluqueriaPage } from "../pages/peluqueria/AgendaPeluqueriaPage";
 import { ControlGuarderiaPage } from "../pages/guarderia/ControlGuarderiaPage";
+import { AgendaVeterinariaPage } from "../pages/veterinaria/AgendaVeterinariaPage";
+import { ConsultaPage } from "../pages/veterinaria/ConsultaPage";
+import { PacientesPage } from "../pages/veterinaria/PacientesPage";
+import { HistoriaClinicaPage } from "../pages/veterinaria/HistoriaClinicaPage";
+import { CatalogoVeterinariaPage } from "../pages/veterinaria/CatalogoVeterinariaPage";
+import { FarmaciaPage } from "../pages/veterinaria/FarmaciaPage";
+import { RecetaPage } from "../pages/veterinaria/RecetaPage";
+import { HospitalizacionPage } from "../pages/veterinaria/HospitalizacionPage";
+import { AltaPage } from "../pages/veterinaria/AltaPage";
+import { LaboratorioPage } from "../pages/veterinaria/LaboratorioPage";
+import { ConsentimientoPage } from "../pages/veterinaria/ConsentimientoPage";
+import { RecordatoriosPage } from "../pages/veterinaria/RecordatoriosPage";
+import { InformeClinicaPage } from "../pages/veterinaria/InformeClinicaPage";
 
 export type FrontendRole = TenantRole;
-export type FrontendUnit = "DAYCARE" | "GROOMING";
+export type FrontendUnit = BusinessUnit;
 
 export interface ModuleRoute {
   path: string;
@@ -189,6 +208,188 @@ export const frontendModules: readonly FrontendModule[] = [
           roles: ["admin", "grooming"],
           unit: "GROOMING",
           requires: ["peluqueria"],
+        },
+      ],
+    },
+  },
+  {
+    id: "veterinaria",
+    label: "Veterinaria",
+    // Every clinic page also reads `/rooms` or books a reservation, so `reservas` is listed
+    // even though the product catalog already makes `veterinaria` depend on it.
+    routes: [
+      {
+        path: "/veterinaria",
+        component: AgendaVeterinariaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria", "reservas"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/consultas/:id",
+        component: ConsultaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/pacientes",
+        component: PacientesPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/pacientes/:petId",
+        component: HistoriaClinicaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria", "reservas"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/farmacia",
+        component: FarmaciaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/recetas/:id",
+        component: RecetaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/hospitalizacion",
+        component: HospitalizacionPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/hospitalizacion/:id",
+        component: AltaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/laboratorio",
+        component: LaboratorioPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/consentimientos/:id",
+        component: ConsentimientoPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/recordatorios",
+        component: RecordatoriosPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/informe",
+        component: InformeClinicaPage,
+        roles: ["admin"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/catalogo",
+        component: CatalogoVeterinariaPage,
+        roles: ["admin"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+    ],
+    navigation: {
+      label: "Veterinaria",
+      icon: Stethoscope,
+      items: [
+        {
+          to: "/veterinaria",
+          label: "Agenda Veterinaria",
+          icon: Stethoscope,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria", "reservas"],
+        },
+        {
+          to: "/veterinaria/pacientes",
+          label: "Historias Clínicas",
+          icon: ClipboardList,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        {
+          to: "/veterinaria/hospitalizacion",
+          label: "Hospitalización",
+          icon: BedDouble,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        {
+          to: "/veterinaria/laboratorio",
+          label: "Laboratorio",
+          icon: FlaskConical,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        // Stock is read through the clinic's own endpoints, so the desk works without the
+        // `inventario` module; receiving stock is what needs the Inventario screen.
+        {
+          to: "/veterinaria/farmacia",
+          label: "Farmacia",
+          icon: Pill,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        {
+          to: "/veterinaria/recordatorios",
+          label: "Recordatorios",
+          icon: BellRing,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        // The clinic's own figures, served by its module so they do not depend on `informes`.
+        {
+          to: "/veterinaria/informe",
+          label: "Informe Clínico",
+          icon: BarChart3,
+          roles: ["admin"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        // The shared rooms screen, reached from the clinic's own group: its Guardería entry is
+        // hidden while working in Veterinaria, and consulting rooms have to be managed somewhere.
+        {
+          to: "/salas",
+          label: "Salas de la Clínica",
+          icon: Grid3X3,
+          roles: ["admin"],
+          unit: "VETERINARY",
+          requires: ["veterinaria", "reservas"],
+        },
+        {
+          to: "/veterinaria/catalogo",
+          label: "Catálogo Clínico",
+          icon: Wrench,
+          roles: ["admin"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
         },
       ],
     },

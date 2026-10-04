@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { AuthzError } from "../middleware/auth";
 
@@ -14,7 +15,7 @@ export async function validatePetOwnership(
   petIds: string[],
   clientId: string,
   daycareId: string,
-): Promise<{ valid: boolean; message?: string }> {
+): Promise<{ valid: boolean; message?: string; deceased?: boolean }> {
   const pets = await prisma.pet.findMany({
     where: { id: { in: petIds }, clientId, daycareId },
   });
@@ -26,7 +27,28 @@ export async function validatePetOwnership(
     };
   }
 
+  const deceased = pets.find((pet) => pet.deceasedAt);
+  if (deceased) {
+    // Flagged apart from "not this client's pet" so the caller can answer 409, as every other
+    // way of booking a deceased patient does.
+    return { valid: false, deceased: true, message: deceasedPetMessage(deceased.name) };
+  }
+
   return { valid: true };
+}
+
+function deceasedPetMessage(name: string): string {
+  return `${name} figura como fallecida en la historia clínica`;
+}
+
+/**
+ * Refuses to book a pet the clinic has recorded as deceased.
+ *
+ * Takes the rows the caller already resolved against the tenant, so it adds no query.
+ */
+export function assertPetsAlive(pets: { name: string; deceasedAt: Date | null }[]): void {
+  const deceased = pets.find((pet) => pet.deceasedAt);
+  if (deceased) throw new AuthzError(409, deceasedPetMessage(deceased.name));
 }
 
 /**
@@ -42,6 +64,23 @@ export async function assertClientInTenant(clientId: string, daycareId: string):
   });
   if (!client) {
     throw new AuthzError(404, "Cliente no encontrado");
+  }
+}
+
+/**
+ * Resolves a veterinarian that must belong to this daycare, or refuses with the same 404 a
+ * foreign client gets.
+ */
+export async function assertVeterinarianInTenant(
+  veterinarianId: string,
+  daycareId: string,
+): Promise<void> {
+  const veterinarian = await prisma.veterinarian.findFirst({
+    where: { id: veterinarianId, daycareId },
+    select: { id: true },
+  });
+  if (!veterinarian) {
+    throw new AuthzError(404, "Veterinario no encontrado");
   }
 }
 
@@ -158,8 +197,9 @@ export async function validateNoReservationConflicts(
   checkInTime: Date,
   checkOutTime: Date,
   excludeReservationId?: string,
+  db: Prisma.TransactionClient = prisma,
 ): Promise<{ valid: boolean; message?: string }> {
-  const conflicts = await prisma.reservation.count({
+  const conflicts = await db.reservation.count({
     where: {
       daycareId,
       roomId,

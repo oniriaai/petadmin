@@ -60,7 +60,9 @@ async function main(): Promise<void> {
     expectStatus(res.status, 200, "GET /settings");
     if (res.data.daycare?.slug !== "pethijos") throw new Error("guardería inesperada");
     const units = res.data.units.map((u: { businessUnit: string }) => u.businessUnit).sort();
-    if (units.join(",") !== "DAYCARE,GROOMING") throw new Error(`unidades: ${units.join(",")}`);
+    if (units.join(",") !== "DAYCARE,GROOMING,VETERINARY") {
+      throw new Error(`unidades: ${units.join(",")}`);
+    }
     // A missing row means defaults, not "unconfigurable".
     for (const unit of res.data.units) {
       if (typeof unit.vatPercent !== "number") throw new Error("falta vatPercent");

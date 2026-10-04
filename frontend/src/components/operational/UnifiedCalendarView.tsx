@@ -40,6 +40,9 @@ function getUnitConfig(unit: string) {
   if (unit === "DAYCARE") {
     return { label: "Guardería", color: "border-amber-500", bg: "bg-amber-50" };
   }
+  if (unit === "VETERINARY") {
+    return { label: "Veterinaria", color: "border-veterinary-500", bg: "bg-veterinary-50" };
+  }
   return { label: "Peluquería", color: "border-violet-500", bg: "bg-violet-50" };
 }
 
@@ -486,6 +489,10 @@ export function UnifiedCalendarView({
             <div className="flex items-center gap-1 sm:gap-1.5">
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-violet-500" />
               <span className="text-[10px] sm:text-xs text-gray-600">Peluquería (Violeta)</span>
+            </div>
+            <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-veterinary-500" />
+              <span className="text-[10px] sm:text-xs text-gray-600">Veterinaria (Turquesa)</span>
             </div>
           </div>
         </div>

@@ -119,7 +119,9 @@ checkInOutRouter.post("/", async (req, res) => {
       getRequiredDaycareId(req),
     );
     if (!petOwnershipValidation.valid) {
-      return res.status(400).json({ message: petOwnershipValidation.message });
+      return res
+        .status(petOwnershipValidation.deceased ? 409 : 400)
+        .json({ message: petOwnershipValidation.message });
     }
 
     // Validate room exists and belongs to business unit

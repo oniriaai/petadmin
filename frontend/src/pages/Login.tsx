@@ -34,7 +34,7 @@ const CAPABILITIES = [
   {
     Icon: Wallet,
     title: "Finanzas por unidad",
-    line: "Cobros e ingresos separados entre Guardería y Peluquería.",
+    line: "Cobros e ingresos separados por unidad de negocio.",
   },
 ];
 

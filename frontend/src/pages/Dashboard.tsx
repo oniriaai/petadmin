@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { ClinicRemindersCard } from "./veterinaria/ClinicRemindersCard";
+import { businessUnitLabel } from "../modules/shared/contracts";
 import { fmtCurrency, fmt, fmtTime, fmtDayLabel, STATUSES } from "../lib/utils";
 import { Badge } from "../components/ui/Badge";
 import { PageLoader } from "../components/ui/Spinner";
@@ -78,7 +80,12 @@ const SEVERITY_ICON: Record<string, React.ReactNode> = {
 } as const;
 
 export function Dashboard() {
-  const { user, activeBusinessUnit } = useAuth();
+  const { user, activeBusinessUnit, hasModule } = useAuth();
+  // The clinic's module is gated in place: it has no dashboard of its own.
+  const showClinic =
+    hasModule("veterinaria") &&
+    (user?.role === "veterinary" ||
+      (user?.role === "admin" && activeBusinessUnit === "VETERINARY"));
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -95,14 +102,10 @@ export function Dashboard() {
 
   const dashboardLabel =
     user?.role === "admin"
-      ? activeBusinessUnit === "DAYCARE"
-        ? "Guardería"
-        : activeBusinessUnit === "GROOMING"
-          ? "Peluquería"
-          : "Consolidado"
-      : user?.businessUnit === "DAYCARE"
-        ? "Guardería"
-        : "Peluquería";
+      ? activeBusinessUnit
+        ? businessUnitLabel(activeBusinessUnit)
+        : "Consolidado"
+      : businessUnitLabel(user?.businessUnit);
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
@@ -225,6 +228,8 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {showClinic && <ClinicRemindersCard />}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[

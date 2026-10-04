@@ -34,6 +34,7 @@ interface InventoryItem {
   currentStock: number;
   unitCost: number;
   businessUnit: string;
+  isControlled?: boolean;
 }
 
 interface Movement {
@@ -43,6 +44,8 @@ interface Movement {
   cost: number | null;
   reason: string | null;
   date: string;
+  lotNumber?: string | null;
+  expiresAt?: string | null;
 }
 
 const MOVEMENT_LABELS: Record<Movement["type"], string> = {
@@ -51,7 +54,7 @@ const MOVEMENT_LABELS: Record<Movement["type"], string> = {
   AJUSTE: "Ajuste",
 };
 
-const emptyItem = {
+const emptyItem: Omit<InventoryItem, "id" | "businessUnit"> = {
   name: "",
   category: "",
   unit: "unidad",
@@ -61,7 +64,7 @@ const emptyItem = {
 };
 
 export function InventarioPage() {
-  const { activeBusinessUnit } = useAuth();
+  const { activeBusinessUnit, user } = useAuth();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -246,6 +249,9 @@ export function InventarioPage() {
       {showForm && (
         <ItemForm
           item={editing}
+          clinic={
+            (editing?.businessUnit ?? activeBusinessUnit ?? user?.businessUnit) === "VETERINARY"
+          }
           onClose={() => setShowForm(false)}
           onSaved={() => {
             setShowForm(false);
@@ -270,10 +276,13 @@ export function InventarioPage() {
 
 function ItemForm({
   item,
+  clinic,
   onClose,
   onSaved,
 }: {
   item: InventoryItem | null;
+  /** The item belongs to the clinic's stock, where the controlled-drug flag means something. */
+  clinic: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -292,6 +301,7 @@ function ItemForm({
       minStock: Number(form.minStock),
       currentStock: Number(form.currentStock),
       unitCost: Number(form.unitCost),
+      ...(clinic ? { isControlled: Boolean(form.isControlled) } : {}),
     };
     try {
       if (item) await api.put(`/inventory/items/${item.id}`, payload);
@@ -397,6 +407,16 @@ function ItemForm({
             </div>
           )}
         </div>
+        {clinic && (
+          <label className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={Boolean(form.isControlled)}
+              onChange={(e) => setForm({ ...form, isControlled: e.target.checked })}
+            />
+            Medicamento controlado: cada dispensación queda en el libro de controlados
+          </label>
+        )}
         {item && (
           // Editing the level directly would leave no trace of why it changed.
           <p className="text-xs text-muted">
@@ -428,6 +448,8 @@ function MovementModal({
   const [type, setType] = useState<Movement["type"]>("ENTRADA");
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
+  const [lotNumber, setLotNumber] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
   const [movements, setMovements] = useState<Movement[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -456,6 +478,11 @@ function MovementModal({
         type,
         quantity: Number(quantity),
         reason: reason.trim() || undefined,
+        // A lot and its expiry describe what was received, so they only travel with an entrada.
+        ...(type === "ENTRADA" && lotNumber.trim() ? { lotNumber: lotNumber.trim() } : {}),
+        ...(type === "ENTRADA" && expiresAt
+          ? { expiresAt: new Date(`${expiresAt}T12:00:00`).toISOString() }
+          : {}),
       });
       onSaved();
     } catch (err) {
@@ -528,6 +555,33 @@ function MovementModal({
               onChange={(e) => setReason(e.target.value)}
             />
           </div>
+          {type === "ENTRADA" && (
+            <>
+              <div>
+                <label className="label" htmlFor="mv-lot">
+                  Lote (opcional)
+                </label>
+                <input
+                  id="mv-lot"
+                  className="input"
+                  value={lotNumber}
+                  onChange={(e) => setLotNumber(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="mv-expiry">
+                  Caducidad (opcional)
+                </label>
+                <input
+                  id="mv-expiry"
+                  className="input"
+                  type="date"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                />
+              </div>
+            </>
+          )}
         </div>
 
         <p className="text-sm text-muted">
@@ -562,6 +616,7 @@ function MovementModal({
                   <span>
                     {MOVEMENT_LABELS[movement.type]} · {movement.quantity} {item.unit}
                     {movement.reason ? ` · ${movement.reason}` : ""}
+                    {movement.lotNumber ? ` · lote ${movement.lotNumber}` : ""}
                   </span>
                 </li>
               ))}

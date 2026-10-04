@@ -1,9 +1,9 @@
 # Alcance del Sistema Modular
 
 El sistema se estructura como un **Modular Monolith** multi-inquilino. Cada guardería cliente es un
-inquilino independiente que opera hasta dos unidades de negocio —`DAYCARE` ("Guardería") y
-`GROOMING` ("Peluquería")— sobre un núcleo de datos maestros compartidos, y accede únicamente a los
-módulos de producto que contrató.
+inquilino independiente que opera hasta tres unidades de negocio —`DAYCARE` ("Guardería"),
+`GROOMING` ("Peluquería") y `VETERINARY` ("Veterinaria")— sobre un núcleo de datos maestros
+compartidos, y accede únicamente a los módulos de producto que contrató.
 
 ---
 
@@ -66,6 +66,27 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Cobro Directo e Independiente**: Registro de ingreso contable acreditado exclusivamente a `GROOMING`. Admite anticipo al agendar y cobro del saldo al entregar.
 - ✅ **Finanzas de Peluquería**: Registro de ingresos y gastos separados estrictamente de Guardería.
 
+### Veterinaria (`VETERINARY`, módulo `veterinaria`)
+
+- ✅ **Agenda de Consultas**: Por día y veterinario, con sala. Un veterinario o una sala no se reservan dos veces; una urgencia se registra igual.
+- ✅ **Sala de Espera**: `Programadas` → `Sala de espera` (ordenada por prioridad) → `En consulta` → `Cerradas`, más cancelaciones y ausencias.
+- ✅ **Registro Clínico**: Motivo, anamnesis, examen físico, valoración, plan y próximo control; signos vitales y diagnósticos presuntivos o definitivos.
+- ✅ **Historia Clínica por Paciente**: Consultas, evolución del peso, vacunas, alergias, condiciones crónicas y fallecimiento. Imprimible.
+- ✅ **Catálogo de la Clínica**: Servicios con precio y duración propios de cada clínica, y veterinarios de planta o externos.
+- ✅ **Cobro al Cerrar**: Cargos del catálogo o libres, descuento, IVA de la unidad, cobro parcial y abonos posteriores, acreditados a `VETERINARY`.
+- ✅ **Vacunas y Preventivos**: Vacunas con lote, laboratorio y refuerzo; desparasitaciones con próxima dosis, aplicadas en consulta o transcritas.
+- ✅ **Recetas**: Varios medicamentos con dosis, frecuencia, duración e indicaciones. Imprimible con paciente, tutor y matrícula del prescriptor.
+- ✅ **Farmacia**: Cola de recetas por dispensar, entrega que descuenta el inventario de la unidad (y puede cobrarse en la consulta abierta), libro de medicamentos controlados imprimible y lotes por caducar.
+- ✅ **Hospitalización**: Ingreso desde la consulta a una sala con aforo, hoja de tratamiento con dosis por administrar (cada una se firma una sola vez, administrada u omitida con motivo), signos vitales en sala y alta con hoja imprimible. La estancia se cobra en la consulta al dar el alta.
+- ✅ **Cirugías y Procedimientos**: Riesgo ASA, inicio, fin y hallazgos. Una cirugía o eutanasia no inicia sin el consentimiento firmado del tutor; la eutanasia registra el fallecimiento.
+- ✅ **Laboratorio e Imagen**: Órdenes desde la consulta, mostrador de pendientes y resultados con valores, referencia e interpretación, registrables aunque la consulta ya esté cerrada.
+- ✅ **Consentimientos**: Textos por tipo editables, imprimibles y con registro de firma.
+- ✅ **Paciente Fallecido**: No admite nuevas consultas, reservas, citas ni check-in en ninguna unidad.
+- ✅ **Recordatorios**: Refuerzos de vacunas y preventivos por vencer, controles sin agendar y exámenes sin resultado, calculados al momento, con enlace de WhatsApp al tutor y resumen en el Dashboard.
+- ✅ **Informe Clínico**: Consultas por tipo y veterinario, facturación por categoría, cobrado, diagnósticos frecuentes y hospitalización del periodo. Solo administradores; no requiere el módulo de informes.
+- ✅ **Exportación**: La baja de una guardería exporta también la historia clínica, una hoja por tipo de registro.
+- ⏳ **Pendiente**: adjuntar archivos a resultados y consentimientos; envío automático de recordatorios. La lista completa de limitaciones conocidas está en `docs/futuras-implementaciones.md`, sección "Deuda Técnica Abierta".
+
 ---
 
 ## 4. Módulo de Administración y Finanzas
@@ -73,10 +94,10 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Usuarios y Multi-Inquilino**: Control de roles, conmutación de unidad de negocio y pertenencia
   a una única guardería. El proveedor puede fijar un inquilino con la cabecera `X-Daycare-Id`; al
   hacerlo, el workspace muestra un aviso permanente de "modo plataforma".
-- ✅ **Dashboard Consolidado**: Resumen diario de ingresos totales de la guardería (ambas unidades),
+- ✅ **Dashboard Consolidado**: Resumen diario de ingresos totales de la guardería (todas sus unidades),
   ocupación promedio y flujo de perrhijos.
 - ✅ **Gestión Contable Segregada**:
-  - Dos cobros separados por unidad cuando una mascota recibe servicios de guardería y peluquería el mismo día.
+  - Un cobro separado por unidad cuando una mascota recibe servicios de más de una el mismo día.
   - Cuentas por pagar (`Payables`) y pagos parciales/totales categorizados por unidad.
 - ✅ **Inventario**: Control de stock e insumos clasificado por unidad de negocio.
 - ✅ **Exportación de Datos**: Reportes y exportación en formato tabular para integración con herramientas de analítica.

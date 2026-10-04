@@ -167,6 +167,46 @@ async function main(): Promise<void> {
     true,
     "reservations serves both units",
   );
+  // With a third unit, a list naming two of them constrains. The shared agenda primitives have
+  // to name the clinic explicitly, and the ones a clinic does not use must refuse it.
+  const veterinariaModule = backendModules.find((m) => m.id === "veterinaria")!;
+  const recurringPlansModule = backendModules.find((m) => m.id === "recurring-plans")!;
+  for (const moduleId of ["reservations", "rooms", "check-in-out"]) {
+    assert.equal(
+      moduleServesUnits(
+        backendModules.find((m) => m.id === moduleId)!,
+        ["VETERINARY"],
+      ),
+      true,
+      `${moduleId} must serve the clinic: its visits are reservations in rooms`,
+    );
+  }
+  assert.equal(
+    moduleServesUnits(recurringPlansModule, ["VETERINARY"]),
+    false,
+    "recurring plans are not a clinic feature",
+  );
+  assert.equal(moduleServesUnits(veterinariaModule, ["VETERINARY"]), true);
+  assert.equal(
+    moduleServesUnits(veterinariaModule, ["GROOMING"]),
+    false,
+    "the clinic does not serve grooming",
+  );
+  assert.equal(
+    moduleServesUnits(veterinariaModule, ["DAYCARE", "GROOMING", "VETERINARY"]),
+    true,
+    "consolidated spans every unit",
+  );
+  const clinicFromGrooming = await runGate("veterinaria", tenantAdmin, "GROOMING");
+  assert.equal(clinicFromGrooming.body?.code, "WRONG_BUSINESS_UNIT");
+  assert.equal(
+    (await runGate("veterinaria", groomingUser)).status,
+    403,
+    "a grooming user must not reach clinical records",
+  );
+  assert.ok(backendModuleIdsFor(["reservas", "veterinaria"]).has("veterinaria"));
+  assert.equal(backendModuleIdsFor(["reservas"]).has("veterinaria"), false, "the clinic is sold");
+
   assert.equal(
     moduleServesUnits(dashboardModule, ["GROOMING"]),
     true,

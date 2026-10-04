@@ -89,6 +89,21 @@ const TENANT_OWNED = new Set([
   "InventoryItem",
   "Alert",
   "Contract",
+  "VetService",
+  "VetVisit",
+  "VetVitals",
+  "VetDiagnosis",
+  "VetVisitCharge",
+  "VetPreventive",
+  "VetPrescription",
+  "VetPrescriptionItem",
+  "VetHospitalization",
+  "VetTreatmentOrder",
+  "VetTreatmentAdministration",
+  "VetProcedure",
+  "VetLabOrder",
+  "VetLabResultValue",
+  "VetConsent",
 ]);
 
 /**

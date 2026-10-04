@@ -5,7 +5,7 @@ const sections = [
   {
     id: "inicio",
     title: "🚀 Primeros pasos",
-    content: `El sistema Pethijos Admin está dividido en dos unidades de negocio: **Guardería** (estancia diaria) y **Peluquería** (estética y baño). Al iniciar sesión, selecciona tu unidad para acceder al dashboard correspondiente.`,
+    content: `El sistema Pethijos Admin está dividido en hasta tres unidades de negocio: **Guardería** (estancia diaria), **Peluquería** (estética y baño) y **Veterinaria** (clínica). Al iniciar sesión, selecciona tu unidad para acceder al dashboard correspondiente.`,
   },
   {
     id: "reservas",
@@ -61,6 +61,30 @@ const sections = [
       "Los gráficos de barras muestran ingresos históricos por mes",
       "El gráfico circular muestra distribución por tipo de servicio",
       "Usa los botones **Excel** para descargar los datos y cargarlos en Power BI",
+    ],
+  },
+  {
+    id: "consulta-veterinaria",
+    title: "🩺 Atender una Consulta Veterinaria",
+    steps: [
+      "Ve a **Agenda Veterinaria** y pulsa **Nueva consulta**; sin hora, el paciente entra directo a la sala de espera",
+      "Abre la consulta y pásala a **En consulta**",
+      "Registra **signos vitales**, el registro clínico (anamnesis, examen, valoración y plan) y los **diagnósticos**",
+      "Añade vacunas, preventivos, **recetas**, exámenes de laboratorio y procedimientos según el caso",
+      "Una **cirugía** o **eutanasia** solo puede iniciarse con el consentimiento del tutor firmado",
+      "Agrega los **cargos** del catálogo y pulsa **Cerrar y cobrar**; una consulta cerrada ya no se modifica",
+    ],
+  },
+  {
+    id: "hospitalizacion",
+    title: "🛏️ Hospitalización, Farmacia y Recordatorios",
+    steps: [
+      "Desde la consulta, pulsa **Ingresar** y elige la sala de hospitalización y la tarifa diaria",
+      "En **Hospitalización**, indica los tratamientos y firma cada dosis como **Administrada** u **Omitir** con su motivo",
+      "Al **dar el alta** se añaden los días de estancia a la consulta; después ciérrala y cóbrala",
+      "En **Farmacia**, entrega los medicamentos recetados: se descuentan del inventario de la clínica",
+      "En **Laboratorio**, registra los resultados aunque la consulta ya esté cerrada",
+      "En **Recordatorios**, escribe al tutor por WhatsApp cuando un refuerzo o un control está por vencer",
     ],
   },
   {

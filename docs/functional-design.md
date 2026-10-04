@@ -2,9 +2,10 @@
 
 ## 1. Objetivo Arquitectónico
 
-Consolidar la operación administrativa y diaria de dos líneas de negocio complementarias mediante una **Arquitectura Modular (Modular Monolith)**:
+Consolidar la operación administrativa y diaria de tres líneas de negocio complementarias mediante una **Arquitectura Modular (Modular Monolith)**:
 - **Guardería** (`DAYCARE`): Flujo de estancias, cupos por sala, planes semanales recurrentes y transporte.
 - **Peluquería** (`GROOMING`): Flujo de citas y turnos por duración estimada, catálogo de estética, tablero kanban de atención y cobro directo.
+- **Veterinaria** (`VETERINARY`): Agenda de consultas por veterinario y sala, sala de espera con prioridad, historia clínica, farmacia, hospitalización, laboratorio y cobro al cerrar.
 - **Core Compartido**: Registro unificado de clientes y mascotas, autenticación y almacenamiento.
 - **Finanzas**: Segregación contable estricta con cobros independientes por unidad.
 
@@ -44,6 +45,23 @@ Consolidar la operación administrativa y diaria de dos líneas de negocio compl
   - Se genera un check-in de estancia en Guardería (sala) y una cita en Peluquería (con su duración).
   - Al completar ambos servicios, el sistema emite **dos cobros contables independientes** (uno para `DAYCARE` y uno para `GROOMING`) garantizando la trazabilidad tributaria y contable de cada negocio.
 
+### Flujo 4: Consulta Veterinaria
+1. **Recepción**: El operador abre `/veterinaria` y crea la consulta. Con hora queda `Programada`; sin hora entra a la `Sala de espera`, ordenada por prioridad. Una urgencia se registra aunque el veterinario o la sala estén ocupados.
+2. **Atención**: En `/veterinaria/consultas/:id` el veterinario registra signos vitales, anamnesis, examen, valoración, plan y diagnósticos. Desde ahí aplica vacunas y preventivos, emite recetas, solicita exámenes, programa procedimientos y redacta consentimientos.
+3. **Farmacia**: Cada línea recetada se entrega una sola vez desde `/veterinaria/farmacia`, descuenta el stock de la unidad y puede añadirse como cargo mientras la consulta siga abierta.
+4. **Cierre y Cobro**: Los cargos se suman, se aplica descuento e IVA de la unidad y se registra el cobro acreditado a `VETERINARY`. La consulta queda congelada; el saldo se abona después.
+
+### Flujo 5: Hospitalización y Cirugía
+1. **Ingreso**: Desde la consulta se ingresa al paciente a una sala de tipo hospitalización con cupo. La consulta **permanece abierta** mientras dure el ingreso.
+2. **Hoja de Tratamiento**: En `/veterinaria/hospitalizacion` se indican tratamientos con su intervalo. Cada dosis se firma una sola vez, como administrada u omitida con motivo; la siguiente se calcula desde la última firmada.
+3. **Cirugía**: Un procedimiento de tipo cirugía o eutanasia no inicia sin un consentimiento firmado del mismo tipo en esa consulta. Finalizar una eutanasia registra el fallecimiento, y el paciente deja de admitir reservas en cualquier unidad.
+4. **Alta**: Exige resumen, suspende las indicaciones y añade a la consulta los días de estancia por la tarifa diaria. Después la consulta se cierra y se cobra.
+
+### Flujo 6: Seguimiento
+- `/veterinaria/laboratorio` recibe los resultados, incluso con la consulta ya cerrada.
+- `/veterinaria/recordatorios` lista refuerzos, preventivos, controles y exámenes pendientes, calculados al momento, con un enlace de WhatsApp al tutor.
+- `/veterinaria/informe` (solo administradores) resume consultas, facturación, diagnósticos y hospitalización de un periodo.
+
 ---
 
 ## 3. Navegación en Interfaz de Usuario
@@ -64,6 +82,19 @@ núcleo y está siempre disponible.
 │   └── Disponibilidad (/disponibilidad)    [reservas]
 ├── ✂️ Módulo Peluquería (roles admin y grooming)
 │   └── Agenda de Peluquería (/peluqueria)  [peluqueria]
+├── 🩺 Módulo Veterinaria (roles admin y veterinary)
+│   ├── Agenda Veterinaria (/veterinaria)             [veterinaria + reservas]
+│   ├── Consulta (/veterinaria/consultas/:id)         [veterinaria]
+│   ├── Historias Clínicas (/veterinaria/pacientes)   [veterinaria]
+│   ├── Farmacia (/veterinaria/farmacia)              [veterinaria]
+│   ├── Receta imprimible (/veterinaria/recetas/:id)  [veterinaria]
+│   ├── Hospitalización (/veterinaria/hospitalizacion) [veterinaria]
+│   ├── Hoja de alta (/veterinaria/hospitalizacion/:id) [veterinaria]
+│   ├── Laboratorio (/veterinaria/laboratorio)        [veterinaria]
+│   ├── Consentimiento (/veterinaria/consentimientos/:id) [veterinaria]
+│   ├── Recordatorios (/veterinaria/recordatorios)    [veterinaria]
+│   ├── Informe Clínico (/veterinaria/informe)        [veterinaria] (solo admin)
+│   └── Catálogo Clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
 └── 💼 Gestión Transversal (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
     ├── Clientes (/clientes)
@@ -91,8 +122,9 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `GET /auth/me`: Sesión según el servidor, con la guardería y los módulos habilitados.
 - `GET, POST, PUT /clients`: Directorio unificado de tutores de la guardería.
 - `GET, POST, PUT /pets`: Registro único de perrhijos, vacunas y alertas.
-- `POST, DELETE /storage`: Carga y eliminación presignada en Backblaze B2. El borrado se autoriza
-  contra la base de datos y acotado a la guardería que llama.
+- `POST /storage/upload-url`, `POST /storage/remove`: Carga presignada y eliminación en Backblaze
+  B2. El borrado se autoriza contra la base de datos y acotado a la guardería que llama: una
+  guardería no puede referenciar ni borrar un archivo bajo el prefijo de otra.
 
 ### Consola de Plataforma (solo `superadmin`)
 - `GET /platform/overview`, `GET /platform/daycares`, `POST /platform/daycares`.
@@ -115,6 +147,22 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `POST /peluqueria/appointments`: Creación de cita por fecha y duración.
 - `PATCH /peluqueria/appointments/:id/status`: Transición de estados en el kanban.
 - `POST /peluqueria/appointments/:id/complete`: Cierre y cobro independiente para `GROOMING`.
+
+### Módulo Veterinaria
+- `GET, POST, PUT, DELETE /veterinaria/services`, `/veterinaria/staff`: Catálogo con precio y personal (escritura solo `admin`).
+- `GET, POST /veterinaria/visits`: Agenda y alta de consulta (reserva `VETERINARY` + registro clínico).
+- `PATCH /veterinaria/visits/:id`, `/status`: Registro clínico y estado en el flujo.
+- `POST /veterinaria/visits/:id/vitals | diagnoses | charges`: Signos vitales, diagnósticos y cargos.
+- `POST /veterinaria/visits/:id/close`, `/payments`: Cierre con cobro independiente para `VETERINARY` y abonos.
+- `GET /veterinaria/patients/:petId/history`: Historia clínica del paciente.
+- `POST /veterinaria/visits/:id/vaccinations | preventives | prescriptions`: Vacunas, preventivos y recetas.
+- `POST /veterinaria/prescription-items/:itemId/dispense`: Dispensación con descuento de stock.
+- `GET /veterinaria/pharmacy/queue | controlled-log | expiring | items`: Mostrador de farmacia.
+- `POST /veterinaria/visits/:id/hospitalizations`, `/hospitalizations/:id/discharge`: Ingreso y alta con cobro de la estancia.
+- `POST /veterinaria/hospitalizations/:id/orders | vitals`, `/treatment-orders/:orderId/doses`: Hoja de tratamiento.
+- `POST /veterinaria/visits/:id/procedures | lab-orders | consents`: Procedimientos, exámenes y consentimientos.
+- `POST /veterinaria/procedures/:id/start | finish`, `/lab-orders/:id/result`, `/consents/:id/sign`: Su ciclo de vida.
+- `GET /veterinaria/reminders`, `/reports/summary`: Recordatorios calculados e informe del periodo.
 
 ### Módulo Finanzas y Backoffice
 - `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.

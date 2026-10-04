@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import {
   buildPetPhotoKey,
   daycarePrefix,
+  isOwnKey,
+  namesForeignPrefix,
   resolveObjectKey,
   sanitizeSegment,
+  tenantOfKey,
 } from "../src/core/storage/object-keys";
 
 const BUCKET = "pethijos-media";
@@ -146,5 +149,28 @@ assert.equal(resolveObjectKey("https://evil.example.com/../../x", BUCKET, ENDPOI
 assert.equal(resolveObjectKey(`https://evil.example.com/pets/Max/1-a.jpg`, BUCKET, ENDPOINT), null);
 // A URL with no configured endpoint is refused rather than trusted.
 assert.equal(resolveObjectKey(`https://${BUCKET}.${ENDPOINT}/pets/Max/1-a.jpg`, BUCKET, ""), null);
+
+// --- key ownership ----------------------------------------------------------
+assert.equal(tenantOfKey("daycares/daycare_a/pets/Max_M/1-a.jpg"), "daycare_a");
+assert.equal(tenantOfKey("pets/Max_M/1-a.jpg"), null, "a pre-tenancy key has no owner segment");
+assert.equal(isOwnKey(a, "daycare_a"), true);
+assert.equal(isOwnKey(a, "daycare_b"), false, "another daycare's key is never one's own");
+assert.equal(isOwnKey("daycares/daycare_ab/pets/x/1-a.jpg", "daycare_a"), false, "prefix of an id");
+assert.equal(isOwnKey("pets/Max_M/1-a.jpg", "daycare_a"), false);
+
+// A reference a tenant writes may not point into another daycare's prefix, on any host: the
+// delete authorization matches the key alone, so the host proves nothing.
+assert.equal(namesForeignPrefix(a, "daycare_a"), false);
+assert.equal(namesForeignPrefix(a, "daycare_b"), true);
+assert.equal(namesForeignPrefix(`https://${ENDPOINT}/${BUCKET}/${a}`, "daycare_a"), false);
+assert.equal(namesForeignPrefix(`https://${ENDPOINT}/${BUCKET}/${a}`, "daycare_b"), true);
+assert.equal(namesForeignPrefix(`https://evil.example.com/${a}`, "daycare_b"), true);
+assert.equal(
+  namesForeignPrefix(`https://evil.example.com/${encodeURIComponent(a)}`, "daycare_b"),
+  true,
+  "percent-encoding must not hide the prefix",
+);
+assert.equal(namesForeignPrefix("pets/Max_M/1-a.jpg", "daycare_b"), false);
+assert.equal(namesForeignPrefix("https://images.example.com/dog.jpg", "daycare_b"), false);
 
 console.log("✓ storage object-key construction and resolution");

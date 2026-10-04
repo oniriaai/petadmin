@@ -8,6 +8,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   daycare: "Guardería",
   grooming: "Peluquería",
+  veterinary: "Veterinaria",
 };
 
 export function UserMenu() {

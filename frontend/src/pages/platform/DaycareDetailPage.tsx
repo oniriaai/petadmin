@@ -15,6 +15,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   daycare: "Guardería",
   grooming: "Peluquería",
+  veterinary: "Veterinaria",
 };
 
 export function DaycareDetailPage() {
@@ -429,6 +430,7 @@ function NewUserForm({ daycareId, onCreated }: { daycareId: string; onCreated: (
             <option value="admin">Administrador</option>
             <option value="daycare">Guardería</option>
             <option value="grooming">Peluquería</option>
+            <option value="veterinary">Veterinaria</option>
           </select>
         </div>
       </div>
