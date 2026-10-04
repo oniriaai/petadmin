@@ -1,7 +1,7 @@
 # Pethijos Admin — Plataforma Modular Multi-Guardería
 
 Sistema administrativo modular (**Modular Monolith**) multi-inquilino para la gestión operativa y
-financiera de guarderías y peluquerías caninas. Cada guardería cliente es un **inquilino** (`Daycare`)
+financiera de guarderías, peluquerías y clínicas veterinarias. Cada guardería cliente es un **inquilino** (`Daycare`)
 con sus propios datos, usuarios y **módulos contratados**; el proveedor los administra desde una
 consola propia.
 
@@ -13,8 +13,10 @@ Cada inquilino opera hasta tres **unidades de negocio**: `DAYCARE` ("Guardería"
 - ✂️ **Peluquería**: catálogo de servicios con duración estimada y tarifas base, agenda por franja
   horaria, tablero kanban (`Agendada` → `En Salón` → `En Baño/Corte` → `Listo` → `Entregada`) y cobro directo.
 - 🩺 **Veterinaria**: agenda de consultas por veterinario y sala, sala de espera con prioridad,
-  historia clínica (registro SOAP, signos vitales, diagnósticos), catálogo de servicios con precio
-  propio de cada clínica y cierre con cobro acreditado a `VETERINARY`.
+  historia clínica (registro SOAP, signos vitales, diagnósticos), vacunas y preventivos, recetas y
+  farmacia sobre el inventario, hospitalización con hoja de tratamiento, cirugías con
+  consentimiento firmado, laboratorio e imagen, recordatorios e informe clínico, y cierre con
+  cobro acreditado a `VETERINARY`.
 - 🐾 **Núcleo compartido**: tutores y perrhijos (con historial, vacunas y fotos en Backblaze B2),
   autenticación JWT y aislamiento estricto entre inquilinos.
 - 💵 **Finanzas**: cobros e ingresos contables segregados por unidad, cuentas por pagar, inventario
@@ -79,9 +81,10 @@ distintos y se mantienen distinguibles a propósito.
 | Rol | Alcance |
 |---|---|
 | `superadmin` | Proveedor. **No pertenece a ninguna guardería** y ninguna guardería puede asignarlo. Acceso total; fija un inquilino con la cabecera `X-Daycare-Id`. |
-| `admin` | Administrador de su guardería, ambas unidades, con selector de workspace. |
+| `admin` | Administrador de su guardería, todas sus unidades, con selector de workspace. |
 | `daycare` | Operación de Guardería de su guardería. |
 | `grooming` | Operación de Peluquería de su guardería. |
+| `veterinary` | Operación de la clínica veterinaria de su guardería. El catálogo, el personal y el informe clínico son solo del `admin`. |
 
 La base de datos garantiza la invariante con la restricción `users_superadmin_untenanted`:
 `(role = 'superadmin') = ("daycareId" IS NULL)`.
@@ -435,7 +438,7 @@ contratación deben evitar.
 | `admin_global` | `admin123` | `admin` | Vista consolidada con selector de unidad |
 | `kinderdog_admin` | `kinderdog123` | `daycare` | Operación y finanzas de Guardería |
 | `pethijos_admin` | `pethijos123` | `grooming` | Operación y finanzas de Peluquería |
-| `vet_admin` | `vet12345` | `veterinary` | Clínica veterinaria: agenda e historias clínicas |
+| `vet_admin` | `vet12345` | `veterinary` | Clínica veterinaria: agenda, historias clínicas, farmacia, hospitalización y laboratorio |
 
 ### Guardería `demo` — solo `GROOMING`, con `reservas` y `peluqueria`
 

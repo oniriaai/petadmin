@@ -78,7 +78,7 @@ siendo exactamente el objeto que se monta.
 3. Rol no permitido → **403** sin código.
 4. Módulo de producto `core` → permitido.
 5. Unidad de negocio que el módulo no sirve → **403** con `{ code: "WRONG_BUSINESS_UNIT" }`.
-   Solo muerde para un rol que abarca ambas unidades y que ha acotado con `X-Business-Unit`:
+   Solo muerde para un rol que abarca varias unidades y que ha acotado con `X-Business-Unit`:
    pedir la ocupación de Guardería estando en Peluquería devolvía datos de Guardería e ignoraba
    la cabecera en silencio.
 6. Módulo no contratado por la guardería → **403** con
