@@ -21,27 +21,30 @@ model Daycare {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  alerts         Alert[]
-  checkInOuts    CheckInOut[]
-  clients        Client[]
-  contracts      Contract[]
-  incomes        Income[]
-  inventoryItems InventoryItem[]
-  modules        DaycareModule[]
-  payables       Payable[]
-  pets           Pet[]
-  providers      Provider[]
-  recurringPlans RecurringPlan[]
-  reservations   Reservation[]
-  rooms          Room[]
-  unitSettings   BusinessUnitSetting[]
-  users          User[]
-  veterinarians  Veterinarian[]
-  vetServices    VetService[]
-  vetVisits      VetVisit[]
-  vetVitals      VetVitals[]
-  vetDiagnoses   VetDiagnosis[]
-  vetCharges     VetVisitCharge[]
+  alerts               Alert[]
+  checkInOuts          CheckInOut[]
+  clients              Client[]
+  contracts            Contract[]
+  incomes              Income[]
+  inventoryItems       InventoryItem[]
+  modules              DaycareModule[]
+  payables             Payable[]
+  pets                 Pet[]
+  providers            Provider[]
+  recurringPlans       RecurringPlan[]
+  reservations         Reservation[]
+  rooms                Room[]
+  unitSettings         BusinessUnitSetting[]
+  users                User[]
+  veterinarians        Veterinarian[]
+  vetServices          VetService[]
+  vetVisits            VetVisit[]
+  vetVitals            VetVitals[]
+  vetDiagnoses         VetDiagnosis[]
+  vetCharges           VetVisitCharge[]
+  vetPreventives       VetPreventive[]
+  vetPrescriptions     VetPrescription[]
+  vetPrescriptionItems VetPrescriptionItem[]
 
   @@map("daycares")
 }
@@ -133,11 +136,11 @@ model Client {
 }
 
 model Pet {
-  id                String           @id @default(cuid())
+  id                String            @id @default(cuid())
   daycareId         String
   clientId          String
   name              String
-  species           String           @default("dog")
+  species           String            @default("dog")
   breed             String?
   variety           String?
   color             String?
@@ -146,13 +149,13 @@ model Pet {
   weight            Float?
   height            Float?
   microchip         String?
-  isNeutered        Boolean          @default(false)
+  isNeutered        Boolean           @default(false)
   allergies         String?
   notes             String?
-  isActive          Boolean          @default(true)
+  isActive          Boolean           @default(true)
   bannerId          String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
   photoUrl          String?
   bloodType         String?
   chronicConditions String?
@@ -161,12 +164,14 @@ model Pet {
   vetVisits         VetVisit[]
   vetVitals         VetVitals[]
   vetDiagnoses      VetDiagnosis[]
+  vetPreventives    VetPreventive[]
+  vetPrescriptions  VetPrescription[]
   alerts            Alert[]
   checkInOuts       CheckInOut[]
   contracts         Contract[]
   documents         PetDocument[]
   vaccinations      PetVaccination[]
-  client            Client           @relation(fields: [clientId], references: [id])
+  client            Client            @relation(fields: [clientId], references: [id])
   reservationPets   ReservationPet[]
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
@@ -176,14 +181,22 @@ model Pet {
 }
 
 model PetVaccination {
-  id      String    @id @default(cuid())
-  petId   String
-  name    String
-  date    DateTime
-  nextDue DateTime?
-  notes   String?
-  pet     Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
+  id             String        @id @default(cuid())
+  petId          String
+  name           String
+  date           DateTime
+  nextDue        DateTime?
+  notes          String?
+  lotNumber      String?
+  manufacturer   String?
+  /// Set when the vaccine was applied in the clinic rather than transcribed from a card.
+  veterinarianId String?
+  vetVisitId     String?
+  pet            Pet           @relation(fields: [petId], references: [id], onDelete: Cascade)
+  veterinarian   Veterinarian? @relation(fields: [veterinarianId], references: [id], onDelete: SetNull)
+  vetVisit       VetVisit?     @relation(fields: [vetVisitId], references: [id], onDelete: SetNull)
 
+  @@index([vetVisitId])
   @@map("pet_vaccinations")
 }
 
@@ -243,9 +256,11 @@ model Veterinarian {
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
 
-  daycare Daycare    @relation(fields: [daycareId], references: [id])
-  user    User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  visits  VetVisit[]
+  daycare       Daycare           @relation(fields: [daycareId], references: [id])
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visits        VetVisit[]
+  vaccinations  PetVaccination[]
+  prescriptions VetPrescription[]
 
   @@index([daycareId])
   @@map("veterinarians")
@@ -293,15 +308,18 @@ model VetVisit {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  daycare      Daycare          @relation(fields: [daycareId], references: [id])
-  reservation  Reservation      @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  pet          Pet              @relation(fields: [petId], references: [id])
-  client       Client           @relation(fields: [clientId], references: [id])
-  veterinarian Veterinarian?    @relation(fields: [veterinarianId], references: [id])
-  vitals       VetVitals[]
-  diagnoses    VetDiagnosis[]
-  charges      VetVisitCharge[]
-  documents    PetDocument[]
+  daycare       Daycare           @relation(fields: [daycareId], references: [id])
+  reservation   Reservation       @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  pet           Pet               @relation(fields: [petId], references: [id])
+  client        Client            @relation(fields: [clientId], references: [id])
+  veterinarian  Veterinarian?     @relation(fields: [veterinarianId], references: [id])
+  vitals        VetVitals[]
+  diagnoses     VetDiagnosis[]
+  charges       VetVisitCharge[]
+  documents     PetDocument[]
+  vaccinations  PetVaccination[]
+  preventives   VetPreventive[]
+  prescriptions VetPrescription[]
 
   @@index([daycareId])
   @@index([daycareId, status])
@@ -601,19 +619,22 @@ model Payment {
 }
 
 model InventoryItem {
-  id           String              @id @default(cuid())
-  daycareId    String
-  businessUnit String
-  name         String
-  category     String
-  unit         String              @default("unidad")
-  minStock     Float               @default(0)
-  currentStock Float               @default(0)
-  unitCost     Float               @default(0)
-  isActive     Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  movements    InventoryMovement[]
-  vetCharges   VetVisitCharge[]
+  id                String                @id @default(cuid())
+  daycareId         String
+  businessUnit      String
+  name              String
+  category          String
+  unit              String                @default("unidad")
+  minStock          Float                 @default(0)
+  currentStock      Float                 @default(0)
+  unitCost          Float                 @default(0)
+  isActive          Boolean               @default(true)
+  /// A controlled drug: every dispensing is listed in the clinic\'s controlled-substance log.
+  isControlled      Boolean               @default(false)
+  prescriptionItems VetPrescriptionItem[]
+  createdAt         DateTime              @default(now())
+  movements         InventoryMovement[]
+  vetCharges        VetVisitCharge[]
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
@@ -622,16 +643,22 @@ model InventoryItem {
 }
 
 model InventoryMovement {
-  id        String        @id @default(cuid())
-  itemId    String
-  type      String
-  quantity  Float
-  cost      Float?
-  reason    String?
-  date      DateTime      @default(now())
-  createdAt DateTime      @default(now())
-  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  id                    String               @id @default(cuid())
+  itemId                String
+  type                  String
+  quantity              Float
+  cost                  Float?
+  reason                String?
+  date                  DateTime             @default(now())
+  createdAt             DateTime             @default(now())
+  lotNumber             String?
+  expiresAt             DateTime?
+  /// The prescription line this stock was dispensed against, if any.
+  vetPrescriptionItemId String?
+  item                  InventoryItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  vetPrescriptionItem   VetPrescriptionItem? @relation(fields: [vetPrescriptionItemId], references: [id], onDelete: SetNull)
 
+  @@index([itemId])
   @@map("inventory_movements")
 }
 
@@ -674,4 +701,79 @@ model Contract {
 
   @@index([daycareId])
   @@map("contracts")
+}
+
+/// Deworming and other antiparasitic or preventive treatments, with their next due date.
+model VetPreventive {
+  id        String    @id @default(cuid())
+  daycareId String
+  petId     String
+  visitId   String?
+  kind      String    @default("DESPARASITACION_INTERNA")
+  product   String
+  dose      String?
+  weightKg  Float?
+  date      DateTime  @default(now())
+  nextDue   DateTime?
+  notes     String?
+  createdAt DateTime  @default(now())
+
+  daycare Daycare   @relation(fields: [daycareId], references: [id])
+  pet     Pet       @relation(fields: [petId], references: [id])
+  visit   VetVisit? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+
+  @@index([daycareId])
+  @@index([petId])
+  @@index([daycareId, nextDue])
+  @@map("vet_preventives")
+}
+
+model VetPrescription {
+  id             String   @id @default(cuid())
+  daycareId      String
+  visitId        String
+  petId          String
+  veterinarianId String?
+  issuedAt       DateTime @default(now())
+  notes          String?
+
+  daycare      Daycare               @relation(fields: [daycareId], references: [id])
+  visit        VetVisit              @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  pet          Pet                   @relation(fields: [petId], references: [id])
+  veterinarian Veterinarian?         @relation(fields: [veterinarianId], references: [id], onDelete: SetNull)
+  items        VetPrescriptionItem[]
+
+  @@index([daycareId])
+  @@index([petId])
+  @@index([visitId])
+  @@map("vet_prescriptions")
+}
+
+model VetPrescriptionItem {
+  id                String    @id @default(cuid())
+  daycareId         String
+  prescriptionId    String
+  drug              String
+  presentation      String?
+  dose              String
+  route             String?
+  frequency         String
+  durationDays      Int?
+  instructions      String?
+  /// The stock item this line is dispensed from, when the clinic sells it itself.
+  inventoryItemId   String?
+  quantityDispensed Float?
+  dispensedAt       DateTime?
+  dispensedByUserId String?
+  lotNumber         String?
+
+  daycare       Daycare             @relation(fields: [daycareId], references: [id])
+  prescription  VetPrescription     @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  inventoryItem InventoryItem?      @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  movements     InventoryMovement[]
+
+  @@index([daycareId])
+  @@index([prescriptionId])
+  @@index([daycareId, dispensedAt])
+  @@map("vet_prescription_items")
 }

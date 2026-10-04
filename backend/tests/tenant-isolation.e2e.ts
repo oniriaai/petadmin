@@ -404,6 +404,27 @@ async function run() {
       });
       expectStatus(foreignVisit.status, 201, "Consulta en la clínica principal");
       const foreignVisitId: string = foreignVisit.data.id;
+      const foreignItem = await owner.post("/inventory/items", {
+        name: `Aislamiento ${Date.now()}`,
+        category: "Medicamentos",
+        currentStock: 5,
+      });
+      expectStatus(foreignItem.status, 201, "Artículo en la clínica principal");
+      const foreignPrescription = await owner.post(
+        `/veterinaria/visits/${foreignVisitId}/prescriptions`,
+        {
+          items: [
+            {
+              drug: "Aislamiento",
+              dose: "1",
+              frequency: "cada 12 h",
+              inventoryItemId: foreignItem.data.id,
+            },
+          ],
+        },
+      );
+      expectStatus(foreignPrescription.status, 201, "Receta en la clínica principal");
+      const foreignLineId: string = foreignPrescription.data.items[0].id;
 
       try {
         // Reads.
@@ -428,6 +449,28 @@ async function run() {
           ["Diagnóstico ajeno", other.post(`${visitPath}/diagnoses`, { description: "Hack" })],
           ["Cargo ajeno", other.post(`${visitPath}/charges`, { description: "Hack" })],
           ["Cerrar consulta ajena", other.post(`${visitPath}/close`, {})],
+          ["Vacuna ajena", other.post(`${visitPath}/vaccinations`, { name: "Hack" })],
+          ["Preventivo ajeno", other.post(`${visitPath}/preventives`, { product: "Hack" })],
+          [
+            "Receta ajena",
+            other.post(`${visitPath}/prescriptions`, {
+              items: [{ drug: "Hack", dose: "1", frequency: "1" }],
+            }),
+          ],
+          [
+            "Preventivo sobre paciente ajeno",
+            other.post(`/veterinaria/patients/${foreignPetId}/preventives`, { product: "Hack" }),
+          ],
+          [
+            "Dispensar una receta ajena",
+            other.post(`/veterinaria/prescription-items/${foreignLineId}/dispense`, {
+              quantity: 1,
+            }),
+          ],
+          [
+            "Leer una receta ajena",
+            other.get(`/veterinaria/prescriptions/${foreignPrescription.data.id}`),
+          ],
           ["Eliminar consulta ajena", other.delete(visitPath)],
           [
             "Editar paciente ajeno",
@@ -497,6 +540,39 @@ async function run() {
           "Asignar veterinario ajeno",
         );
 
+        // Its own prescription cannot draw on the other tenant's stock.
+        expectStatus(
+          (
+            await other.post(`/veterinaria/visits/${ownVisit.data.id}/prescriptions`, {
+              items: [
+                { drug: "X", dose: "1", frequency: "1", inventoryItemId: foreignItem.data.id },
+              ],
+            })
+          ).status,
+          404,
+          "Receta con artículo de inventario ajeno",
+        );
+        const ownPrescription = await other.post(
+          `/veterinaria/visits/${ownVisit.data.id}/prescriptions`,
+          { items: [{ drug: "X", dose: "1", frequency: "1" }] },
+        );
+        expectStatus(ownPrescription.status, 201, "Receta propia");
+        expectStatus(
+          (
+            await other.post(
+              `/veterinaria/prescription-items/${ownPrescription.data.items[0].id}/dispense`,
+              { quantity: 1, inventoryItemId: foreignItem.data.id },
+            )
+          ).status,
+          404,
+          "Dispensar desde el inventario ajeno",
+        );
+        const stock = await owner.get("/veterinaria/pharmacy/items");
+        const untouchedItem = stock.data.find((i: any) => i.id === foreignItem.data.id);
+        if (untouchedItem?.currentStock !== 5) {
+          throw new Error("El stock de la clínica principal fue alterado desde otra");
+        }
+
         // And none of it reached the visit it was aimed at.
         const untouched = await owner.get(visitPath);
         expectStatus(untouched.status, 200, "La consulta principal sigue existiendo");
@@ -505,6 +581,7 @@ async function run() {
         }
       } finally {
         await owner.delete(`/veterinaria/visits/${foreignVisitId}`);
+        await owner.delete(`/inventory/items/${foreignItem.data.id}`);
       }
     } finally {
       await removeClinic(clinicId, slug);

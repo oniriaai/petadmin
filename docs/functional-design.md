@@ -69,6 +69,8 @@ núcleo y está siempre disponible.
 │   ├── Agenda Veterinaria (/veterinaria)             [veterinaria + reservas]
 │   ├── Consulta (/veterinaria/consultas/:id)         [veterinaria]
 │   ├── Historias Clínicas (/veterinaria/pacientes)   [veterinaria]
+│   ├── Farmacia (/veterinaria/farmacia)              [veterinaria]
+│   ├── Receta imprimible (/veterinaria/recetas/:id)  [veterinaria]
 │   └── Catálogo Clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
 └── 💼 Gestión Transversal (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
@@ -129,6 +131,9 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `POST /veterinaria/visits/:id/vitals | diagnoses | charges`: Signos vitales, diagnósticos y cargos.
 - `POST /veterinaria/visits/:id/close`, `/payments`: Cierre con cobro independiente para `VETERINARY` y abonos.
 - `GET /veterinaria/patients/:petId/history`: Historia clínica del paciente.
+- `POST /veterinaria/visits/:id/vaccinations | preventives | prescriptions`: Vacunas, preventivos y recetas.
+- `POST /veterinaria/prescription-items/:itemId/dispense`: Dispensación con descuento de stock.
+- `GET /veterinaria/pharmacy/queue | controlled-log | expiring | items`: Mostrador de farmacia.
 
 ### Módulo Finanzas y Backoffice
 - `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.

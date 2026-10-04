@@ -68,6 +68,8 @@ async function run() {
   let roomId = "";
   let service: { id: string; name: string; basePrice: number } = { id: "", name: "", basePrice: 0 };
   let visitId = "";
+  let pharmacyVisitId = "";
+  let stockItemId = "";
   let total = 0;
   const cleanupVisitIds: string[] = [];
 
@@ -338,6 +340,162 @@ async function run() {
     expectEqual(patient.data.bloodType, "DEA 1.1+", "grupo sanguíneo");
   });
 
+  await test("Vacunas y preventivos quedan en la historia con lote y próxima dosis", async () => {
+    const visit = await vet.post("/veterinaria/visits", { clientId, petId, triage: "URGENCIA" });
+    expectStatus(visit.status, 201, "consulta de farmacia");
+    pharmacyVisitId = visit.data.id;
+    cleanupVisitIds.push(pharmacyVisitId);
+    const path = `/veterinaria/visits/${pharmacyVisitId}`;
+    const nextYear = new Date(Date.now() + 365 * 86_400_000).toISOString();
+
+    const vaccine = await vet.post(`${path}/vaccinations`, {
+      name: "Antirrábica",
+      lotNumber: "RAB-2291",
+      manufacturer: "Zoovet",
+      nextDue: nextYear,
+    });
+    expectStatus(vaccine.status, 201, "vacuna");
+    expectEqual(vaccine.data.lotNumber, "RAB-2291", "lote de la vacuna");
+    expectStatus((await vet.post(`${path}/vaccinations`, {})).status, 400, "vacuna sin nombre");
+
+    expectStatus(
+      (
+        await vet.post(`${path}/preventives`, {
+          kind: "DESPARASITACION_INTERNA",
+          product: "Praziquantel",
+          weightKg: 12.4,
+          nextDue: nextYear,
+        })
+      ).status,
+      201,
+      "desparasitación en consulta",
+    );
+    const external = await vet.post(`/veterinaria/patients/${petId}/preventives`, {
+      kind: "DESPARASITACION_EXTERNA",
+      product: "Pipeta",
+    });
+    expectStatus(external.status, 201, "preventivo sin consulta");
+
+    const history = await vet.get(`/veterinaria/patients/${petId}/history`);
+    expectEqual(history.data.preventives.length, 2, "preventivos en la historia");
+    const recorded = history.data.pet.vaccinations.find(
+      (v: { lotNumber?: string }) => v.lotNumber === "RAB-2291",
+    );
+    if (!recorded?.vetVisitId) throw new Error("la vacuna no quedó ligada a su consulta");
+
+    expectStatus(
+      (await vet.delete(`/veterinaria/patients/${petId}/preventives/${external.data.id}`)).status,
+      200,
+      "quitar preventivo",
+    );
+  });
+
+  await test("Una receta se dispensa una sola vez, descuenta stock y puede cobrarse", async () => {
+    const path = `/veterinaria/visits/${pharmacyVisitId}`;
+    const item = await vet.post("/inventory/items", {
+      name: `Tramadol E2E ${Date.now()}`,
+      category: "Medicamentos",
+      unit: "tableta",
+      currentStock: 5,
+      isControlled: true,
+    });
+    expectStatus(item.status, 201, "alta de artículo");
+    stockItemId = item.data.id;
+    expectEqual(item.data.businessUnit, "VETERINARY", "unidad del artículo");
+
+    const entry = await vet.post(`/inventory/items/${stockItemId}/movements`, {
+      type: "ENTRADA",
+      quantity: 3,
+      lotNumber: "TR-77",
+      expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
+    });
+    expectStatus(entry.status, 201, "entrada con lote y caducidad");
+
+    expectStatus(
+      (await vet.post(`${path}/prescriptions`, { items: [] })).status,
+      400,
+      "receta vacía",
+    );
+    const prescription = await vet.post(`${path}/prescriptions`, {
+      notes: "Dar con comida",
+      items: [
+        {
+          drug: "Tramadol 50 mg",
+          dose: "1 tableta",
+          frequency: "cada 12 horas",
+          durationDays: 5,
+          inventoryItemId: stockItemId,
+        },
+        { drug: "Omeprazol 10 mg", dose: "1 cápsula", frequency: "cada 24 horas" },
+      ],
+    });
+    expectStatus(prescription.status, 201, "receta");
+    const [stocked, external] = prescription.data.items;
+
+    const queue = await vet.get("/veterinaria/pharmacy/queue");
+    expectStatus(queue.status, 200, "cola de farmacia");
+    if (!queue.data.some((line: { id: string }) => line.id === stocked.id)) {
+      throw new Error("la receta no está en la cola de farmacia");
+    }
+
+    const dispensePath = (id: string) => `/veterinaria/prescription-items/${id}/dispense`;
+    expectStatus(
+      (await vet.post(dispensePath(external.id), { quantity: 1 })).status,
+      400,
+      "dispensar sin artículo de inventario",
+    );
+    expectStatus(
+      (await vet.post(dispensePath(stocked.id), { quantity: 100 })).status,
+      409,
+      "dispensar más que el stock",
+    );
+    const dispensed = await vet.post(dispensePath(stocked.id), {
+      quantity: 2,
+      lotNumber: "TR-77",
+      unitPrice: 4,
+    });
+    expectStatus(dispensed.status, 200, "dispensación");
+    expectEqual(dispensed.data.quantityDispensed, 2, "cantidad dispensada");
+    expectStatus(
+      (await vet.post(dispensePath(stocked.id), { quantity: 1 })).status,
+      409,
+      "segunda dispensación",
+    );
+
+    const stock = await vet.get("/veterinaria/pharmacy/items");
+    const after = stock.data.find((i: { id: string }) => i.id === stockItemId);
+    // 5 inicial + 3 de la entrada - 2 dispensadas; el intento rechazado no descontó nada.
+    expectEqual(after?.currentStock, 6, "stock tras dispensar");
+
+    const visit = await vet.get(path);
+    const billed = visit.data.charges.find(
+      (c: { inventoryItemId?: string }) => c.inventoryItemId === stockItemId,
+    );
+    if (!billed || billed.quantity !== 2 || billed.unitPrice !== 4) {
+      throw new Error("la dispensación no generó su cargo en la consulta");
+    }
+
+    expectStatus(
+      (await vet.delete(`${path}/prescriptions/${prescription.data.id}`)).status,
+      409,
+      "eliminar una receta ya dispensada",
+    );
+
+    const printable = await vet.get(`/veterinaria/prescriptions/${prescription.data.id}`);
+    expectStatus(printable.status, 200, "receta imprimible");
+    expectEqual(printable.data.pet.client.lastName, "Tester", "tutor en la receta");
+
+    const log = await vet.get("/veterinaria/pharmacy/controlled-log");
+    const entryInLog = log.data.find((line: { id: string }) => line.id === stocked.id);
+    if (!entryInLog || entryInLog.lotNumber !== "TR-77") {
+      throw new Error("la dispensación de un controlado no figura en el libro");
+    }
+    const expiring = await vet.get("/veterinaria/pharmacy/expiring");
+    if (!expiring.data.some((lot: { lotNumber: string }) => lot.lotNumber === "TR-77")) {
+      throw new Error("el lote por caducar no aparece");
+    }
+  });
+
   await test("Un veterinario o una sala no se reservan dos veces, salvo una urgencia", async () => {
     // Far enough ahead, and offset per run, that it cannot collide with other data.
     const start = new Date(Date.now() + (40 + Math.floor(Math.random() * 300)) * 86_400_000);
@@ -402,6 +560,7 @@ async function run() {
   // Unclosed visits are removed. The closed one stays: it is clinical history, and the API
   // refuses to delete it by design.
   for (const id of cleanupVisitIds) await vet.delete(`/veterinaria/visits/${id}`);
+  if (stockItemId) await vet.delete(`/inventory/items/${stockItemId}`);
 
   const passed = results.filter((r) => r.passed).length;
   console.log("\n" + "=".repeat(60));

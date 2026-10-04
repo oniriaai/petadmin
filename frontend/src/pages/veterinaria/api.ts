@@ -138,6 +138,100 @@ export interface VisitIncome {
   concept: string;
 }
 
+export interface Vaccination {
+  id: string;
+  name: string;
+  date: string;
+  nextDue?: string | null;
+  lotNumber?: string | null;
+  manufacturer?: string | null;
+  vetVisitId?: string | null;
+}
+
+export const PREVENTIVE_KINDS: Record<string, string> = {
+  DESPARASITACION_INTERNA: "Desparasitación interna",
+  DESPARASITACION_EXTERNA: "Desparasitación externa",
+  OTRO: "Otro preventivo",
+};
+
+export interface Preventive {
+  id: string;
+  kind: string;
+  product: string;
+  dose?: string | null;
+  weightKg?: number | null;
+  date: string;
+  nextDue?: string | null;
+}
+
+export interface StockItem {
+  id: string;
+  name: string;
+  category?: string;
+  unit: string;
+  currentStock?: number;
+  minStock?: number;
+  isControlled?: boolean;
+}
+
+export interface PrescriptionItem {
+  id: string;
+  drug: string;
+  presentation?: string | null;
+  dose: string;
+  route?: string | null;
+  frequency: string;
+  durationDays?: number | null;
+  instructions?: string | null;
+  inventoryItemId?: string | null;
+  inventoryItem?: StockItem | null;
+  quantityDispensed?: number | null;
+  dispensedAt?: string | null;
+  lotNumber?: string | null;
+}
+
+export interface Prescription {
+  id: string;
+  issuedAt: string;
+  notes?: string | null;
+  items: PrescriptionItem[];
+  veterinarian?: { id: string; name: string; licenseNumber?: string | null } | null;
+}
+
+export interface PrintablePrescription extends Prescription {
+  pet: PatientProfile & {
+    client: {
+      firstName: string;
+      lastName: string;
+      phone?: string | null;
+      idNumber?: string | null;
+    };
+  };
+}
+
+/** A prescription line with the patient and prescriber it belongs to, as the pharmacy sees it. */
+export interface PharmacyLine extends PrescriptionItem {
+  prescription: {
+    id: string;
+    issuedAt: string;
+    visitId: string;
+    veterinarian?: { id: string; name: string; licenseNumber?: string | null } | null;
+    pet: {
+      id: string;
+      name: string;
+      client: { firstName: string; lastName: string; idNumber?: string | null };
+    };
+  };
+}
+
+export interface ExpiringLot {
+  id: string;
+  lotNumber?: string | null;
+  expiresAt: string;
+  quantity: number;
+  item: StockItem;
+}
+
 export interface PatientProfile extends VisitPet {
   sex?: string;
   birthdate?: string | null;
@@ -172,12 +266,15 @@ export interface VisitDetail extends Omit<VisitSummary, "pet" | "reservation" | 
   vitals: Vitals[];
   diagnoses: Diagnosis[];
   charges: VisitCharge[];
+  vaccinations: Vaccination[];
+  preventives: Preventive[];
+  prescriptions: Prescription[];
 }
 
 export interface PatientHistory {
   pet: PatientProfile & {
     client: VisitClient;
-    vaccinations: Array<{ id: string; name: string; date: string; nextDue?: string | null }>;
+    vaccinations: Vaccination[];
     documents: Array<{ id: string; name: string; type: string; uploadedAt: string }>;
   };
   visits: Array<{
@@ -193,6 +290,8 @@ export interface PatientHistory {
   }>;
   vitals: Vitals[];
   chronicDiagnoses: Diagnosis[];
+  preventives: Preventive[];
+  prescriptions: Prescription[];
 }
 
 export interface ClinicRoom {
@@ -253,13 +352,34 @@ export const veterinariaApi = {
     api.post<Diagnosis>(`/veterinaria/visits/${id}/diagnoses`, body),
   addCharge: (id: string, body: Record<string, unknown>) =>
     api.post<VisitCharge>(`/veterinaria/visits/${id}/charges`, body),
-  removeChild: (id: string, kind: "vitals" | "diagnoses" | "charges", childId: string) =>
-    api.del(`/veterinaria/visits/${id}/${kind}/${childId}`),
+  removeChild: (
+    id: string,
+    kind: "vitals" | "diagnoses" | "charges" | "vaccinations" | "prescriptions",
+    childId: string,
+  ) => api.del(`/veterinaria/visits/${id}/${kind}/${childId}`),
 
   close: (id: string, body: Record<string, unknown>) =>
     api.post<VisitDetail>(`/veterinaria/visits/${id}/close`, body),
   pay: (id: string, body: Record<string, unknown>) =>
     api.post<VisitDetail>(`/veterinaria/visits/${id}/payments`, body),
+
+  addVaccination: (id: string, body: Record<string, unknown>) =>
+    api.post<Vaccination>(`/veterinaria/visits/${id}/vaccinations`, body),
+  addPreventive: (id: string, body: Record<string, unknown>) =>
+    api.post<Preventive>(`/veterinaria/visits/${id}/preventives`, body),
+  removePreventive: (petId: string, id: string) =>
+    api.del(`/veterinaria/patients/${petId}/preventives/${id}`),
+  addPrescription: (id: string, body: Record<string, unknown>) =>
+    api.post<Prescription>(`/veterinaria/visits/${id}/prescriptions`, body),
+  prescription: (id: string) => api.get<PrintablePrescription>(`/veterinaria/prescriptions/${id}`),
+  dispense: (itemId: string, body: Record<string, unknown>) =>
+    api.post<PrescriptionItem>(`/veterinaria/prescription-items/${itemId}/dispense`, body),
+
+  pharmacyItems: () => api.get<StockItem[]>("/veterinaria/pharmacy/items"),
+  pharmacyQueue: () => api.get<PharmacyLine[]>("/veterinaria/pharmacy/queue"),
+  controlledLog: (params: { from?: string; to?: string }) =>
+    api.get<PharmacyLine[]>(`/veterinaria/pharmacy/controlled-log${query(params)}`),
+  expiringLots: () => api.get<ExpiringLot[]>("/veterinaria/pharmacy/expiring"),
 
   history: (petId: string) => api.get<PatientHistory>(`/veterinaria/patients/${petId}/history`),
   updatePatient: (petId: string, body: Record<string, unknown>) =>

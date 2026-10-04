@@ -66,7 +66,7 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Cobro Directo e Independiente**: Registro de ingreso contable acreditado exclusivamente a `GROOMING`. Admite anticipo al agendar y cobro del saldo al entregar.
 - ✅ **Finanzas de Peluquería**: Registro de ingresos y gastos separados estrictamente de Guardería.
 
-### Veterinaria (`VETERINARY`, módulo `veterinaria`) — fase 1 de 4
+### Veterinaria (`VETERINARY`, módulo `veterinaria`) — fases 1 y 2 de 4
 
 - ✅ **Agenda de Consultas**: Por día y veterinario, con sala. Un veterinario o una sala no se reservan dos veces; una urgencia se registra igual.
 - ✅ **Sala de Espera**: `Programadas` → `Sala de espera` (ordenada por prioridad) → `En consulta` → `Cerradas`, más cancelaciones y ausencias.
@@ -74,7 +74,10 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Historia Clínica por Paciente**: Consultas, evolución del peso, vacunas, alergias, condiciones crónicas y fallecimiento. Imprimible.
 - ✅ **Catálogo de la Clínica**: Servicios con precio y duración propios de cada clínica, y veterinarios de planta o externos.
 - ✅ **Cobro al Cerrar**: Cargos del catálogo o libres, descuento, IVA de la unidad, cobro parcial y abonos posteriores, acreditados a `VETERINARY`.
-- ⏳ **Pendiente**: vacunación y desparasitación con lote, recetas y farmacia sobre inventario (fase 2); hospitalización, cirugía, laboratorio e imagen, consentimientos (fase 3); recordatorios e informes clínicos (fase 4).
+- ✅ **Vacunas y Preventivos**: Vacunas con lote, laboratorio y refuerzo; desparasitaciones con próxima dosis, aplicadas en consulta o transcritas.
+- ✅ **Recetas**: Varios medicamentos con dosis, frecuencia, duración e indicaciones. Imprimible con paciente, tutor y matrícula del prescriptor.
+- ✅ **Farmacia**: Cola de recetas por dispensar, entrega que descuenta el inventario de la unidad (y puede cobrarse en la consulta abierta), libro de medicamentos controlados imprimible y lotes por caducar.
+- ⏳ **Pendiente**: hospitalización, cirugía, laboratorio e imagen, consentimientos (fase 3); recordatorios e informes clínicos (fase 4).
 
 ---
 

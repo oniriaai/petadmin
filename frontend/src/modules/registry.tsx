@@ -12,6 +12,7 @@ import {
   Home,
   Package,
   PawPrint,
+  Pill,
   Repeat,
   Scissors,
   Settings,
@@ -41,6 +42,8 @@ import { ConsultaPage } from "../pages/veterinaria/ConsultaPage";
 import { PacientesPage } from "../pages/veterinaria/PacientesPage";
 import { HistoriaClinicaPage } from "../pages/veterinaria/HistoriaClinicaPage";
 import { CatalogoVeterinariaPage } from "../pages/veterinaria/CatalogoVeterinariaPage";
+import { FarmaciaPage } from "../pages/veterinaria/FarmaciaPage";
+import { RecetaPage } from "../pages/veterinaria/RecetaPage";
 
 export type FrontendRole = TenantRole;
 export type FrontendUnit = BusinessUnit;
@@ -235,6 +238,20 @@ export const frontendModules: readonly FrontendModule[] = [
         unit: "VETERINARY",
       },
       {
+        path: "/veterinaria/farmacia",
+        component: FarmaciaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/recetas/:id",
+        component: RecetaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
         path: "/veterinaria/catalogo",
         component: CatalogoVeterinariaPage,
         roles: ["admin"],
@@ -258,6 +275,16 @@ export const frontendModules: readonly FrontendModule[] = [
           to: "/veterinaria/pacientes",
           label: "Historias Clínicas",
           icon: ClipboardList,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        // Stock is read through the clinic's own endpoints, so the desk works without the
+        // `inventario` module; receiving stock is what needs the Inventario screen.
+        {
+          to: "/veterinaria/farmacia",
+          label: "Farmacia",
+          icon: Pill,
           roles: ["admin", "veterinary"],
           unit: "VETERINARY",
           requires: ["veterinaria"],

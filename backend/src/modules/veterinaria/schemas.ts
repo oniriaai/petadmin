@@ -156,3 +156,56 @@ export const patientSchema = z.object({
   deceasedAt: z.string().min(1).nullable().optional(),
   deathCause: z.string().trim().max(500).nullable().optional(),
 });
+
+export const PREVENTIVE_KINDS = [
+  "DESPARASITACION_INTERNA",
+  "DESPARASITACION_EXTERNA",
+  "OTRO",
+] as const;
+
+export const vaccinationSchema = z.object({
+  name: z.string().trim().min(1, "Vacuna requerida").max(120),
+  date: z.string().min(1).optional(),
+  nextDue: z.string().min(1).optional(),
+  lotNumber: optionalText(80),
+  manufacturer: optionalText(120),
+  notes: optionalText(500),
+});
+
+export const preventiveSchema = z.object({
+  kind: z.enum(PREVENTIVE_KINDS).default("DESPARASITACION_INTERNA"),
+  product: z.string().trim().min(1, "Producto requerido").max(120),
+  dose: optionalText(80),
+  weightKg: z.number().positive().max(200).optional(),
+  date: z.string().min(1).optional(),
+  nextDue: z.string().min(1).optional(),
+  notes: optionalText(500),
+});
+
+export const prescriptionSchema = z.object({
+  notes: optionalText(1000),
+  items: z
+    .array(
+      z.object({
+        drug: z.string().trim().min(1, "Medicamento requerido").max(160),
+        presentation: optionalText(120),
+        dose: z.string().trim().min(1, "Dosis requerida").max(120),
+        route: optionalText(60),
+        frequency: z.string().trim().min(1, "Frecuencia requerida").max(120),
+        durationDays: z.number().int().min(1).max(365).optional(),
+        instructions: optionalText(500),
+        inventoryItemId: z.string().min(1).optional(),
+      }),
+    )
+    .min(1, "La receta necesita al menos un medicamento")
+    .max(30),
+});
+
+export const dispenseSchema = z.object({
+  /** Overrides the stock item the line was prescribed against, or sets one if it had none. */
+  inventoryItemId: z.string().min(1).optional(),
+  quantity: z.number().positive().max(10000),
+  lotNumber: optionalText(80),
+  /** Bill the dispensed quantity on the visit at this unit price. Only while the visit is open. */
+  unitPrice: z.number().min(0).optional(),
+});

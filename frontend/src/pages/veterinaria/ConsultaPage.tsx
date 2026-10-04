@@ -6,6 +6,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { PAYMENT_METHODS, fmt, fmtCurrency, fmtDateTime } from "../../lib/utils";
+import { PrescriptionPanel, PreventivePanel } from "./ConsultaOrdersPanels";
 import {
   TRIAGE,
   VISIT_STATUS,
@@ -334,8 +335,11 @@ export function ConsultaPage() {
         <div className="space-y-5">
           <VitalsPanel visit={visit} locked={locked} run={run} />
           <DiagnosesPanel visit={visit} locked={locked} run={run} />
+          <PreventivePanel visit={visit} locked={locked} run={run} />
         </div>
       </div>
+
+      <PrescriptionPanel visit={visit} locked={locked} run={run} />
 
       <ChargesPanel
         visit={visit}

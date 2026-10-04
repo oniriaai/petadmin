@@ -337,6 +337,20 @@ cobros) más su registro clínico, uno a uno. Una consulta `CERRADA` queda conge
 | `POST` | `/veterinaria/visits/:id/payments` | Abono sobre el saldo de una consulta cerrada |
 | `GET` | `/veterinaria/patients/:petId/history` | Historia clínica: consultas, diagnósticos, signos vitales, vacunas y documentos |
 | `PATCH` | `/veterinaria/patients/:petId` | Datos clínicos del paciente: grupo sanguíneo, alergias, condiciones crónicas, fallecimiento |
+| `POST` `DELETE` | `/veterinaria/visits/:id/vaccinations[/:childId]` | Vacuna aplicada en la consulta, con lote, laboratorio y refuerzo |
+| `POST` | `/veterinaria/visits/:id/preventives` | Desparasitación u otro preventivo aplicado en la consulta |
+| `POST` `DELETE` | `/veterinaria/patients/:petId/preventives[/:childId]` | Preventivo sin consulta detrás (aplicado fuera o antes de llevar registro) |
+| `POST` `DELETE` | `/veterinaria/visits/:id/prescriptions[/:childId]` | Receta con sus medicamentos; no se elimina si ya se dispensó algo |
+| `GET` | `/veterinaria/prescriptions/:id` | Receta con paciente, tutor y prescriptor, para imprimir |
+| `POST` | `/veterinaria/prescription-items/:itemId/dispense` | Dispensa una línea **una sola vez**: descuenta stock (409 si no alcanza) y, con `unitPrice`, añade el cargo a la consulta abierta |
+| `GET` | `/veterinaria/pharmacy/items` | Stock de la unidad `VETERINARY`, para el selector de dispensación |
+| `GET` | `/veterinaria/pharmacy/queue` | Líneas recetadas en los últimos 30 días sin dispensar; paginable |
+| `GET` | `/veterinaria/pharmacy/controlled-log` | Libro de controlados: dispensaciones de artículos marcados `isControlled` (`from`, `to`); paginable |
+| `GET` | `/veterinaria/pharmacy/expiring` | Lotes recibidos que caducan en 90 días o ya caducaron |
+
+El stock se mueve a través de `core/inventory/stock.ts`, compartido con `/inventory`: movimiento y
+nivel se escriben en una sola transacción. `/inventory/items` acepta `isControlled`, y una entrada
+acepta `lotNumber` y `expiresAt`.
 
 ---
 
@@ -466,6 +480,7 @@ hace). `prisma db push` queda como salida de emergencia en desarrollo.
 | `20260902000000_rename_business_units` | `KINDERDOG`→`DAYCARE`, `PETHIJOS`→`GROOMING` y sus roles |
 | `20260903000000_add_daycare_tenancy` | `daycares`, `daycare_modules`, `platform_audit_logs`, `daycareId` con backfill, FKs, índices y el CHECK `users_superadmin_untenanted` |
 | `20261004000000_veterinary_core` | Clínica veterinaria: `vet_services`, `vet_visits`, `vet_vitals`, `vet_diagnoses`, `vet_visit_charges`; matrícula, especialidad y usuario en `veterinarians`; datos clínicos en `pets`. Solo añade: la unidad `VETERINARY` y el rol `veterinary` son valores de texto y no necesitan migración |
+| `20261005000000_veterinary_pharmacy` | `vet_preventives`, `vet_prescriptions`, `vet_prescription_items`; lote, laboratorio, veterinario y consulta en `pet_vaccinations`; `isControlled` en `inventory_items`; lote, caducidad y línea de receta en `inventory_movements`. Solo añade |
 | `20260904000000_add_unit_vat_percent` | `business_unit_settings.vatPercent`, con el valor por defecto que ya estaba escrito a mano |
 | `20260905000000_drop_unused_backfill_tenant` | Elimina la guardería `daycare_pethijos` **solo si no posee ningún dato**. La migración de tenancy la inserta sin condiciones (correcto para adoptar una instalación de un solo inquilino), con lo que una base de datos **nueva** arrancaba con un inquilino que nadie creó, activo y con los siete módulos vendibles habilitados |
 | `20260906000000_per_tenant_usernames` | `username` pasa a ser único por `(daycareId, username)`, más un índice **parcial** sobre `username` donde `daycareId IS NULL` para las cuentas de plataforma: Postgres considera los `NULL` distintos entre sí, así que el índice compuesto no las cubriría |

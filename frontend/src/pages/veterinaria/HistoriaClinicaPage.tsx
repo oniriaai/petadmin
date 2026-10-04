@@ -7,6 +7,7 @@ import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { fmt, fmtDateTime } from "../../lib/utils";
 import {
+  PREVENTIVE_KINDS,
   VISIT_STATUS,
   VISIT_TYPES,
   errorMessage,
@@ -79,7 +80,7 @@ export function HistoriaClinicaPage() {
     );
   }
 
-  const { pet, visits, vitals, chronicDiagnoses } = history;
+  const { pet, visits, vitals, chronicDiagnoses, preventives, prescriptions } = history;
   const weights = vitals.filter((v) => v.weightKg != null).slice(0, 8);
   const today = new Date();
 
@@ -268,6 +269,7 @@ export function HistoriaClinicaPage() {
                       <p className="font-medium text-gray-900">{vaccination.name}</p>
                       <p className="text-muted">
                         {fmt(vaccination.date)}
+                        {vaccination.lotNumber ? ` · lote ${vaccination.lotNumber}` : ""}
                         {vaccination.nextDue && (
                           <span className={overdue ? "text-red-600 font-medium" : ""}>
                             {" "}
@@ -282,6 +284,56 @@ export function HistoriaClinicaPage() {
               </ul>
             )}
           </section>
+
+          <section className="card p-4 space-y-2 text-sm" aria-label="Desparasitaciones">
+            <h2 className="font-semibold text-gray-900">Desparasitaciones y preventivos</h2>
+            {preventives.length === 0 ? (
+              <p className="text-muted">Sin preventivos registrados.</p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {preventives.map((preventive) => {
+                  const overdue = preventive.nextDue && new Date(preventive.nextDue) < today;
+                  return (
+                    <li key={preventive.id} className="py-1.5">
+                      <p className="font-medium text-gray-900">{preventive.product}</p>
+                      <p className="text-muted">
+                        {PREVENTIVE_KINDS[preventive.kind] ?? preventive.kind} ·{" "}
+                        {fmt(preventive.date)}
+                        {preventive.nextDue && (
+                          <span className={overdue ? "text-red-600 font-medium" : ""}>
+                            {" "}
+                            · próxima {fmt(preventive.nextDue)}
+                            {overdue ? " (vencida)" : ""}
+                          </span>
+                        )}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          {prescriptions.length > 0 && (
+            <section className="card p-4 space-y-2 text-sm" aria-label="Recetas">
+              <h2 className="font-semibold text-gray-900">Recetas</h2>
+              <ul className="divide-y divide-gray-100">
+                {prescriptions.map((prescription) => (
+                  <li key={prescription.id} className="py-1.5">
+                    <Link
+                      to={`/veterinaria/recetas/${prescription.id}`}
+                      className="font-medium text-gray-900 hover:underline"
+                    >
+                      {fmt(prescription.issuedAt)}
+                    </Link>
+                    <p className="text-muted">
+                      {prescription.items.map((item) => item.drug).join(", ")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           {pet.documents.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Documentos">

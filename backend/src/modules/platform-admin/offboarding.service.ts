@@ -351,6 +351,12 @@ export async function deleteDaycare(
     );
 
     // The clinical record, before the reservations, pets and veterinarians it points at.
+    count(
+      "vetPrescriptionItems",
+      await tx.vetPrescriptionItem.deleteMany({ where: { daycareId } }),
+    );
+    count("vetPrescriptions", await tx.vetPrescription.deleteMany({ where: { daycareId } }));
+    count("vetPreventives", await tx.vetPreventive.deleteMany({ where: { daycareId } }));
     count("vetVitals", await tx.vetVitals.deleteMany({ where: { daycareId } }));
     count("vetDiagnoses", await tx.vetDiagnosis.deleteMany({ where: { daycareId } }));
     count("vetVisitCharges", await tx.vetVisitCharge.deleteMany({ where: { daycareId } }));

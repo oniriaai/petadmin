@@ -182,6 +182,7 @@ describe("navigation gating", () => {
     renderSidebar({ modules: ["reservas"] });
     expect(screen.queryByText("Agenda Veterinaria")).not.toBeInTheDocument();
     expect(screen.queryByText("Historias Clínicas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Farmacia")).not.toBeInTheDocument();
     expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
   });
 
@@ -193,6 +194,7 @@ describe("navigation gating", () => {
     });
     expect(screen.getByText("Agenda Veterinaria")).toBeInTheDocument();
     expect(screen.getByText("Historias Clínicas")).toBeInTheDocument();
+    expect(screen.getByText("Farmacia")).toBeInTheDocument();
     expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
     // And nothing of the other units.
     expect(screen.queryByText("Agenda Peluquería")).not.toBeInTheDocument();

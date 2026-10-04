@@ -16,14 +16,33 @@ import {
 } from "./catalog.service";
 import { getPatientHistory, updatePatient } from "./history.service";
 import {
+  addPatientPreventive,
+  addVaccination,
+  addVisitPreventive,
+  createPrescription,
+  dispenseItem,
+  getPrescription,
+  listControlledLog,
+  listDispenseQueue,
+  listExpiringLots,
+  listPharmacyItems,
+  removePrescription,
+  removePreventive,
+  removeVaccination,
+} from "./pharmacy.service";
+import {
   chargeSchema,
   closeVisitSchema,
   createVisitSchema,
   diagnosisSchema,
+  dispenseSchema,
   patientSchema,
   paymentSchema,
+  prescriptionSchema,
+  preventiveSchema,
   serviceSchema,
   staffSchema,
+  vaccinationSchema,
   visitRecordSchema,
   visitStatusSchema,
   vitalsSchema,
@@ -347,6 +366,137 @@ veterinariaRouter.patch("/patients/:petId", async (req, res) => {
     const body = parseBody(patientSchema, req, res);
     if (!body) return;
     res.json(await updatePatient(getRequiredDaycareId(req), req.params.petId, body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+// --- Preventive care, prescriptions and pharmacy ---------------------------------------------
+
+veterinariaRouter.post("/visits/:id/vaccinations", async (req, res) => {
+  try {
+    const body = parseBody(vaccinationSchema, req, res);
+    if (!body) return;
+    res.status(201).json(await addVaccination(getRequiredDaycareId(req), req.params.id, body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.delete("/visits/:id/vaccinations/:childId", async (req, res) => {
+  try {
+    await removeVaccination(getRequiredDaycareId(req), req.params.id, req.params.childId);
+    res.json({ ok: true });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.post("/visits/:id/preventives", async (req, res) => {
+  try {
+    const body = parseBody(preventiveSchema, req, res);
+    if (!body) return;
+    res.status(201).json(await addVisitPreventive(getRequiredDaycareId(req), req.params.id, body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.post("/patients/:petId/preventives", async (req, res) => {
+  try {
+    const body = parseBody(preventiveSchema, req, res);
+    if (!body) return;
+    res
+      .status(201)
+      .json(await addPatientPreventive(getRequiredDaycareId(req), req.params.petId, body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.delete("/patients/:petId/preventives/:childId", async (req, res) => {
+  try {
+    await removePreventive(getRequiredDaycareId(req), req.params.petId, req.params.childId);
+    res.json({ ok: true });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.post("/visits/:id/prescriptions", async (req, res) => {
+  try {
+    const body = parseBody(prescriptionSchema, req, res);
+    if (!body) return;
+    res.status(201).json(await createPrescription(getRequiredDaycareId(req), req.params.id, body));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.delete("/visits/:id/prescriptions/:childId", async (req, res) => {
+  try {
+    await removePrescription(getRequiredDaycareId(req), req.params.id, req.params.childId);
+    res.json({ ok: true });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.get("/prescriptions/:id", async (req, res) => {
+  try {
+    res.json(await getPrescription(getRequiredDaycareId(req), req.params.id));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.post("/prescription-items/:itemId/dispense", async (req, res) => {
+  try {
+    const body = parseBody(dispenseSchema, req, res);
+    if (!body) return;
+    res.json(
+      await dispenseItem(getRequiredDaycareId(req), req.params.itemId, req.user?.userId, body),
+    );
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.get("/pharmacy/items", async (req, res) => {
+  try {
+    res.json(await listPharmacyItems(getRequiredDaycareId(req)));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.get("/pharmacy/queue", async (req, res) => {
+  try {
+    const page = readPage(req);
+    const { items, total } = await listDispenseQueue(getRequiredDaycareId(req), page);
+    sendPage(res, page, items, total);
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.get("/pharmacy/controlled-log", async (req, res) => {
+  try {
+    const page = readPage(req);
+    const { items, total } = await listControlledLog(
+      getRequiredDaycareId(req),
+      req.query as Record<string, string>,
+      page,
+    );
+    sendPage(res, page, items, total);
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.get("/pharmacy/expiring", async (req, res) => {
+  try {
+    res.json(await listExpiringLots(getRequiredDaycareId(req)));
   } catch (error) {
     fail(res, error);
   }

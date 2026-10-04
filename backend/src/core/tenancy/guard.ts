@@ -94,6 +94,9 @@ const TENANT_OWNED = new Set([
   "VetVitals",
   "VetDiagnosis",
   "VetVisitCharge",
+  "VetPreventive",
+  "VetPrescription",
+  "VetPrescriptionItem",
 ]);
 
 /**

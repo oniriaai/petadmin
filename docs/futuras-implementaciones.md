@@ -6,7 +6,7 @@ Con la reestructuración hacia una **Arquitectura Modular (Modular Monolith)**, 
 
 - ✅ **Módulo de Guardería**: Salas con cálculo de ocupación y cupos en tiempo real, validación estricta contra sobrecupo, check-in/out, planes recurrentes con scheduler automático y transporte.
 - ✅ **Módulo de Peluquería**: Catálogo de servicios con duraciones estimadas, citas por franja horaria, tablero kanban de estados de atención y cobro directo.
-- ✅ **Módulo de Veterinaria (fase 1)**: Tercera unidad de negocio (`VETERINARY`) con su rol, agenda de consultas, sala de espera, historia clínica y cobro al cerrar.
+- ✅ **Módulo de Veterinaria (fases 1 y 2)**: Tercera unidad de negocio (`VETERINARY`) con su rol, agenda de consultas, sala de espera, historia clínica y cobro al cerrar; vacunas y preventivos con lote, recetas imprimibles y farmacia sobre el inventario con libro de controlados.
 - ✅ **Core Compartido**: Tutores y perrhijos con historial médico, vacunas y fotos en Backblaze B2.
 - ✅ **Finanzas Segregadas**: Cobros e ingresos independientes por unidad contable (`DAYCARE` y `GROOMING`).
 - ✅ **Multi-Inquilino**: Cada guardería cliente es un inquilino con sus propios datos y usuarios.
@@ -41,9 +41,8 @@ La deuda que quedaba tras el trabajo de plataforma está resuelta:
 ## Roadmap para Siguientes Fases
 
 ### Clínica Veterinaria: fases restantes
-1. **Medicina preventiva y farmacia**: vacunas y desparasitaciones con lote y refuerzo, recetas imprimibles, dispensación que descuenta inventario y libro de medicamentos controlados.
-2. **Hospitalización, cirugía y diagnóstico**: jaulas con aforo, hoja de tratamientos, procedimientos con riesgo anestésico y consentimiento firmado, órdenes y resultados de laboratorio e imagen.
-3. **Recordatorios e informes clínicos**: vacunas y controles por vencer, consultas por tipo y veterinario, ingresos por categoría y exportación al dar de baja una guardería.
+1. **Hospitalización, cirugía y diagnóstico**: jaulas con aforo, hoja de tratamientos, procedimientos con riesgo anestésico y consentimiento firmado, órdenes y resultados de laboratorio e imagen.
+2. **Recordatorios e informes clínicos**: vacunas y controles por vencer, consultas por tipo y veterinario, ingresos por categoría y exportación al dar de baja una guardería.
 
 ### Fase 1: Automatización y Recordatorios de Citas
 1. **Notificaciones WhatsApp**:

@@ -33,7 +33,7 @@ const LOCKED_STATUSES: VisitStatus[] = ["CERRADA", "CANCELADA", "NO_ASISTIO"];
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
-function parseDate(value: string, what: string): Date {
+export function parseDate(value: string, what: string): Date {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) throw new AuthzError(400, `${what} inválida`);
   return date;
@@ -84,6 +84,14 @@ const visitDetailInclude = {
   diagnoses: { orderBy: { createdAt: "asc" } },
   charges: { orderBy: { createdAt: "asc" } },
   documents: { orderBy: { uploadedAt: "desc" } },
+  vaccinations: { orderBy: { date: "desc" } },
+  preventives: { orderBy: { date: "desc" } },
+  prescriptions: {
+    orderBy: { issuedAt: "asc" },
+    include: {
+      items: { include: { inventoryItem: { select: { id: true, name: true, unit: true } } } },
+    },
+  },
 } satisfies Prisma.VetVisitInclude;
 
 export interface VisitListQuery {
@@ -154,16 +162,16 @@ export async function getVisit(daycareId: string, id: string) {
 }
 
 /** The visit's state, tenant-scoped. Every write below starts here. */
-async function requireVisit(daycareId: string, id: string) {
+export async function requireVisit(daycareId: string, id: string) {
   const visit = await prisma.vetVisit.findFirst({
     where: { id, daycareId },
-    select: { id: true, status: true, petId: true, reservationId: true },
+    select: { id: true, status: true, petId: true, reservationId: true, veterinarianId: true },
   });
   if (!visit) throw new AuthzError(404, "Consulta no encontrada");
   return visit;
 }
 
-function assertEditable(visit: { status: string }) {
+export function assertEditable(visit: { status: string }) {
   if (LOCKED_STATUSES.includes(visit.status as VisitStatus)) {
     throw new AuthzError(409, "La consulta está cerrada o cancelada y ya no se puede modificar");
   }
