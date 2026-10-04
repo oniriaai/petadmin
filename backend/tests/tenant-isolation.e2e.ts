@@ -487,6 +487,25 @@ async function run() {
           0,
           "Órdenes de laboratorio ajenas en el listado",
         );
+        // The main clinic has a lab order pending; the other clinic's reminders and figures
+        // must not see it.
+        if (
+          !(await owner.get("/veterinaria/reminders?kind=LABORATORIO")).data.some(
+            (r: any) => r.id === `LABORATORIO:${foreignLab.data.id}`,
+          )
+        ) {
+          throw new Error("El recordatorio no aparece en su propia clínica");
+        }
+        expectStatus(
+          (await other.get("/veterinaria/reminders")).data.length,
+          0,
+          "Recordatorios ajenos",
+        );
+        expectStatus(
+          (await other.get("/veterinaria/reports/summary")).data.visits.total,
+          0,
+          "Consultas ajenas en el informe",
+        );
 
         // Writes addressed at the other tenant's visit and patient.
         const visitPath = `/veterinaria/visits/${foreignVisitId}`;

@@ -17,6 +17,7 @@ import {
 import { getPatientHistory, updatePatient } from "./history.service";
 import { fail, parseBody } from "./http";
 import { inpatientRouter } from "./inpatient.router";
+import { getClinicSummary, listReminders } from "./insights.service";
 import {
   addPatientPreventive,
   addVaccination,
@@ -73,11 +74,12 @@ import {
 export const veterinariaRouter = Router();
 
 /** The catalogue and the staff list set prices and who may attend: an admin's decision. */
-function assertAdmin(req: Request): void {
+function assertAdmin(
+  req: Request,
+  message = "Solo un administrador puede modificar el catálogo de la clínica",
+): void {
   const role = req.user?.role;
-  if (role !== "admin" && role !== "superadmin") {
-    throw new AuthzError(403, "Solo un administrador puede modificar el catálogo de la clínica");
-  }
+  if (role !== "admin" && role !== "superadmin") throw new AuthzError(403, message);
 }
 
 const documentSchema = z.object({
@@ -479,6 +481,29 @@ veterinariaRouter.get("/pharmacy/controlled-log", async (req, res) => {
 veterinariaRouter.get("/pharmacy/expiring", async (req, res) => {
   try {
     res.json(await listExpiringLots(getRequiredDaycareId(req)));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+// --- Reminders and reports -------------------------------------------------------------------
+
+// A bare array on purpose: reminders are merged and de-duplicated in memory from four sources,
+// so there is no database page to hand out. The service caps the list.
+veterinariaRouter.get("/reminders", async (req, res) => {
+  try {
+    res.json(await listReminders(getRequiredDaycareId(req), req.query as Record<string, string>));
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+veterinariaRouter.get("/reports/summary", async (req, res) => {
+  try {
+    assertAdmin(req, "Solo un administrador puede ver los informes de la clínica");
+    res.json(
+      await getClinicSummary(getRequiredDaycareId(req), req.query as Record<string, string>),
+    );
   } catch (error) {
     fail(res, error);
   }

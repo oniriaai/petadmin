@@ -185,6 +185,8 @@ describe("navigation gating", () => {
     expect(screen.queryByText("Farmacia")).not.toBeInTheDocument();
     expect(screen.queryByText("Hospitalización")).not.toBeInTheDocument();
     expect(screen.queryByText("Laboratorio")).not.toBeInTheDocument();
+    expect(screen.queryByText("Recordatorios")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informe Clínico")).not.toBeInTheDocument();
     expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
   });
 
@@ -199,6 +201,9 @@ describe("navigation gating", () => {
     expect(screen.getByText("Farmacia")).toBeInTheDocument();
     expect(screen.getByText("Hospitalización")).toBeInTheDocument();
     expect(screen.getByText("Laboratorio")).toBeInTheDocument();
+    expect(screen.getByText("Recordatorios")).toBeInTheDocument();
+    // The clinic's figures are an administrator's.
+    expect(screen.queryByText("Informe Clínico")).not.toBeInTheDocument();
     expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
     // And nothing of the other units.
     expect(screen.queryByText("Agenda Peluquería")).not.toBeInTheDocument();

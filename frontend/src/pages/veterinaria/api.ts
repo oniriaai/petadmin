@@ -403,6 +403,49 @@ export interface Ward {
   occupied: number;
 }
 
+export type ReminderKind = "VACUNA" | "PREVENTIVO" | "CONTROL" | "LABORATORIO";
+
+export const REMINDER_KINDS: Record<ReminderKind, string> = {
+  VACUNA: "Vacunas",
+  PREVENTIVO: "Preventivos",
+  CONTROL: "Controles",
+  LABORATORIO: "Laboratorio",
+};
+
+export interface Reminder {
+  id: string;
+  kind: ReminderKind;
+  dueAt: string;
+  overdue: boolean;
+  label: string;
+  pet: { id: string; name: string };
+  client: VisitClient;
+  visitId?: string | null;
+}
+
+export interface ClinicSummary {
+  from: string;
+  to: string;
+  visits: {
+    total: number;
+    missed: number;
+    byType: Array<{ type: string; count: number }>;
+    byVeterinarian: Array<{ veterinarianId: string | null; name: string; count: number }>;
+  };
+  revenue: {
+    billed: number;
+    collected: number;
+    byCategory: Array<{ category: string; amount: number }>;
+  };
+  topDiagnoses: Array<{ description: string; count: number }>;
+  hospital: {
+    admissions: number;
+    discharges: number;
+    averageStayDays: number | null;
+    wards: Ward[];
+  };
+}
+
 export interface PatientProfile extends VisitPet {
   sex?: string;
   birthdate?: string | null;
@@ -606,10 +649,21 @@ export const veterinariaApi = {
   signConsent: (id: string, signedByName: string) =>
     api.post<Consent>(`/veterinaria/consents/${id}/sign`, { signedByName }),
 
+  reminders: (params: { kind?: string; days?: string } = {}) =>
+    api.get<Reminder[]>(`/veterinaria/reminders${query(params)}`),
+  summary: (params: { from?: string; to?: string }) =>
+    api.get<ClinicSummary>(`/veterinaria/reports/summary${query(params)}`),
+
   history: (petId: string) => api.get<PatientHistory>(`/veterinaria/patients/${petId}/history`),
   updatePatient: (petId: string, body: Record<string, unknown>) =>
     api.patch<PatientProfile>(`/veterinaria/patients/${petId}`, body),
 };
+
+/** A WhatsApp chat with the tutor, with the message already written. Null without a number. */
+export function whatsappLink(client: VisitClient, message: string): string | null {
+  const digits = (client.whatsapp || client.phone || "").replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : null;
+}
 
 export const errorMessage = (error: unknown, fallback: string) =>
   error instanceof Error && error.message ? error.message : fallback;

@@ -281,7 +281,252 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     ]),
   );
 
+  await addClinicSheets(daycareId, sheet);
+
   return wb;
+}
+
+/**
+ * The clinical record, one sheet per kind of entry. A customer leaving with a clinic takes its
+ * patients' histories with it; they are the part of this export that cannot be rebuilt.
+ */
+async function addClinicSheets(
+  daycareId: string,
+  sheet: (name: string, headers: string[]) => ExcelJS.Worksheet,
+): Promise<void> {
+  const petName = { pet: { select: { name: true } } } as const;
+  const [
+    visits,
+    diagnoses,
+    preventives,
+    prescriptions,
+    hospitalizations,
+    procedures,
+    labOrders,
+    consents,
+  ] = await Promise.all([
+    prisma.vetVisit.findMany({
+      where: { daycareId },
+      include: {
+        ...petName,
+        client: { select: { firstName: true, lastName: true } },
+        veterinarian: { select: { name: true } },
+        reservation: { select: { checkIn: true, totalAmount: true, pendingAmount: true } },
+        vitals: { orderBy: { takenAt: "desc" }, take: 1 },
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.vetDiagnosis.findMany({
+      where: { daycareId },
+      include: petName,
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.vetPreventive.findMany({
+      where: { daycareId },
+      include: petName,
+      orderBy: { date: "asc" },
+    }),
+    prisma.vetPrescription.findMany({
+      where: { daycareId },
+      include: { ...petName, items: true, veterinarian: { select: { name: true } } },
+      orderBy: { issuedAt: "asc" },
+    }),
+    prisma.vetHospitalization.findMany({
+      where: { daycareId },
+      include: { ...petName, room: { select: { name: true } } },
+      orderBy: { admittedAt: "asc" },
+    }),
+    prisma.vetProcedure.findMany({
+      where: { daycareId },
+      include: { ...petName, veterinarian: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.vetLabOrder.findMany({
+      where: { daycareId },
+      include: { ...petName, values: true },
+      orderBy: { requestedAt: "asc" },
+    }),
+    prisma.vetConsent.findMany({
+      where: { daycareId },
+      include: { ...petName, client: { select: { firstName: true, lastName: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const vs = sheet("Consultas clínicas", [
+    "Fecha",
+    "Paciente",
+    "Tutor",
+    "Veterinario",
+    "Tipo",
+    "Estado",
+    "Motivo",
+    "Anamnesis",
+    "Examen físico",
+    "Valoración",
+    "Plan",
+    "Peso (kg)",
+    "Temperatura (°C)",
+    "Total",
+    "Pendiente",
+  ]);
+  visits.forEach((v) =>
+    vs.addRow([
+      v.reservation.checkIn,
+      v.pet.name,
+      `${v.client.firstName} ${v.client.lastName}`,
+      v.veterinarian?.name ?? "",
+      v.type,
+      v.status,
+      v.reason ?? "",
+      v.anamnesis ?? "",
+      v.physicalExam ?? "",
+      v.assessment ?? "",
+      v.plan ?? "",
+      v.vitals[0]?.weightKg ?? "",
+      v.vitals[0]?.temperatureC ?? "",
+      v.reservation.totalAmount,
+      v.reservation.pendingAmount,
+    ]),
+  );
+
+  const ds = sheet("Diagnósticos", [
+    "Fecha",
+    "Paciente",
+    "Diagnóstico",
+    "Código",
+    "Tipo",
+    "Crónico",
+  ]);
+  diagnoses.forEach((d) =>
+    ds.addRow([
+      d.createdAt,
+      d.pet.name,
+      d.description,
+      d.code ?? "",
+      d.kind,
+      d.isChronic ? "Sí" : "No",
+    ]),
+  );
+
+  const pvs = sheet("Preventivos", ["Fecha", "Paciente", "Tipo", "Producto", "Dosis", "Próxima"]);
+  preventives.forEach((p) =>
+    pvs.addRow([p.date, p.pet.name, p.kind, p.product, p.dose ?? "", p.nextDue ?? ""]),
+  );
+
+  // One row per medicine, so a prescription of three lines is three rows.
+  const rxs = sheet("Recetas", [
+    "Fecha",
+    "Paciente",
+    "Veterinario",
+    "Medicamento",
+    "Dosis",
+    "Frecuencia",
+    "Días",
+    "Indicaciones",
+    "Dispensado",
+  ]);
+  prescriptions.forEach((rx) =>
+    rx.items.forEach((item) =>
+      rxs.addRow([
+        rx.issuedAt,
+        rx.pet.name,
+        rx.veterinarian?.name ?? "",
+        item.drug,
+        item.dose,
+        item.frequency,
+        item.durationDays ?? "",
+        item.instructions ?? "",
+        item.dispensedAt ?? "",
+      ]),
+    ),
+  );
+
+  const hs = sheet("Hospitalizaciones", [
+    "Ingreso",
+    "Alta",
+    "Paciente",
+    "Sala",
+    "Motivo",
+    "Resumen del alta",
+    "Cuidados en casa",
+  ]);
+  hospitalizations.forEach((h) =>
+    hs.addRow([
+      h.admittedAt,
+      h.dischargedAt ?? "",
+      h.pet.name,
+      h.room.name,
+      h.reason,
+      h.dischargeSummary ?? "",
+      h.homeCareInstructions ?? "",
+    ]),
+  );
+
+  const prs = sheet("Procedimientos", [
+    "Fecha",
+    "Paciente",
+    "Veterinario",
+    "Procedimiento",
+    "Tipo",
+    "Estado",
+    "ASA",
+    "Hallazgos",
+    "Complicaciones",
+  ]);
+  procedures.forEach((p) =>
+    prs.addRow([
+      p.startAt ?? p.createdAt,
+      p.pet.name,
+      p.veterinarian?.name ?? "",
+      p.name,
+      p.kind,
+      p.status,
+      p.asaRisk ?? "",
+      p.findings ?? "",
+      p.complications ?? "",
+    ]),
+  );
+
+  const ls = sheet("Laboratorio", [
+    "Solicitado",
+    "Paciente",
+    "Examen",
+    "Tipo",
+    "Estado",
+    "Resultado",
+    "Valores",
+  ]);
+  labOrders.forEach((o) =>
+    ls.addRow([
+      o.requestedAt,
+      o.pet.name,
+      o.test,
+      o.kind,
+      o.status,
+      o.resultSummary ?? "",
+      o.values.map((v) => `${v.analyte}: ${v.value}${v.unit ? ` ${v.unit}` : ""}`).join("; "),
+    ]),
+  );
+
+  const cs = sheet("Consentimientos", [
+    "Fecha",
+    "Paciente",
+    "Tutor",
+    "Tipo",
+    "Firmado por",
+    "Firmado el",
+  ]);
+  consents.forEach((c) =>
+    cs.addRow([
+      c.createdAt,
+      c.pet.name,
+      `${c.client.firstName} ${c.client.lastName}`,
+      c.type,
+      c.signedByName ?? "",
+      c.signedAt ?? "",
+    ]),
+  );
 }
 
 export interface DeletionSummary {

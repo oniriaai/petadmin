@@ -778,6 +778,95 @@ async function run() {
     );
   });
 
+  await test("Los recordatorios se calculan de vacunas, controles y exámenes pendientes", async () => {
+    const visit = await vet.post("/veterinaria/visits", { clientId, petId, triage: "URGENCIA" });
+    expectStatus(visit.status, 201, "consulta");
+    cleanupVisitIds.push(visit.data.id);
+    const path = `/veterinaria/visits/${visit.data.id}`;
+    const inDays = (days: number) => new Date(Date.now() + days * 86_400_000).toISOString();
+    const vaccine = `Rabia E2E ${Date.now()}`;
+    const mine = async (kind: string) =>
+      ((await vet.get(`/veterinaria/reminders?kind=${kind}&days=30`)).data as any[]).filter(
+        (r) => r.pet.id === petId,
+      );
+
+    expectStatus((await vet.get("/veterinaria/reminders?kind=HACK")).status, 400, "tipo inválido");
+
+    const first = await vet.post(`${path}/vaccinations`, { name: vaccine, nextDue: inDays(10) });
+    expectStatus(first.status, 201, "vacuna con refuerzo próximo");
+    const due = (await mine("VACUNA")).find((r) => r.label.includes(vaccine));
+    if (!due) throw new Error("el refuerzo próximo no aparece como recordatorio");
+    expectEqual(due.overdue, false, "un refuerzo futuro no está vencido");
+    expectEqual(due.client.id, clientId, "tutor del recordatorio");
+
+    // A newer dose of the same vaccine settles the older reminder.
+    await vet.post(`${path}/vaccinations`, {
+      name: vaccine,
+      date: inDays(0),
+      nextDue: inDays(400),
+    });
+    if ((await mine("VACUNA")).some((r) => r.label.includes(vaccine))) {
+      throw new Error("una dosis posterior no retiró el recordatorio anterior");
+    }
+
+    expectStatus(
+      (await vet.patch(path, { followUpDate: inDays(-2) })).status,
+      200,
+      "control ya vencido",
+    );
+    const followUp = (await mine("CONTROL")).find((r) => r.visitId === visit.data.id);
+    if (!followUp) throw new Error("el control pendiente no aparece");
+    expectEqual(followUp.overdue, true, "un control pasado está vencido");
+
+    const lab = await vet.post(`${path}/lab-orders`, { test: "Perfil renal" });
+    expectStatus(lab.status, 201, "orden de laboratorio");
+    if (!(await mine("LABORATORIO")).some((r) => r.id === `LABORATORIO:${lab.data.id}`)) {
+      throw new Error("el examen pendiente no aparece");
+    }
+    await vet.post(`/veterinaria/lab-orders/${lab.data.id}/result`, { resultSummary: "Normal" });
+    if ((await mine("LABORATORIO")).some((r) => r.id === `LABORATORIO:${lab.data.id}`)) {
+      throw new Error("un examen con resultado sigue como pendiente");
+    }
+  });
+
+  await test("El informe de la clínica resume el periodo y es solo para administradores", async () => {
+    expectStatus((await vet.get("/veterinaria/reports/summary")).status, 403, "rol veterinary");
+
+    const summary = await admin.get("/veterinaria/reports/summary");
+    expectStatus(summary.status, 200, "informe como admin");
+    const { visits, revenue, topDiagnoses, hospital } = summary.data;
+    if (visits.total < 1 || visits.byType.length < 1 || visits.byVeterinarian.length < 1) {
+      throw new Error("el informe no cuenta las consultas del periodo");
+    }
+    if (!(revenue.collected >= total)) {
+      throw new Error(
+        `lo cobrado (${revenue.collected}) no incluye la consulta cerrada (${total})`,
+      );
+    }
+    const billed = revenue.byCategory.reduce(
+      (sum: number, c: { amount: number }) => sum + c.amount,
+      0,
+    );
+    if (!near(billed, revenue.billed) || revenue.billed <= 0) {
+      throw new Error("las categorías no suman lo facturado");
+    }
+    if (topDiagnoses.length < 1) throw new Error("faltan los diagnósticos más frecuentes");
+    if (hospital.discharges < 1 || hospital.wards.length < 1) {
+      throw new Error("faltan las cifras de hospitalización");
+    }
+
+    expectStatus(
+      (await admin.get("/veterinaria/reports/summary?from=2030-01-01&to=2029-01-01")).status,
+      400,
+      "rango invertido",
+    );
+    const empty = await admin.get(
+      "/veterinaria/reports/summary?from=2001-01-01T00:00:00Z&to=2001-01-31T00:00:00Z",
+    );
+    expectEqual(empty.data.visits.total, 0, "un periodo sin actividad");
+    expectEqual(empty.data.revenue.collected, 0, "cobros de un periodo sin actividad");
+  });
+
   await test("Un veterinario o una sala no se reservan dos veces, salvo una urgencia", async () => {
     // Far enough ahead, and offset per run, that it cannot collide with other data.
     const start = new Date(Date.now() + (40 + Math.floor(Math.random() * 300)) * 86_400_000);

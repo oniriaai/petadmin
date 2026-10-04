@@ -361,6 +361,8 @@ cobros) más su registro clínico, uno a uno. Una consulta `CERRADA` queda conge
 | `PATCH` `POST` | `/veterinaria/lab-orders/:id/status` `/result` | Marca en proceso; registra o corrige el resultado (resumen y valores), **aunque la consulta ya esté cerrada** |
 | `POST` `DELETE` | `/veterinaria/visits/:id/consents[/:childId]` | Consentimiento del tutor; firmado no se elimina |
 | `GET` `POST` | `/veterinaria/consents/:id` `/sign` | Consentimiento para imprimir; registra la firma una sola vez |
+| `GET` | `/veterinaria/reminders` | Recordatorios calculados (`kind`, `days`): refuerzos y preventivos por vencer, controles sin consulta posterior y exámenes sin resultado. Arreglo simple con tope: se combina en memoria y no se pagina |
+| `GET` | `/veterinaria/reports/summary` | Solo admin. Consultas por tipo y veterinario, facturación por categoría, cobrado, diagnósticos frecuentes y hospitalización (`from`, `to`; últimos 30 días por defecto) |
 
 Una consulta no se cierra, cancela ni elimina mientras su paciente siga ingresado o tenga un
 procedimiento en curso. Una mascota registrada como fallecida no admite reservas, citas de

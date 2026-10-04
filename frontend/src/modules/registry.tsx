@@ -5,6 +5,7 @@ import type { BusinessUnit, ProductModuleId, TenantRole } from "./shared/contrac
 import {
   BarChart3,
   BedDouble,
+  BellRing,
   BookOpen,
   CalendarDays,
   ClipboardList,
@@ -50,6 +51,8 @@ import { HospitalizacionPage } from "../pages/veterinaria/HospitalizacionPage";
 import { AltaPage } from "../pages/veterinaria/AltaPage";
 import { LaboratorioPage } from "../pages/veterinaria/LaboratorioPage";
 import { ConsentimientoPage } from "../pages/veterinaria/ConsentimientoPage";
+import { RecordatoriosPage } from "../pages/veterinaria/RecordatoriosPage";
+import { InformeClinicaPage } from "../pages/veterinaria/InformeClinicaPage";
 
 export type FrontendRole = TenantRole;
 export type FrontendUnit = BusinessUnit;
@@ -286,6 +289,20 @@ export const frontendModules: readonly FrontendModule[] = [
         unit: "VETERINARY",
       },
       {
+        path: "/veterinaria/recordatorios",
+        component: RecordatoriosPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/informe",
+        component: InformeClinicaPage,
+        roles: ["admin"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
         path: "/veterinaria/catalogo",
         component: CatalogoVeterinariaPage,
         roles: ["admin"],
@@ -336,6 +353,23 @@ export const frontendModules: readonly FrontendModule[] = [
           label: "Farmacia",
           icon: Pill,
           roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        {
+          to: "/veterinaria/recordatorios",
+          label: "Recordatorios",
+          icon: BellRing,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        // The clinic's own figures, served by its module so they do not depend on `informes`.
+        {
+          to: "/veterinaria/informe",
+          label: "Informe Clínico",
+          icon: BarChart3,
+          roles: ["admin"],
           unit: "VETERINARY",
           requires: ["veterinaria"],
         },

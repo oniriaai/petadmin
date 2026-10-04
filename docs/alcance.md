@@ -82,7 +82,10 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Laboratorio e Imagen**: Órdenes desde la consulta, mostrador de pendientes y resultados con valores, referencia e interpretación, registrables aunque la consulta ya esté cerrada.
 - ✅ **Consentimientos**: Textos por tipo editables, imprimibles y con registro de firma.
 - ✅ **Paciente Fallecido**: No admite nuevas consultas, reservas, citas ni check-in en ninguna unidad.
-- ⏳ **Pendiente**: recordatorios e informes clínicos (fase 4); adjuntar archivos a resultados y consentimientos.
+- ✅ **Recordatorios**: Refuerzos de vacunas y preventivos por vencer, controles sin agendar y exámenes sin resultado, calculados al momento, con enlace de WhatsApp al tutor y resumen en el Dashboard.
+- ✅ **Informe Clínico**: Consultas por tipo y veterinario, facturación por categoría, cobrado, diagnósticos frecuentes y hospitalización del periodo. Solo administradores; no requiere el módulo de informes.
+- ✅ **Exportación**: La baja de una guardería exporta también la historia clínica, una hoja por tipo de registro.
+- ⏳ **Pendiente**: adjuntar archivos a resultados y consentimientos; envío automático de recordatorios.
 
 ---
 

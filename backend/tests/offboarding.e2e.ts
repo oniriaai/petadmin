@@ -1,4 +1,5 @@
 import axios from "axios";
+import ExcelJS from "exceljs";
 
 /**
  * Offboarding a client daycare: export its data, then delete it.
@@ -141,6 +142,20 @@ async function run() {
       throw new Error("La respuesta no es un libro de Excel");
     }
     if (body.length < 3000) throw new Error(`El libro parece vacío (${body.length} bytes)`);
+
+    // The clinical record leaves with the customer too, one sheet per kind of entry.
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(body as any);
+    const sheets = workbook.worksheets.map((ws) => ws.name);
+    for (const name of [
+      "Tutores",
+      "Consultas clínicas",
+      "Recetas",
+      "Hospitalizaciones",
+      "Laboratorio",
+    ]) {
+      if (!sheets.includes(name)) throw new Error(`Falta la hoja "${name}" en la exportación`);
+    }
 
     const disposition = String(res.headers["content-disposition"] ?? "");
     if (!disposition.includes(`${SLUG}-datos.xlsx`)) {

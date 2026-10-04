@@ -75,6 +75,8 @@ núcleo y está siempre disponible.
 │   ├── Hoja de alta (/veterinaria/hospitalizacion/:id) [veterinaria]
 │   ├── Laboratorio (/veterinaria/laboratorio)        [veterinaria]
 │   ├── Consentimiento (/veterinaria/consentimientos/:id) [veterinaria]
+│   ├── Recordatorios (/veterinaria/recordatorios)    [veterinaria]
+│   ├── Informe Clínico (/veterinaria/informe)        [veterinaria] (solo admin)
 │   └── Catálogo Clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
 └── 💼 Gestión Transversal (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
@@ -142,6 +144,7 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `POST /veterinaria/hospitalizations/:id/orders | vitals`, `/treatment-orders/:orderId/doses`: Hoja de tratamiento.
 - `POST /veterinaria/visits/:id/procedures | lab-orders | consents`: Procedimientos, exámenes y consentimientos.
 - `POST /veterinaria/procedures/:id/start | finish`, `/lab-orders/:id/result`, `/consents/:id/sign`: Su ciclo de vida.
+- `GET /veterinaria/reminders`, `/reports/summary`: Recordatorios calculados e informe del periodo.
 
 ### Módulo Finanzas y Backoffice
 - `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.
