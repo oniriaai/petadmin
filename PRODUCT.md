@@ -28,7 +28,7 @@ Confirmed roles:
 
 ## Product Purpose
 
-Pethijos Admin is a unified operational and financial system for pet-care businesses, sold to daycares as a multi-tenant product. Each customer daycare is a tenant that operates up to three complementary business units:
+Argos Suite is a unified operational and financial system for pet-care businesses, sold to daycares as a multi-tenant product. Each customer daycare is a tenant that operates up to three complementary business units:
 
 - **Guardería** (`DAYCARE`): daycare stays, room capacity, attendance, recurring plans, and transportation.
 - **Peluquería** (`GROOMING`): grooming services, scheduled appointments, service workflow, and direct collection.
@@ -91,7 +91,7 @@ Durable constraints and terminology:
 
 ## Brand Commitments
 
-The confirmed product and business names are **Pethijos** and **Kinderdog**, which name the original operating business — now the first tenant, seeded under the slug `pethijos`. They are brand names, not identifiers: the business-unit slots are `DAYCARE` and `GROOMING` in code so the system can be sold to other daycares, and the interface labels them “Guardería” and “Peluquería.” Existing product terminology includes “Perrhijos” for pets and Spanish operational labels such as “Tutor,” “Cupos,” and “Gestión Financiera.” No additional visual, typographic, or asset direction has been confirmed in this product record.
+The confirmed product and business names are **Pethijos** and **Kinderdog**, which name the original operating business — now the first tenant, seeded under the slug `pethijos`. They are brand names, not identifiers: the business-unit slots are `DAYCARE` and `GROOMING` in code so the system can be sold to other daycares, and the interface labels them “Guardería” and “Peluquería.” Existing product terminology includes “Perrhijos” for pets and Spanish operational labels such as “Tutor,” “Cupos,” and “Gestión Financiera.” The product itself is named **Argos Suite**; its name, voice, colors, typography and logo direction are defined in `BRAND.md`, which is the source of truth for visual identity.
 
 ## Evidence on Hand
 

@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Pethijos Admin: a multi-tenant modular monolith for dog daycares, grooming salons and veterinary
-clinics. Each customer
+Argos Suite (formerly Pethijos Admin): a multi-tenant modular monolith for dog daycares, grooming
+salons and veterinary clinics. Brand, voice and design tokens are defined in `BRAND.md`. Each customer
 is a tenant (`Daycare`) with its own users, data and **purchased product modules**; the vendor
 manages tenants from a platform console. A tenant runs up to three business units, `DAYCARE`
 ("Guardería"), `GROOMING` ("Peluquería") and `VETERINARY` ("Veterinaria").
