@@ -28,6 +28,7 @@ backend/src/
 │   ├── tenancy/guard.ts                # Red de seguridad: falla si un `where` no filtra inquilino
 │   ├── tenancy/principal.ts            # Estado vivo de la cuenta (activa / guardería activa)
 │   ├── tenancy/unit-settings.ts        # Ajustes por (guardería, unidad)
+│   ├── tenancy/local-time.ts           # El día de una unidad en su zona horaria
 │   └── modules.ts                      # Superficie pública del Core
 │
 ├── platform/                            # Composición y control de acceso
@@ -366,7 +367,14 @@ cobros) más su registro clínico, uno a uno. Una consulta `CERRADA` queda conge
 
 Una consulta no se cierra, cancela ni elimina mientras su paciente siga ingresado o tenga un
 procedimiento en curso. Una mascota registrada como fallecida no admite reservas, citas de
-peluquería, check-in ni nuevas ocurrencias de un plan recurrente.
+peluquería, check-in ni nuevas ocurrencias de un plan recurrente, y tampoco puede añadirse a una
+reserva existente: todas responden `409`. El planificador omite el plan y lo cuenta en
+`skippedDeceased`, no como fallo.
+
+La agenda de un día (`date=YYYY-MM-DD`, en la clínica y en peluquería) es el día de la zona horaria
+de la unidad, no el del servidor (`core/tenancy/local-time.ts`). La disponibilidad de veterinario y
+sala se comprueba con la fila bloqueada, así que dos reservas simultáneas del mismo hueco no pasan
+las dos.
 
 El stock se mueve a través de `core/inventory/stock.ts`, compartido con `/inventory`: movimiento y
 nivel se escriben en una sola transacción. `/inventory/items` acepta `isControlled`, y una entrada
@@ -482,10 +490,15 @@ daycares/{daycareId}/pets/{mascota}_{tutor}/{timestamp}-{archivo}
 - `resolveObjectKey` rechaza travesías, segmentos vacíos y **URLs cuyo host no sea este bucket**.
   Importa el orden: el parser de URL normaliza `/../../x` a `/x` en silencio, así que lo que
   realmente protege es la comprobación de host. Sin `B2_ENDPOINT` configurado se rechaza cualquier URL.
-- `DELETE /storage` autoriza **contra la base de datos**: la clave debe estar referenciada por un
+- `POST /storage/remove` autoriza **contra la base de datos**: la clave debe estar referenciada por un
   `Pet.photoUrl` o un `PetDocument.filePath` **de la guardería que llama**. Autorizar por la forma
   de la clave no serviría, y así las claves antiguas sin prefijo siguen funcionando mientras que
   adivinar la de otro inquilino no logra nada.
+- La referencia sola tampoco basta, porque es el propio inquilino quien la escribe: podría apuntar
+  una foto o un documento suyo a la clave de otra guardería y luego "borrar su archivo". Por eso
+  una clave bajo `daycares/{id}/` solo la borra esa guardería, y una clave antigua sin prefijo
+  solo se borra si ninguna otra guardería la referencia. Además, `photoUrl` y el `filePath` de un
+  documento de consulta se rechazan con `400` si nombran el prefijo de otra guardería.
 
 ---
 
@@ -565,9 +578,9 @@ npm run test:scheduler       # Idempotencia del generador de planes recurrentes
 ```bash
 docker compose up --build
 
-# Las once suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
+# Las doce suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
 # sesión a propósito y throttlearía los logins que necesitan las demás.
-for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler ratelimit; do
+for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler veterinaria ratelimit; do
   docker exec pethijos-backend npm run "test:$s" || break
 done
 ```

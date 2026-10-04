@@ -153,6 +153,12 @@ the module gate before the role check, and is never assignable by a tenant
   params they return the bare (capped) array, because several forms fill a `<select>` from them.
   Don't paginate a handler that filters in JS after the query.
 - Unhandled errors respond `500` with the `requestId` and never the error text.
+- "Today" and "that day" are the unit's, not the server's (which runs in UTC). Use
+  `localDayBoundsUtc` from `core/tenancy/local-time.ts` with `getUnitTimezone`, not
+  `setHours(0, 0, 0, 0)`.
+- A stored file reference (`photoUrl`, a document's `filePath`) authorizes deleting the object
+  behind it. Validate it against the tenant's prefix with `core/storage/object-keys.ts` before
+  writing it.
 - Charges generated when a stay or appointment closes are always recorded, even when the tenant
   lacks `finanzas` — only the finance API/UI is gated.
 

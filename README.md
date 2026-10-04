@@ -291,7 +291,7 @@ trabajos:
 | Trabajo | Qué comprueba |
 |---|---|
 | `static` | Tipos (`npm run typecheck`), lint (`eslint`), formato (`prettier --check`) y la suite de arquitectura en el backend; tipos, lint, formato, build y pruebas en el frontend. Sin base de datos, así que falla lo obvio primero. |
-| `e2e` | Las **once** suites e2e contra un Postgres de servicio, con migraciones aplicadas y datos de demostración sembrados. Termina comprobando que el registro del backend no contiene ninguna consulta sin ámbito de inquilino. |
+| `e2e` | Las **doce** suites e2e contra un Postgres de servicio, con migraciones aplicadas y datos de demostración sembrados. Termina comprobando que el registro del backend no contiene ninguna consulta sin ámbito de inquilino. |
 | `production-image` | Construye las dos imágenes de producción y comprueba que el backend **se niega a arrancar** sin `JWT_SECRET` y que una base de datos nueva queda con la cuenta de plataforma y **sin** guarderías de demostración. |
 
 `test:ratelimit` va deliberadamente al final de `e2e`: agota el límite de inicios de sesión a

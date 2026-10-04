@@ -122,8 +122,9 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `GET /auth/me`: Sesión según el servidor, con la guardería y los módulos habilitados.
 - `GET, POST, PUT /clients`: Directorio unificado de tutores de la guardería.
 - `GET, POST, PUT /pets`: Registro único de perrhijos, vacunas y alertas.
-- `POST, DELETE /storage`: Carga y eliminación presignada en Backblaze B2. El borrado se autoriza
-  contra la base de datos y acotado a la guardería que llama.
+- `POST /storage/upload-url`, `POST /storage/remove`: Carga presignada y eliminación en Backblaze
+  B2. El borrado se autoriza contra la base de datos y acotado a la guardería que llama: una
+  guardería no puede referenciar ni borrar un archivo bajo el prefijo de otra.
 
 ### Consola de Plataforma (solo `superadmin`)
 - `GET /platform/overview`, `GET /platform/daycares`, `POST /platform/daycares`.
