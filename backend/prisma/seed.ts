@@ -599,6 +599,9 @@ async function main() {
   };
 
   const kdDaycare = getRoom(BU.DAYCARE, "daycare");
+  // The second daycare room, by name: getRoom returns the first match, and one seeded
+  // occurrence below has to live somewhere other than the room its plan generates into.
+  const kdPuppies = rooms.find((r) => r.name === "Zona Cachorros Guardería")!;
   const kdGroom = getRoom(BU.DAYCARE, "grooming");
   const kdTransport = getRoom(BU.DAYCARE, "transport");
   const phDaycare = getRoom(BU.GROOMING, "daycare");
@@ -664,7 +667,15 @@ async function main() {
       dayOffset: 1,
       inHour: 8,
       outHour: 18,
-      roomId: kdDaycare.id,
+      // Not kdDaycare: rpKd generates into that room on Mon/Wed/Fri from 08:30 to 17:30, and
+      // this occurrence runs 08:00-18:00. The times do not match, so the generator's
+      // (recurringPlanId, checkIn) existence check does not recognise it -- it then finds the
+      // room occupied and reports a scheduling conflict. dayOffset is a fixed number of days
+      // while the plan fires on fixed weekdays, so that happened on three days out of seven,
+      // which made test:scheduler fail depending on the date it ran. Standing this occurrence
+      // in the puppy zone keeps the fixture (a plan-linked reservation exists) and leaves the
+      // plan's own room free.
+      roomId: kdPuppies.id,
       basePrice: 40,
       vatPercent: 15,
       paymentMethod: "EFECTIVO",
