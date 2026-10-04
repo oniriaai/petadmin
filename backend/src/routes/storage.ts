@@ -1,19 +1,27 @@
 import { Router } from "express";
-import { 
-  PutObjectCommand, 
+import {
+  PutObjectCommand,
   DeleteObjectCommand,
   ListObjectVersionsCommand,
-  DeleteObjectsCommand
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, BUCKET_NAME, B2_ENDPOINT } from "../lib/s3";
 import { handleAuthzError } from "../middleware/auth";
+import { storageLimiter } from "../middleware/security";
 import { buildPetPhotoKey, resolveObjectKey } from "../core/storage/object-keys";
-import { buildChildScopeWhere, buildDaycareWhere, getRequiredDaycareId } from "../core/tenancy/scope";
+import {
+  buildChildScopeWhere,
+  buildDaycareWhere,
+  getRequiredDaycareId,
+} from "../core/tenancy/scope";
 import { prisma } from "../db";
 import { z } from "zod";
 
 export const storageRouter = Router();
+
+// Per-tenant, not per-IP: a daycare's staff share one budget and cannot exhaust another's.
+storageRouter.use(storageLimiter);
 
 const uploadUrlSchema = z.object({
   fileName: z.string().min(1),
@@ -30,7 +38,9 @@ storageRouter.post("/upload-url", async (req, res) => {
   try {
     const parsed = uploadUrlSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid parameters", errors: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ message: "Invalid parameters", errors: parsed.error.flatten() });
     }
 
     if (!BUCKET_NAME || !B2_ENDPOINT) {
@@ -41,8 +51,13 @@ storageRouter.post("/upload-url", async (req, res) => {
 
     // Every component is sanitized inside buildPetPhotoKey, so a caller-supplied petName
     // cannot escape the pets/ prefix. Previously petName was interpolated raw.
-    const key = buildPetPhotoKey({ daycareId: getRequiredDaycareId(req), petName, ownerName, fileName });
-    
+    const key = buildPetPhotoKey({
+      daycareId: getRequiredDaycareId(req),
+      petName,
+      ownerName,
+      fileName,
+    });
+
     const command = new PutObjectCommand({
       Bucket: BUCKET_NAME,
       Key: key,
@@ -64,7 +79,9 @@ storageRouter.post("/remove", async (req, res) => {
   try {
     const parsed = removeFileSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid parameters", errors: parsed.error.flatten() });
+      return res
+        .status(400)
+        .json({ message: "Invalid parameters", errors: parsed.error.flatten() });
     }
 
     if (!BUCKET_NAME || !B2_ENDPOINT) {
@@ -111,10 +128,10 @@ storageRouter.post("/remove", async (req, res) => {
       });
 
       const listResponse = await s3Client.send(listVersionsCmd);
-      
+
       // Collect all versions and delete markers for this key
       const objectsToDelete: Array<{ Key: string; VersionId?: string }> = [];
-      
+
       if (listResponse.Versions) {
         for (const version of listResponse.Versions) {
           if (version.Key === key) {
@@ -125,7 +142,7 @@ storageRouter.post("/remove", async (req, res) => {
           }
         }
       }
-      
+
       if (listResponse.DeleteMarkers) {
         for (const marker of listResponse.DeleteMarkers) {
           if (marker.Key === key) {
@@ -140,14 +157,16 @@ storageRouter.post("/remove", async (req, res) => {
       // If versioning is enabled, we found multiple versions/markers
       if (objectsToDelete.length > 0) {
         console.log(`[Storage] Found ${objectsToDelete.length} versions for key: ${key}`);
-        
+
         const deleteCmd = new DeleteObjectsCommand({
           Bucket: BUCKET_NAME,
           Delete: { Objects: objectsToDelete },
         });
-        
+
         const deleteResponse = await s3Client.send(deleteCmd);
-        console.log(`[Storage] Deleted ${deleteResponse.Deleted?.length || 0} versions successfully`);
+        console.log(
+          `[Storage] Deleted ${deleteResponse.Deleted?.length || 0} versions successfully`,
+        );
       } else {
         // Non-versioned bucket or key doesn't exist - use simple delete
         console.log(`[Storage] No versions found (non-versioned bucket), using simple delete`);

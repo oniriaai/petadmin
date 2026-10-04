@@ -22,7 +22,8 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const { user, logout, activeBusinessUnit, hasModules, fullAccess } = useAuth();
-  const effectiveUnit = activeBusinessUnit ?? (user?.businessUnit === "GLOBAL" ? null : user?.businessUnit);
+  const effectiveUnit =
+    activeBusinessUnit ?? (user?.businessUnit === "GLOBAL" ? null : user?.businessUnit);
   const isDaycare = effectiveUnit === "DAYCARE";
   const isGrooming = effectiveUnit === "GROOMING";
 
@@ -30,7 +31,13 @@ export function Sidebar({
   const compact = isCollapsed && !isDrawer;
 
   const spansBothUnits = user?.role === "admin" || user?.role === "superadmin";
-  const unitLabel = isDaycare ? "Guardería" : isGrooming ? "Peluquería" : spansBothUnits ? "Consolidado" : "";
+  const unitLabel = isDaycare
+    ? "Guardería"
+    : isGrooming
+      ? "Peluquería"
+      : spansBothUnits
+        ? "Consolidado"
+        : "";
 
   const shouldShowItem = (item: ModuleNavigationItem) => {
     // No `?? "admin"` fallback: an undefined user used to be treated as an administrator and
@@ -66,7 +73,13 @@ export function Sidebar({
             isDaycare ? "bg-daycare-600" : isGrooming ? "bg-grooming-700" : "bg-white/15",
           )}
         >
-          {isDaycare ? <PawPrint size={18} /> : isGrooming ? <Scissors size={18} /> : <Compass size={18} />}
+          {isDaycare ? (
+            <PawPrint size={18} />
+          ) : isGrooming ? (
+            <Scissors size={18} />
+          ) : (
+            <Compass size={18} />
+          )}
         </div>
         {!compact && (
           <div className="min-w-0 flex-1">
@@ -74,11 +87,17 @@ export function Sidebar({
             <p className="text-[11px] uppercase tracking-wider text-shell-muted font-semibold truncate">
               {unitLabel}
             </p>
-            <p className="text-sm font-bold leading-tight truncate">{user?.name ?? user?.username}</p>
+            <p className="text-sm font-bold leading-tight truncate">
+              {user?.name ?? user?.username}
+            </p>
           </div>
         )}
         {isDrawer && (
-          <button onClick={onNavigate} className="icon-button text-shell-muted hover:text-white" aria-label="Cerrar menú">
+          <button
+            onClick={onNavigate}
+            className="icon-button text-shell-muted hover:text-white"
+            aria-label="Cerrar menú"
+          >
             <X size={20} />
           </button>
         )}
@@ -93,7 +112,9 @@ export function Sidebar({
           end
           onClick={onNavigate}
           title={compact ? "Dashboard Principal" : undefined}
-          className={({ isActive }) => cls("sidebar-link", compact && "justify-center px-2", isActive && "active")}
+          className={({ isActive }) =>
+            cls("sidebar-link", compact && "justify-center px-2", isActive && "active")
+          }
         >
           <LayoutDashboard size={16} className="shrink-0" />
           {!compact && <span>Dashboard Principal</span>}

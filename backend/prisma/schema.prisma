@@ -76,7 +76,9 @@ model PlatformAuditLog {
 model User {
   id           String       @id @default(cuid())
   daycareId    String?
-  username     String       @unique
+  /// Unique per daycare, not globally -- see @@unique below and
+  /// 20260906000000_per_tenant_usernames for the partial index covering platform accounts.
+  username     String
   passwordHash String
   name         String
   role         String       @default("owner")
@@ -87,6 +89,7 @@ model User {
 
   daycare Daycare? @relation(fields: [daycareId], references: [id], onDelete: Restrict)
 
+  @@unique([daycareId, username])
   @@index([daycareId])
   @@map("users")
 }

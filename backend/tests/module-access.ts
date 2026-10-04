@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { NextFunction, Request, Response } from "express";
 
-import { backendModules, moduleHandlers, registerBackendModules } from "../src/platform/module-registry";
+import { backendModules, registerBackendModules } from "../src/platform/module-registry";
 import { moduleServesUnits, requireModuleAccess } from "../src/platform/module-access";
 import { requireAuth } from "../src/middleware/auth";
 import { backendModuleIdsFor, productModuleForBackendId } from "../src/platform/product-modules";
@@ -35,7 +35,11 @@ for (const [index, module] of backendModules.entries()) {
 
   assert.equal(entry.handlers.length, 3, `${module.id} must mount auth + gate + router`);
   assert.equal(entry.handlers[0], requireAuth, `${module.id} must authenticate first`);
-  assert.equal(typeof entry.handlers[1], "function", `${module.id} must carry the entitlement gate`);
+  assert.equal(
+    typeof entry.handlers[1],
+    "function",
+    `${module.id} must carry the entitlement gate`,
+  );
   assert.equal(
     entry.handlers[2],
     module.router,
@@ -55,7 +59,11 @@ interface GateResult {
   reachedEntitlementCheck?: boolean;
 }
 
-async function runGate(moduleId: string, user: unknown, businessUnitHeader?: string): Promise<GateResult> {
+async function runGate(
+  moduleId: string,
+  user: unknown,
+  businessUnitHeader?: string,
+): Promise<GateResult> {
   const module = backendModules.find((m) => m.id === moduleId);
   assert.ok(module, `unknown module ${moduleId}`);
   const gate = requireModuleAccess(module);
@@ -102,13 +110,21 @@ async function main(): Promise<void> {
   // module's access.roles lists "superadmin" (they enumerate tenant roles), so checking roles
   // first would lock the platform out of the product it administers.
   for (const moduleId of ["guarderia", "peluqueria", "reports"]) {
-    assert.equal((await runGate(moduleId, superadmin)).passed, true, `superadmin must reach ${moduleId}`);
+    assert.equal(
+      (await runGate(moduleId, superadmin)).passed,
+      true,
+      `superadmin must reach ${moduleId}`,
+    );
   }
 
   // Role denial is 403 and never reveals whether the module was also unsold.
   const wrongRole = await runGate("guarderia", groomingUser);
   assert.equal(wrongRole.status, 403);
-  assert.equal(wrongRole.body?.code, undefined, "a role denial must not be reported as MODULE_DISABLED");
+  assert.equal(
+    wrongRole.body?.code,
+    undefined,
+    "a role denial must not be reported as MODULE_DISABLED",
+  );
 
   // --- business-unit narrowing -----------------------------------------------
   // `access.businessUnits` used to be metadata that nothing read. It only bites for a role that
@@ -117,9 +133,17 @@ async function main(): Promise<void> {
   const tenantAdmin = { role: "admin", daycareId: "daycare_a", businessUnit: "GLOBAL" };
 
   const wrongUnit = await runGate("guarderia", tenantAdmin, "GROOMING");
-  assert.equal(wrongUnit.status, 403, "an admin scoped to grooming must not reach the daycare module");
+  assert.equal(
+    wrongUnit.status,
+    403,
+    "an admin scoped to grooming must not reach the daycare module",
+  );
   assert.equal(wrongUnit.body?.code, "WRONG_BUSINESS_UNIT");
-  assert.notEqual(wrongUnit.body?.code, "MODULE_DISABLED", "a unit mismatch is not an entitlement failure");
+  assert.notEqual(
+    wrongUnit.body?.code,
+    "MODULE_DISABLED",
+    "a unit mismatch is not an entitlement failure",
+  );
 
   // The positive direction is asserted against the rule itself: driving it through the
   // middleware would continue into the entitlement lookup, which needs a database.
@@ -127,11 +151,27 @@ async function main(): Promise<void> {
   const reservationsModule = backendModules.find((m) => m.id === "reservations")!;
   const dashboardModule = backendModules.find((m) => m.id === "dashboard")!;
 
-  assert.equal(moduleServesUnits(guarderiaModule, ["DAYCARE", "GROOMING"]), true, "consolidated spans both");
+  assert.equal(
+    moduleServesUnits(guarderiaModule, ["DAYCARE", "GROOMING"]),
+    true,
+    "consolidated spans both",
+  );
   assert.equal(moduleServesUnits(guarderiaModule, ["DAYCARE"]), true);
-  assert.equal(moduleServesUnits(guarderiaModule, ["GROOMING"]), false, "guarderia does not serve grooming");
-  assert.equal(moduleServesUnits(reservationsModule, ["GROOMING"]), true, "reservations serves both units");
-  assert.equal(moduleServesUnits(dashboardModule, ["GROOMING"]), true, "a module with no declared units is unconstrained");
+  assert.equal(
+    moduleServesUnits(guarderiaModule, ["GROOMING"]),
+    false,
+    "guarderia does not serve grooming",
+  );
+  assert.equal(
+    moduleServesUnits(reservationsModule, ["GROOMING"]),
+    true,
+    "reservations serves both units",
+  );
+  assert.equal(
+    moduleServesUnits(dashboardModule, ["GROOMING"]),
+    true,
+    "a module with no declared units is unconstrained",
+  );
 
   // A malformed header is the caller's mistake: 400, not 500.
   const badHeader = await runGate("guarderia", tenantAdmin, "NO_SUCH_UNIT");

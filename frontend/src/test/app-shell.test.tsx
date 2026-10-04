@@ -15,8 +15,21 @@ const logout = vi.fn();
 
 function session(overrides: Record<string, unknown> = {}) {
   return {
-    user: { id: "u1", username: "ana", name: "Ana", role: "admin", businessUnit: "GLOBAL", daycareId: "d1" },
-    daycare: { id: "d1", name: "Guardería Uno", slug: "uno", legalName: "Uno S.A.", unitList: ["DAYCARE", "GROOMING"] },
+    user: {
+      id: "u1",
+      username: "ana",
+      name: "Ana",
+      role: "admin",
+      businessUnit: "GLOBAL",
+      daycareId: "d1",
+    },
+    daycare: {
+      id: "d1",
+      name: "Guardería Uno",
+      slug: "uno",
+      legalName: "Uno S.A.",
+      unitList: ["DAYCARE", "GROOMING"],
+    },
     enabledModules: ["nucleo", "reservas"],
     units: ["DAYCARE", "GROOMING"],
     fullAccess: false,
@@ -122,7 +135,16 @@ describe("unit switcher", () => {
   });
 
   it("is hidden from a unit-scoped role", () => {
-    renderShell({ user: { id: "u2", username: "b", name: "B", role: "grooming", businessUnit: "GROOMING", daycareId: "d1" } });
+    renderShell({
+      user: {
+        id: "u2",
+        username: "b",
+        name: "B",
+        role: "grooming",
+        businessUnit: "GROOMING",
+        daycareId: "d1",
+      },
+    });
     expect(screen.queryByLabelText("Unidad de negocio")).not.toBeInTheDocument();
   });
 
@@ -146,7 +168,14 @@ describe("user menu", () => {
 
   it("offers the console to a superadmin", () => {
     renderShell({
-      user: { id: "s1", username: "superadmin", name: "Plataforma", role: "superadmin", businessUnit: "GLOBAL", daycareId: null },
+      user: {
+        id: "s1",
+        username: "superadmin",
+        name: "Plataforma",
+        role: "superadmin",
+        businessUnit: "GLOBAL",
+        daycareId: null,
+      },
       fullAccess: true,
     });
     fireEvent.click(screen.getByLabelText("Menú de usuario"));
@@ -162,7 +191,14 @@ describe("platform banner", () => {
 
   it("is shown, and offers no way to dismiss it, while the vendor operates a tenant", () => {
     renderShell({
-      user: { id: "s1", username: "superadmin", name: "Plataforma", role: "superadmin", businessUnit: "GLOBAL", daycareId: null },
+      user: {
+        id: "s1",
+        username: "superadmin",
+        name: "Plataforma",
+        role: "superadmin",
+        businessUnit: "GLOBAL",
+        daycareId: null,
+      },
       fullAccess: true,
       pinnedDaycareId: "d1",
     });

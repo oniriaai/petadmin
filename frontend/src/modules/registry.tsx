@@ -3,8 +3,20 @@ import type { LucideIcon } from "lucide-react";
 import { isProductModuleId } from "./shared/contracts";
 import type { ProductModuleId, TenantRole } from "./shared/contracts";
 import {
-  BarChart3, BookOpen, CalendarDays, DollarSign, Grid3X3, Home, Package, PawPrint,
-  Repeat, Scissors, Settings, Truck, Users, Wrench,
+  BarChart3,
+  BookOpen,
+  CalendarDays,
+  DollarSign,
+  Grid3X3,
+  Home,
+  Package,
+  PawPrint,
+  Repeat,
+  Scissors,
+  Settings,
+  Truck,
+  Users,
+  Wrench,
 } from "lucide-react";
 import { Dashboard } from "../pages/Dashboard";
 import { ClientesPage } from "../pages/clientes/ClientesPage";
@@ -79,32 +91,106 @@ export const frontendModules: readonly FrontendModule[] = [
     id: "guarderia",
     label: "Guardería",
     routes: [
-      { path: "/guarderia", component: ControlGuarderiaPage, roles: ["admin", "daycare"], requires: ["guarderia"], unit: "DAYCARE" },
+      {
+        path: "/guarderia",
+        component: ControlGuarderiaPage,
+        roles: ["admin", "daycare"],
+        requires: ["guarderia"],
+        unit: "DAYCARE",
+      },
       { path: "/salas", component: RoomsPage, roles: ["admin", "daycare"], requires: ["reservas"] },
-      { path: "/planes", component: RecurringPlansPage, roles: ["admin", "daycare"], requires: ["reservas"] },
-      { path: "/transporte", component: TransportePage, roles: ["admin", "daycare"], requires: ["guarderia", "informes"], unit: "DAYCARE" },
-      { path: "/disponibilidad", component: DisponibilidadPage, roles: ["admin", "daycare"], requires: ["reservas"] },
+      {
+        path: "/planes",
+        component: RecurringPlansPage,
+        roles: ["admin", "daycare"],
+        requires: ["reservas"],
+      },
+      {
+        path: "/transporte",
+        component: TransportePage,
+        roles: ["admin", "daycare"],
+        requires: ["guarderia", "informes"],
+        unit: "DAYCARE",
+      },
+      {
+        path: "/disponibilidad",
+        component: DisponibilidadPage,
+        roles: ["admin", "daycare"],
+        requires: ["reservas"],
+      },
     ],
     navigation: {
       label: "Guardería",
       icon: Home,
       items: [
-        { to: "/guarderia", label: "Control Guardería", icon: Home, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["guarderia"] },
-        { to: "/salas", label: "Salas & Cupos", icon: Grid3X3, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["reservas"] },
-        { to: "/planes", label: "Planes Recurrentes", icon: Repeat, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["reservas"] },
-        { to: "/transporte", label: "Transporte", icon: Truck, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["guarderia", "informes"] },
-        { to: "/disponibilidad", label: "Disponibilidad", icon: CalendarDays, roles: ["admin", "daycare"], unit: "DAYCARE", requires: ["reservas"] },
+        {
+          to: "/guarderia",
+          label: "Control Guardería",
+          icon: Home,
+          roles: ["admin", "daycare"],
+          unit: "DAYCARE",
+          requires: ["guarderia"],
+        },
+        {
+          to: "/salas",
+          label: "Salas & Cupos",
+          icon: Grid3X3,
+          roles: ["admin", "daycare"],
+          unit: "DAYCARE",
+          requires: ["reservas"],
+        },
+        {
+          to: "/planes",
+          label: "Planes Recurrentes",
+          icon: Repeat,
+          roles: ["admin", "daycare"],
+          unit: "DAYCARE",
+          requires: ["reservas"],
+        },
+        {
+          to: "/transporte",
+          label: "Transporte",
+          icon: Truck,
+          roles: ["admin", "daycare"],
+          unit: "DAYCARE",
+          requires: ["guarderia", "informes"],
+        },
+        {
+          to: "/disponibilidad",
+          label: "Disponibilidad",
+          icon: CalendarDays,
+          roles: ["admin", "daycare"],
+          unit: "DAYCARE",
+          requires: ["reservas"],
+        },
       ],
     },
   },
   {
     id: "peluqueria",
     label: "Peluquería",
-    routes: [{ path: "/peluqueria", component: AgendaPeluqueriaPage, roles: ["admin", "grooming"], requires: ["peluqueria"], unit: "GROOMING" }],
+    routes: [
+      {
+        path: "/peluqueria",
+        component: AgendaPeluqueriaPage,
+        roles: ["admin", "grooming"],
+        requires: ["peluqueria"],
+        unit: "GROOMING",
+      },
+    ],
     navigation: {
       label: "Peluquería",
       icon: Scissors,
-      items: [{ to: "/peluqueria", label: "Agenda Peluquería", icon: Scissors, roles: ["admin", "grooming"], unit: "GROOMING", requires: ["peluqueria"] }],
+      items: [
+        {
+          to: "/peluqueria",
+          label: "Agenda Peluquería",
+          icon: Scissors,
+          roles: ["admin", "grooming"],
+          unit: "GROOMING",
+          requires: ["peluqueria"],
+        },
+      ],
     },
   },
   {
@@ -125,10 +211,20 @@ export const frontendModules: readonly FrontendModule[] = [
       label: "Gestión Transversal",
       icon: Users,
       items: [
-        { to: "/operaciones", label: "Operaciones (General)", icon: CalendarDays, requires: ["reservas"] },
+        {
+          to: "/operaciones",
+          label: "Operaciones (General)",
+          icon: CalendarDays,
+          requires: ["reservas"],
+        },
         { to: "/clientes", label: "Perfil del Cliente", icon: Users },
         { to: "/animales", label: "Animales", icon: PawPrint },
-        { to: "/transacciones", label: "Gestión Financiera", icon: DollarSign, requires: ["finanzas"] },
+        {
+          to: "/transacciones",
+          label: "Gestión Financiera",
+          icon: DollarSign,
+          requires: ["finanzas"],
+        },
         { to: "/inventario", label: "Inventario", icon: Package, requires: ["inventario"] },
         { to: "/informes", label: "Informes y Gráficos", icon: BarChart3, requires: ["informes"] },
         { to: "/herramientas", label: "Herramientas", icon: Wrench },
@@ -139,7 +235,9 @@ export const frontendModules: readonly FrontendModule[] = [
   },
 ];
 
-export function validateFrontendModules(modules: readonly FrontendModule[] = frontendModules): void {
+export function validateFrontendModules(
+  modules: readonly FrontendModule[] = frontendModules,
+): void {
   const ids = new Set<string>();
   const paths = new Set<string>();
 

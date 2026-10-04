@@ -50,7 +50,11 @@ export function RoomsPage() {
   }
 
   const filtered = search
-    ? rooms.filter(r => r.name.toLowerCase().includes(search.toLowerCase()) || r.type.toLowerCase().includes(search.toLowerCase()))
+    ? rooms.filter(
+        (r) =>
+          r.name.toLowerCase().includes(search.toLowerCase()) ||
+          r.type.toLowerCase().includes(search.toLowerCase()),
+      )
     : rooms;
 
   const typeLabel = (type: string) => {
@@ -66,7 +70,8 @@ export function RoomsPage() {
 
   // Over capacity is an incident, not "busy": it read identically to a room at 80% before, so a
   // room holding 43 of 24 looked the same as one holding 20 of 24.
-  const isOverCapacity = (occupancy: number, capacity: number) => capacity > 0 && occupancy > capacity;
+  const isOverCapacity = (occupancy: number, capacity: number) =>
+    capacity > 0 && occupancy > capacity;
 
   const capacityColor = (occupancy: number, capacity: number) => {
     if (capacity <= 0) return "text-gray-500";
@@ -81,14 +86,14 @@ export function RoomsPage() {
   return (
     <div className="p-4 sm:p-6 space-y-5">
       <PageHeader
-          title="Salas y Espacios"
-          subtitle={<>{rooms.length} salas registradas</>}
-          actions={
-            <button onClick={() => setShowNew(true)} className="btn-primary">
-          <Plus size={16} /> Nueva Sala
-        </button>
-          }
-        />
+        title="Salas y Espacios"
+        subtitle={<>{rooms.length} salas registradas</>}
+        actions={
+          <button onClick={() => setShowNew(true)} className="btn-primary">
+            <Plus size={16} /> Nueva Sala
+          </button>
+        }
+      />
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
@@ -97,13 +102,13 @@ export function RoomsPage() {
             className="input pl-9"
             placeholder="Buscar sala…"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
           className="input w-40"
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={(e) => setStatusFilter(e.target.value)}
         >
           <option value="active">Activas</option>
           <option value="inactive">Inactivas</option>
@@ -133,13 +138,15 @@ export function RoomsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(room => (
+                {filtered.map((room) => (
                   <tr key={room.id} className="table-tr">
                     <td className="table-td font-medium">{room.name}</td>
                     <td className="table-td text-sm">{typeLabel(room.type)}</td>
                     <td className="table-td text-sm">{room.capacity} mascotas máx</td>
                     <td className="table-td">
-                      <span className={`font-medium ${capacityColor(room.currentOccupancy || 0, room.capacity)}`}>
+                      <span
+                        className={`font-medium ${capacityColor(room.currentOccupancy || 0, room.capacity)}`}
+                      >
                         {room.currentOccupancy || 0} / {room.capacity}
                       </span>
                       {isOverCapacity(room.currentOccupancy || 0, room.capacity) && (
@@ -149,11 +156,13 @@ export function RoomsPage() {
                       )}
                     </td>
                     <td className="table-td">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        room.isActive
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-600"
-                      }`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${
+                          room.isActive
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
                         {room.isActive ? "Activa" : "Inactiva"}
                       </span>
                     </td>
@@ -185,18 +194,9 @@ export function RoomsPage() {
         )}
       </div>
 
-      <RoomForm
-        open={showNew}
-        onClose={() => setShowNew(false)}
-        onSaved={load}
-      />
+      <RoomForm open={showNew} onClose={() => setShowNew(false)} onSaved={load} />
 
-      <RoomForm
-        open={!!editing}
-        onClose={() => setEditing(null)}
-        room={editing}
-        onSaved={load}
-      />
+      <RoomForm open={!!editing} onClose={() => setEditing(null)} room={editing} onSaved={load} />
     </div>
   );
 }

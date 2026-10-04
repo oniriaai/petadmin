@@ -32,15 +32,28 @@ export default function PlatformApp() {
   ];
 
   return (
-    <div data-theme="platform" className="min-h-screen flex" style={{ background: "var(--color-canvas)", color: "var(--color-ink)" }}>
-      <aside className="w-60 shrink-0 border-r flex flex-col" style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}>
+    <div
+      data-theme="platform"
+      className="min-h-screen flex"
+      style={{ background: "var(--color-canvas)", color: "var(--color-ink)" }}
+    >
+      <aside
+        className="w-60 shrink-0 border-r flex flex-col"
+        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
+      >
         <div className="px-4 py-5 border-b" style={{ borderColor: "var(--color-border)" }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl grid place-items-center" style={{ background: "var(--color-action)" }}>
+            <div
+              className="w-9 h-9 rounded-xl grid place-items-center"
+              style={{ background: "var(--color-action)" }}
+            >
               <ShieldCheck size={18} className="text-white" />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: "var(--color-muted)" }}>
+              <p
+                className="text-[11px] uppercase tracking-wider font-semibold"
+                style={{ color: "var(--color-muted)" }}
+              >
                 Plataforma
               </p>
               <p className="text-sm font-bold truncate">{user?.name ?? user?.username}</p>
@@ -60,7 +73,9 @@ export default function PlatformApp() {
                   isActive ? "text-white" : "hover:bg-white/5",
                 )
               }
-              style={({ isActive }) => (isActive ? { background: "var(--color-action)" } : { color: "var(--color-muted)" })}
+              style={({ isActive }) =>
+                isActive ? { background: "var(--color-action)" } : { color: "var(--color-muted)" }
+              }
             >
               <Icon size={16} className="shrink-0" />
               <span>{label}</span>

@@ -54,7 +54,10 @@ export function isProductModuleId(value: string): value is ProductModuleId {
  * holding these in localStorage from a session that predates the rename, so both normalizers
  * accept them on input. Neither is ever emitted. Safe to delete once no old session remains.
  */
-const LEGACY_BUSINESS_UNITS: Record<string, BusinessUnit> = { KINDERDOG: "DAYCARE", PETHIJOS: "GROOMING" };
+const LEGACY_BUSINESS_UNITS: Record<string, BusinessUnit> = {
+  KINDERDOG: "DAYCARE",
+  PETHIJOS: "GROOMING",
+};
 const LEGACY_ROLES: Record<string, UserRole> = { kinderdog: "daycare", pethijos: "grooming" };
 
 export function normalizeBusinessUnit(value: unknown): BusinessUnit | null {

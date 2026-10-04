@@ -1,8 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
-import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import {
+  assertRecordAccess,
+  buildScopeWhere,
+  getRequiredDaycareId,
+} from "../../core/tenancy/scope";
+import { readPage, sendPage } from "../../utils/pagination";
 import {
   cancelFuturePendingReservationsForPlan,
   syncFuturePendingReservationsForPlan,
@@ -25,23 +30,29 @@ const recurringPlanSchema = z.object({
 
 recurringPlansRouter.get("/", async (req, res) => {
   try {
-  const { status, clientId } = req.query as Record<string, string>;
+    const { status, clientId } = req.query as Record<string, string>;
 
-  const where: Record<string, unknown> = buildScopeWhere(req);
-  if (status === "active") where.isActive = true;
-  else if (status === "inactive") where.isActive = false;
-  if (clientId) where.clientId = clientId;
+    const where: Record<string, unknown> = buildScopeWhere(req);
+    if (status === "active") where.isActive = true;
+    else if (status === "inactive") where.isActive = false;
+    if (clientId) where.clientId = clientId;
 
-  const plans = await prisma.recurringPlan.findMany({
-    where,
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true } },
-      room: { select: { id: true, name: true } },
-      reservations: { select: { id: true, checkIn: true, checkOut: true, status: true } },
-    },
-    orderBy: { startDate: "desc" },
-  });
-  res.json(plans);
+    const page = readPage(req);
+    const [plans, total] = await Promise.all([
+      prisma.recurringPlan.findMany({
+        where,
+        include: {
+          client: { select: { id: true, firstName: true, lastName: true } },
+          room: { select: { id: true, name: true } },
+          reservations: { select: { id: true, checkIn: true, checkOut: true, status: true } },
+        },
+        orderBy: [{ startDate: "desc" }, { id: "desc" }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.recurringPlan.count({ where }),
+    ]);
+    sendPage(res, page, plans, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -51,17 +62,20 @@ recurringPlansRouter.get("/", async (req, res) => {
 
 recurringPlansRouter.get("/:id", async (req, res) => {
   try {
-  const plan = await prisma.recurringPlan.findUnique({
-    where: { id: req.params.id },
-    include: {
-      client: true,
-      room: true,
-      reservations: { include: { pets: { include: { pet: true } }, client: true } },
-    },
-  });
-  if (!plan) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertRecordAccess(req, plan);
-  res.json(plan);
+    const plan = await prisma.recurringPlan.findUnique({
+      where: { id: req.params.id },
+      include: {
+        client: true,
+        room: true,
+        reservations: { include: { pets: { include: { pet: true } }, client: true } },
+      },
+    });
+    if (!plan) {
+      res.status(404).json({ message: "Plan no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, plan);
+    res.json(plan);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -71,49 +85,72 @@ recurringPlansRouter.get("/:id", async (req, res) => {
 
 recurringPlansRouter.post("/", async (req, res) => {
   const parsed = recurringPlanSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() }); return; }
-
-  try {
-  const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
-  const { clientId, startDate, endDate, startTime, endTime, daysOfWeek, petIds, service, roomId, notes } = parsed.data;
-  if (endTime <= startTime) {
-    res.status(400).json({ message: "La hora de salida debe ser mayor a la hora de entrada" });
+  if (!parsed.success) {
+    res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() });
     return;
   }
 
-  // Verify client exists and belongs to business unit
-  const client = await prisma.client.findUnique({ where: { id: clientId } });
-  if (!client) { res.status(404).json({ message: "Cliente no encontrado" }); return; }
-
-  // Verify room exists if provided
-  if (roomId) {
-    const room = await prisma.room.findUnique({ where: { id: roomId } });
-    if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
-    if (room.businessUnit !== bu) { res.status(400).json({ message: "La sala no pertenece a la unidad seleccionada" }); return; }
-  }
-
-  const plan = await prisma.recurringPlan.create({
-    data: {
-      businessUnit: bu,
-      daycareId: getRequiredDaycareId(req),
+  try {
+    const bu = getRequiredBusinessUnit(req, req.body?.businessUnit);
+    const {
       clientId,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate,
+      endDate,
       startTime,
       endTime,
       daysOfWeek,
       petIds,
       service,
-      roomId: roomId || null,
+      roomId,
       notes,
-      isActive: true,
-    },
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true } },
-      room: { select: { id: true, name: true } },
-    },
-  });
-  res.status(201).json(plan);
+    } = parsed.data;
+    if (endTime <= startTime) {
+      res.status(400).json({ message: "La hora de salida debe ser mayor a la hora de entrada" });
+      return;
+    }
+
+    // Verify client exists and belongs to business unit
+    const client = await prisma.client.findUnique({ where: { id: clientId } });
+    if (!client) {
+      res.status(404).json({ message: "Cliente no encontrado" });
+      return;
+    }
+
+    // Verify room exists if provided
+    if (roomId) {
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room) {
+        res.status(404).json({ message: "Sala no encontrada" });
+        return;
+      }
+      if (room.businessUnit !== bu) {
+        res.status(400).json({ message: "La sala no pertenece a la unidad seleccionada" });
+        return;
+      }
+    }
+
+    const plan = await prisma.recurringPlan.create({
+      data: {
+        businessUnit: bu,
+        daycareId: getRequiredDaycareId(req),
+        clientId,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        startTime,
+        endTime,
+        daysOfWeek,
+        petIds,
+        service,
+        roomId: roomId || null,
+        notes,
+        isActive: true,
+      },
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true } },
+        room: { select: { id: true, name: true } },
+      },
+    });
+    res.status(201).json(plan);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -123,54 +160,69 @@ recurringPlansRouter.post("/", async (req, res) => {
 
 recurringPlansRouter.put("/:id", async (req, res) => {
   try {
-  const parsed = recurringPlanSchema.partial().safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Datos inválidos" }); return; }
+    const parsed = recurringPlanSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: "Datos inválidos" });
+      return;
+    }
 
-  const plan = await prisma.recurringPlan.findUnique({ where: { id: req.params.id } });
-  if (!plan) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertRecordAccess(req, plan);
+    const plan = await prisma.recurringPlan.findUnique({ where: { id: req.params.id } });
+    if (!plan) {
+      res.status(404).json({ message: "Plan no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, plan);
 
-  const { roomId, clientId, startDate, endDate, startTime, endTime, ...rest } = parsed.data;
-  const effectiveStartTime = startTime ?? plan.startTime;
-  const effectiveEndTime = endTime ?? plan.endTime;
-  if (effectiveEndTime <= effectiveStartTime) {
-    res.status(400).json({ message: "La hora de salida debe ser mayor a la hora de entrada" });
-    return;
-  }
+    const { roomId, clientId, startDate, endDate, startTime, endTime, ...rest } = parsed.data;
+    const effectiveStartTime = startTime ?? plan.startTime;
+    const effectiveEndTime = endTime ?? plan.endTime;
+    if (effectiveEndTime <= effectiveStartTime) {
+      res.status(400).json({ message: "La hora de salida debe ser mayor a la hora de entrada" });
+      return;
+    }
 
-  // Verify room exists if provided
-  if (roomId) {
-    const room = await prisma.room.findUnique({ where: { id: roomId } });
-    if (!room) { res.status(404).json({ message: "Sala no encontrada" }); return; }
-    if (room.businessUnit !== plan.businessUnit) { res.status(400).json({ message: "La sala no pertenece a la unidad del plan" }); return; }
-  }
+    // Verify room exists if provided
+    if (roomId) {
+      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      if (!room) {
+        res.status(404).json({ message: "Sala no encontrada" });
+        return;
+      }
+      if (room.businessUnit !== plan.businessUnit) {
+        res.status(400).json({ message: "La sala no pertenece a la unidad del plan" });
+        return;
+      }
+    }
 
-  // Verify client exists if changing
-  if (clientId) {
-    const client = await prisma.client.findUnique({ where: { id: clientId } });
-    if (!client) { res.status(404).json({ message: "Cliente no encontrado" }); return; }
-  }
+    // Verify client exists if changing
+    if (clientId) {
+      const client = await prisma.client.findUnique({ where: { id: clientId } });
+      if (!client) {
+        res.status(404).json({ message: "Cliente no encontrado" });
+        return;
+      }
+    }
 
-  const updated = await prisma.recurringPlan.update({
-    where: { id: req.params.id },
-    data: {
-      ...rest,
-      ...(startDate && { startDate: new Date(startDate) }),
-      ...(endDate && { endDate: new Date(endDate) }),
-      ...(startTime && { startTime }),
-      ...(endTime && { endTime }),
-      ...(clientId && { clientId }),
-      ...(roomId !== undefined && { roomId: roomId || null }),
-    },
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true } },
-      room: { select: { id: true, name: true } },
-      reservations: { select: { id: true, status: true } },
-    },
-  });
+    const updated = await prisma.recurringPlan.update({
+      where: { id: req.params.id },
+      data: {
+        ...rest,
+        ...(startDate && { startDate: new Date(startDate) }),
+        ...(endDate && { endDate: new Date(endDate) }),
+        ...(startTime && { startTime }),
+        ...(endTime && { endTime }),
+        ...(clientId && { clientId }),
+        ...(roomId !== undefined && { roomId: roomId || null }),
+      },
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true } },
+        room: { select: { id: true, name: true } },
+        reservations: { select: { id: true, status: true } },
+      },
+    });
 
-  await syncFuturePendingReservationsForPlan(updated.id);
-  res.json(updated);
+    await syncFuturePendingReservationsForPlan(updated.id);
+    res.json(updated);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -180,18 +232,24 @@ recurringPlansRouter.put("/:id", async (req, res) => {
 
 recurringPlansRouter.patch("/:id/status", async (req, res) => {
   try {
-  const { isActive } = req.body;
-  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
-  if (!current) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertRecordAccess(req, current);
-  const plan = await prisma.recurringPlan.update({
-    where: { id: req.params.id },
-    data: { isActive },
-  });
-  if (isActive === false) {
-    await cancelFuturePendingReservationsForPlan(plan.id);
-  }
-  res.json(plan);
+    const { isActive } = req.body;
+    const current = await prisma.recurringPlan.findUnique({
+      where: { id: req.params.id },
+      select: { businessUnit: true, daycareId: true },
+    });
+    if (!current) {
+      res.status(404).json({ message: "Plan no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, current);
+    const plan = await prisma.recurringPlan.update({
+      where: { id: req.params.id },
+      data: { isActive },
+    });
+    if (isActive === false) {
+      await cancelFuturePendingReservationsForPlan(plan.id);
+    }
+    res.json(plan);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -201,16 +259,22 @@ recurringPlansRouter.patch("/:id/status", async (req, res) => {
 
 recurringPlansRouter.delete("/:id", async (req, res) => {
   try {
-  const current = await prisma.recurringPlan.findUnique({ where: { id: req.params.id }, select: { businessUnit: true, daycareId: true } });
-  if (!current) { res.status(404).json({ message: "Plan no encontrado" }); return; }
-  assertRecordAccess(req, current);
-  await cancelFuturePendingReservationsForPlan(req.params.id);
-  // Soft delete by marking as inactive
-  await prisma.recurringPlan.update({
-    where: { id: req.params.id },
-    data: { isActive: false },
-  });
-  res.json({ ok: true });
+    const current = await prisma.recurringPlan.findUnique({
+      where: { id: req.params.id },
+      select: { businessUnit: true, daycareId: true },
+    });
+    if (!current) {
+      res.status(404).json({ message: "Plan no encontrado" });
+      return;
+    }
+    assertRecordAccess(req, current);
+    await cancelFuturePendingReservationsForPlan(req.params.id);
+    // Soft delete by marking as inactive
+    await prisma.recurringPlan.update({
+      where: { id: req.params.id },
+      data: { isActive: false },
+    });
+    res.json({ ok: true });
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

@@ -23,15 +23,15 @@ interface Props {
 }
 
 export function ProviderForm({ open, onClose, provider, onSaved }: Props) {
-  const [form, setForm] = useState({ 
-    name: "", 
-    idNumber: "", 
-    email: "", 
-    phone: "", 
-    address: "", 
-    city: "", 
-    province: "", 
-    product: "" 
+  const [form, setForm] = useState({
+    name: "",
+    idNumber: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    province: "",
+    product: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -45,10 +45,19 @@ export function ProviderForm({ open, onClose, provider, onSaved }: Props) {
         address: provider.address || "",
         city: provider.city || "",
         province: provider.province || "",
-        product: provider.product || ""
+        product: provider.product || "",
       });
     } else {
-      setForm({ name: "", idNumber: "", email: "", phone: "", address: "", city: "", province: "", product: "" });
+      setForm({
+        name: "",
+        idNumber: "",
+        email: "",
+        phone: "",
+        address: "",
+        city: "",
+        province: "",
+        product: "",
+      });
     }
   }, [provider, open]);
 
@@ -78,7 +87,9 @@ export function ProviderForm({ open, onClose, provider, onSaved }: Props) {
       size="lg"
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="btn-primary" onClick={save} disabled={saving}>
             {saving && <Spinner size={14} />} Guardar
           </button>
@@ -88,23 +99,43 @@ export function ProviderForm({ open, onClose, provider, onSaved }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div className="col-span-2">
           <label className="label">Nombre *</label>
-          <input className="input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <input
+            className="input"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Cédula / RUC</label>
-          <input className="input" value={form.idNumber} onChange={e => setForm({ ...form, idNumber: e.target.value })} />
+          <input
+            className="input"
+            value={form.idNumber}
+            onChange={(e) => setForm({ ...form, idNumber: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Producto / Servicio</label>
-          <input className="input" value={form.product} onChange={e => setForm({ ...form, product: e.target.value })} />
+          <input
+            className="input"
+            value={form.product}
+            onChange={(e) => setForm({ ...form, product: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Email</label>
-          <input className="input" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+          <input
+            className="input"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+          />
         </div>
         <div>
           <label className="label">Teléfono</label>
-          <input className="input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} />
+          <input
+            className="input"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
         </div>
       </div>
     </Modal>

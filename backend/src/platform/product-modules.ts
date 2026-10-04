@@ -30,7 +30,9 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
     label: "Núcleo",
     description:
       "Autenticación, dashboard, ajustes de la guardería y los registros compartidos de tutores y perrhijos.",
-    backendModuleIds: ["auth", "dashboard", "clients", "pets", "storage", "settings"],
+    // `users` is core on purpose: a daycare administering its own staff is not a feature to
+    // be sold or withheld. Without it every password reset is a vendor support ticket.
+    backendModuleIds: ["auth", "dashboard", "clients", "pets", "storage", "settings", "users"],
     core: true,
   },
   {
@@ -69,7 +71,8 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
   {
     id: "inventario",
     label: "Inventario",
-    description: "Artículos, niveles de stock con aviso de mínimo y movimientos de entrada, salida y ajuste.",
+    description:
+      "Artículos, niveles de stock con aviso de mínimo y movimientos de entrada, salida y ajuste.",
     backendModuleIds: ["inventory"],
   },
   {
@@ -102,7 +105,11 @@ export const TOGGLEABLE_PRODUCT_MODULES: readonly ProductModule[] = PRODUCT_MODU
 );
 
 /** Enabled by default when the console creates a daycare, subject to its purchased units. */
-export const DEFAULT_ENABLED_PRODUCT_MODULES: readonly string[] = ["reservas", "finanzas", "informes"];
+export const DEFAULT_ENABLED_PRODUCT_MODULES: readonly string[] = [
+  "reservas",
+  "finanzas",
+  "informes",
+];
 
 const byId = new Map(PRODUCT_MODULES.map((m) => [m.id, m]));
 const byBackendId = new Map<string, ProductModule>();
@@ -169,7 +176,9 @@ export function validateProductModules(modules: readonly ProductModule[] = PRODU
   for (const productModule of modules) {
     for (const required of productModule.requires ?? []) {
       if (!ids.has(required)) {
-        throw new Error(`Product module '${productModule.id}' requires unknown module '${required}'`);
+        throw new Error(
+          `Product module '${productModule.id}' requires unknown module '${required}'`,
+        );
       }
       if (required === productModule.id) {
         throw new Error(`Product module '${productModule.id}' cannot require itself`);

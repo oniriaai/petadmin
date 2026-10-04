@@ -8,7 +8,11 @@ for (const module of backendModules) {
   assert.ok(module.id, "Every backend module must have an id");
   assert.ok(module.router, `Module ${module.id} must expose a router`);
   assert.ok(module.basePath.startsWith("/"), `Module ${module.id} must use an absolute base path`);
-  assert.equal(mountedPaths.has(module.basePath), false, `Duplicate backend path: ${module.basePath}`);
+  assert.equal(
+    mountedPaths.has(module.basePath),
+    false,
+    `Duplicate backend path: ${module.basePath}`,
+  );
   mountedPaths.add(module.basePath);
 }
 

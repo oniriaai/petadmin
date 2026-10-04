@@ -1,7 +1,12 @@
 import { Router } from "express";
-import { assertBusinessUnitAccess, getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
+import { getRequiredBusinessUnit, handleAuthzError } from "../../middleware/auth";
 import { prisma } from "../../db";
-import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../../core/tenancy/scope";
+import {
+  assertRecordAccess,
+  buildScopeWhere,
+  getRequiredDaycareId,
+} from "../../core/tenancy/scope";
+import { readPage } from "../../utils/pagination";
 import {
   createCheckInOutSchema,
   checkInSchema,
@@ -29,7 +34,9 @@ function mapToFrontend(record: any) {
     petId: record.petId,
     petName: record.pet?.name || "Desconocido",
     clientId: record.clientId,
-    clientName: record.client ? `${record.client.firstName} ${record.client.lastName}` : "Desconocido",
+    clientName: record.client
+      ? `${record.client.firstName} ${record.client.lastName}`
+      : "Desconocido",
     roomId: record.roomId,
     roomName: record.room?.name,
     reservationId: record.reservationId,
@@ -99,20 +106,24 @@ checkInOutRouter.post("/", async (req, res) => {
     const { petId, petIds, clientId, roomId, reservationId, notes, checkInNow } = parsed.data;
 
     // Normalize to an array of pet IDs
-    const finalPetIds = petIds && petIds.length > 0 ? petIds : (petId ? [petId] : []);
-    
+    const finalPetIds = petIds && petIds.length > 0 ? petIds : petId ? [petId] : [];
+
     if (finalPetIds.length === 0) {
       return res.status(400).json({ message: "Se requiere al menos una mascota" });
     }
 
     // Validate pet ownership
-    const petOwnershipValidation = await validatePetOwnership(finalPetIds, clientId);
+    const petOwnershipValidation = await validatePetOwnership(
+      finalPetIds,
+      clientId,
+      getRequiredDaycareId(req),
+    );
     if (!petOwnershipValidation.valid) {
       return res.status(400).json({ message: petOwnershipValidation.message });
     }
 
     // Validate room exists and belongs to business unit
-    const roomValidation = await validateRoomExists(roomId, bu);
+    const roomValidation = await validateRoomExists(roomId, getRequiredDaycareId(req), bu);
     if (!roomValidation.valid) {
       return res.status(400).json({ message: roomValidation.message });
     }
@@ -122,7 +133,7 @@ checkInOutRouter.post("/", async (req, res) => {
 
     // Create CheckInOut records in batch
     const createdRecords = await Promise.all(
-      finalPetIds.map(id => 
+      finalPetIds.map((id) =>
         prisma.checkInOut.create({
           data: {
             petId: id,
@@ -140,8 +151,8 @@ checkInOutRouter.post("/", async (req, res) => {
             client: { select: { id: true, firstName: true, lastName: true } },
             room: { select: { id: true, name: true } },
           },
-        })
-      )
+        }),
+      ),
     );
 
     // If only one pet was requested, return a single object for backward compatibility (optional)
@@ -195,9 +206,10 @@ checkInOutRouter.post("/:id/check-in", async (req, res) => {
     if (checkInOut.room) {
       const capacityValidation = await validateRoomCapacity(
         checkInOut.roomId,
+        checkInOut.daycareId,
         checkInTime,
         checkInOut.checkOutTime || checkInTime,
-        1
+        1,
       );
       if (!capacityValidation.valid) {
         return res.status(400).json({ message: capacityValidation.message });
@@ -259,12 +271,16 @@ checkInOutRouter.post("/:id/check-out", async (req, res) => {
 
     // Validate: must have a checkInTime before checking out
     if (!checkInOut.checkInTime) {
-      return res.status(400).json({ message: "Debe haber un check-in registrado antes del check-out" });
+      return res
+        .status(400)
+        .json({ message: "Debe haber un check-in registrado antes del check-out" });
     }
 
     // Validate: checkOutTime > checkInTime
     if (checkOutTime < checkInOut.checkInTime) {
-      return res.status(400).json({ message: "La hora de salida debe ser posterior a la hora de entrada" });
+      return res
+        .status(400)
+        .json({ message: "La hora de salida debe ser posterior a la hora de entrada" });
     }
 
     // Validate: no prior checkOutTime (only allow first check-out)
@@ -342,13 +358,16 @@ checkInOutRouter.get("/active", async (req, res) => {
 checkInOutRouter.get("/history", async (req, res) => {
   try {
     const buWhere = buildScopeWhere(req);
-    const {
-      clientId, petId, roomId, reservationId, startDate, endDate,
-      skip, take, offset, limit 
-    } = req.query as Record<string, string>;
+    const { clientId, petId, roomId, reservationId, startDate, endDate } = req.query as Record<
+      string,
+      string
+    >;
 
-    const finalSkip = parseInt(offset || skip || "0");
-    const finalTake = parseInt(limit || take || "50");
+    // Bounded by the shared helper rather than trusting the query string: `?limit=999999`
+    // used to read the whole table for the tenant.
+    const requested = readPage(req);
+    const finalSkip = requested.skip;
+    const finalTake = requested.paginated ? requested.take : 50;
 
     const where: Record<string, unknown> = {
       ...buWhere,
@@ -382,7 +401,12 @@ checkInOutRouter.get("/history", async (req, res) => {
           reservation: { select: { id: true, service: true } },
           performedByUser: { select: { id: true, name: true } },
         },
-        orderBy: { checkInTime: "desc" },
+        // `nulls: "last"` is the fix for a real bug, not a refinement. Postgres sorts NULLs
+        // FIRST under DESC, and a CheckInOut row created from a reservation has no checkInTime
+        // until the pet actually arrives. With 64 such rows against a default page of 50, the
+        // first page of "history" was entirely visits that never happened and the most recent
+        // real one was unreachable. `createdAt` breaks ties so a page boundary is stable.
+        orderBy: [{ checkInTime: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }],
         skip: finalSkip,
         take: finalTake,
       }),

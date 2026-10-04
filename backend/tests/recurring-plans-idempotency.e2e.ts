@@ -5,7 +5,6 @@
  * occurrences it evaluates on any given run already exist. Reporting those as failures made the
  * log useless: a healthy run and a broken one both printed a large `failed` count.
  */
-import assert from "node:assert/strict";
 
 import { generateRecurringReservations } from "../src/modules/reservas/recurring-plans.service";
 import { prisma } from "../src/db";

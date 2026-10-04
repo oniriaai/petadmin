@@ -35,7 +35,9 @@ async function objectExists(key: string) {
 
 async function uploadOne(entry: PhotoEntry) {
   if (!BUCKET_NAME || !B2_ENDPOINT) {
-    throw new Error("Missing B2 configuration. Required: B2_BUCKET_NAME, B2_ENDPOINT, B2_KEY_ID, B2_APPLICATION_KEY");
+    throw new Error(
+      "Missing B2 configuration. Required: B2_BUCKET_NAME, B2_ENDPOINT, B2_KEY_ID, B2_APPLICATION_KEY",
+    );
   }
 
   const exists = await objectExists(entry.key);
@@ -64,19 +66,19 @@ async function uploadOne(entry: PhotoEntry) {
       Key: entry.key,
       Body: body,
       ContentType: contentType,
-    })
+    }),
   );
 
-  console.log(`${exists ? "replace" : "upload"} ${entry.petName}: ${entry.key} (${body.length} bytes)`);
+  console.log(
+    `${exists ? "replace" : "upload"} ${entry.petName}: ${entry.key} (${body.length} bytes)`,
+  );
   return { status: exists ? ("replaced" as const) : ("uploaded" as const), bytes: body.length };
 }
 
 async function main() {
   const entries = JSON.parse(readFileSync(mappingPath, "utf8")) as PhotoEntry[];
 
-  const duplicateKeys = entries
-    .map((e) => e.key)
-    .filter((key, i, all) => all.indexOf(key) !== i);
+  const duplicateKeys = entries.map((e) => e.key).filter((key, i, all) => all.indexOf(key) !== i);
   if (duplicateKeys.length > 0) {
     throw new Error(`Duplicate B2 keys found in mapping: ${duplicateKeys.join(", ")}`);
   }

@@ -125,25 +125,14 @@ export function UnifiedListView({
     }
   };
 
-  const SortHeader = ({
-    label,
-    field,
-  }: {
-    label: string;
-    field: SortField;
-  }) => (
+  const SortHeader = ({ label, field }: { label: string; field: SortField }) => (
     <button
       onClick={() => handleSort(field)}
       className="flex items-center gap-1 font-medium hover:text-blue-600 transition"
     >
       {label}
-      {sortField === field && (
-        sortOrder === "asc" ? (
-          <ChevronUp size={14} />
-        ) : (
-          <ChevronDown size={14} />
-        )
-      )}
+      {sortField === field &&
+        (sortOrder === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />)}
     </button>
   );
 
@@ -227,37 +216,41 @@ export function UnifiedListView({
                     const statusColor = getStatusColor(event.status);
 
                     return (
-                      <tr key={event.id} className="table-tr cursor-pointer hover:bg-gray-50 transition">
-                        <td
-                          className="table-td"
-                          onClick={() => onViewDetail?.(event)}
-                        >
+                      <tr
+                        key={event.id}
+                        className="table-tr cursor-pointer hover:bg-gray-50 transition"
+                      >
+                        <td className="table-td" onClick={() => onViewDetail?.(event)}>
                           {event.type === "RESERVATION" ? (
-                            <div className="flex items-center gap-1.5 text-blue-600" title="Reserva">
+                            <div
+                              className="flex items-center gap-1.5 text-blue-600"
+                              title="Reserva"
+                            >
                               <Calendar size={16} />
-                              <span className="text-[10px] font-bold uppercase tracking-wider">Res</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider">
+                                Res
+                              </span>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 text-purple-600" title="Ad-hoc">
+                            <div
+                              className="flex items-center gap-1.5 text-purple-600"
+                              title="Ad-hoc"
+                            >
                               <Plus size={16} />
-                              <span className="text-[10px] font-bold uppercase tracking-wider">AdH</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider">
+                                AdH
+                              </span>
                             </div>
                           )}
                         </td>
-                        <td
-                          className="table-td text-sm"
-                          onClick={() => onViewDetail?.(event)}
-                        >
+                        <td className="table-td text-sm" onClick={() => onViewDetail?.(event)}>
                           <div>{fmt(event.scheduledCheckIn)}</div>
-                          <div className="text-gray-400 text-xs">{fmtTime(event.scheduledCheckIn)}</div>
+                          <div className="text-gray-400 text-xs">
+                            {fmtTime(event.scheduledCheckIn)}
+                          </div>
                         </td>
-                        <td
-                          className="table-td"
-                          onClick={() => onViewDetail?.(event)}
-                        >
-                          <p className="font-medium text-gray-900">
-                            {event.clientName}
-                          </p>
+                        <td className="table-td" onClick={() => onViewDetail?.(event)}>
+                          <p className="font-medium text-gray-900">{event.clientName}</p>
                         </td>
                         <td
                           className="table-td text-sm text-gray-600"
@@ -265,25 +258,19 @@ export function UnifiedListView({
                         >
                           {event.petNames}
                         </td>
-                        <td
-                          className="table-td text-sm"
-                          onClick={() => onViewDetail?.(event)}
-                        >
+                        <td className="table-td text-sm" onClick={() => onViewDetail?.(event)}>
                           {event.roomName}
                         </td>
-                        <td
-                          className="table-td"
-                          onClick={() => onViewDetail?.(event)}
-                        >
-                          <Badge color={statusColor}>
-                            {getStatusLabel(event.status)}
-                          </Badge>
+                        <td className="table-td" onClick={() => onViewDetail?.(event)}>
+                          <Badge color={statusColor}>{getStatusLabel(event.status)}</Badge>
                         </td>
                         <td className="table-td text-sm">
                           {event.actualCheckIn ? (
                             <>
                               <div>{fmt(event.actualCheckIn)}</div>
-                              <div className="text-gray-400 text-xs">{fmtTime(event.actualCheckIn)}</div>
+                              <div className="text-gray-400 text-xs">
+                                {fmtTime(event.actualCheckIn)}
+                              </div>
                             </>
                           ) : (
                             "—"
@@ -293,7 +280,9 @@ export function UnifiedListView({
                           {event.actualCheckOut ? (
                             <>
                               <div>{fmt(event.actualCheckOut)}</div>
-                              <div className="text-gray-400 text-xs">{fmtTime(event.actualCheckOut)}</div>
+                              <div className="text-gray-400 text-xs">
+                                {fmtTime(event.actualCheckOut)}
+                              </div>
                             </>
                           ) : (
                             "—"
@@ -341,8 +330,8 @@ export function UnifiedListView({
               <div className="flex items-center gap-3">
                 <span className="text-gray-600">
                   Mostrando {paginatedEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} a{" "}
-                  {Math.min(currentPage * pageSize, sortedEvents.length)} de{" "}
-                  {sortedEvents.length} operaciones
+                  {Math.min(currentPage * pageSize, sortedEvents.length)} de {sortedEvents.length}{" "}
+                  operaciones
                 </span>
                 <select
                   value={pageSize}

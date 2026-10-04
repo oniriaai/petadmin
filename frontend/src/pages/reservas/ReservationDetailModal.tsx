@@ -43,12 +43,7 @@ interface Props {
   onSaved: () => void;
 }
 
-export function ReservationDetailModal({
-  open,
-  onClose,
-  reservation,
-  onSaved,
-}: Props) {
+export function ReservationDetailModal({ open, onClose, reservation, onSaved }: Props) {
   const [editing, setEditing] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,7 +75,8 @@ export function ReservationDetailModal({
   useEffect(() => {
     if (!editing) return;
     setLoading(true);
-    api.get<Room[]>("/rooms?status=active")
+    api
+      .get<Room[]>("/rooms?status=active")
       .then(setRooms)
       .finally(() => setLoading(false));
   }, [editing]);
@@ -115,7 +111,7 @@ export function ReservationDetailModal({
   const pending = total - advanceAmount;
 
   const canEdit = ["PENDIENTE", "CONFIRMADA"].includes(reservation.status);
-  const svc = SERVICES.find(s => s.value === reservation.service)?.label || reservation.service;
+  const svc = SERVICES.find((s) => s.value === reservation.service)?.label || reservation.service;
 
   return (
     <Modal
@@ -126,18 +122,10 @@ export function ReservationDetailModal({
       footer={
         editing ? (
           <>
-            <button
-              className="btn-secondary"
-              onClick={() => setEditing(false)}
-              disabled={saving}
-            >
+            <button className="btn-secondary" onClick={() => setEditing(false)} disabled={saving}>
               Cancelar
             </button>
-            <button
-              className="btn-primary"
-              onClick={handleSave}
-              disabled={saving}
-            >
+            <button className="btn-primary" onClick={handleSave} disabled={saving}>
               {saving ? <Spinner size={14} /> : null}
               Guardar Cambios
             </button>
@@ -145,10 +133,7 @@ export function ReservationDetailModal({
         ) : (
           <>
             {canEdit && (
-              <button
-                className="btn-primary"
-                onClick={() => setEditing(true)}
-              >
+              <button className="btn-primary" onClick={() => setEditing(true)}>
                 Editar
               </button>
             )}
@@ -159,11 +144,7 @@ export function ReservationDetailModal({
         )
       }
     >
-      {error && (
-        <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4">{error}</p>}
 
       {!editing ? (
         <div className="space-y-4">
@@ -176,7 +157,7 @@ export function ReservationDetailModal({
             </div>
             <div>
               <p className="label">Mascotas</p>
-              <p>{reservation.pets.map(p => p.pet.name).join(", ")}</p>
+              <p>{reservation.pets.map((p) => p.pet.name).join(", ")}</p>
             </div>
             <div>
               <p className="label">Servicio</p>
@@ -213,9 +194,7 @@ export function ReservationDetailModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Descuento:</span>
-                <span className="font-medium">
-                  -{fmtCurrency(reservation.discountAmount)}
-                </span>
+                <span className="font-medium">-{fmtCurrency(reservation.discountAmount)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">IVA ({reservation.vatPercent}%):</span>
@@ -223,9 +202,7 @@ export function ReservationDetailModal({
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Adelanto:</span>
-                <span className="font-medium">
-                  -{fmtCurrency(reservation.advanceAmount)}
-                </span>
+                <span className="font-medium">-{fmtCurrency(reservation.advanceAmount)}</span>
               </div>
               <div className="flex justify-between border-t pt-2 font-semibold">
                 <span>Total:</span>
@@ -272,7 +249,7 @@ export function ReservationDetailModal({
                     min="0"
                     step="0.01"
                     value={basePrice}
-                    onChange={e => setBasePrice(+e.target.value)}
+                    onChange={(e) => setBasePrice(+e.target.value)}
                   />
                 </div>
                 <div>
@@ -283,7 +260,7 @@ export function ReservationDetailModal({
                     min="0"
                     max="100"
                     value={vatPercent}
-                    onChange={e => setVatPercent(+e.target.value)}
+                    onChange={(e) => setVatPercent(+e.target.value)}
                   />
                 </div>
                 <div>
@@ -294,7 +271,7 @@ export function ReservationDetailModal({
                     min="0"
                     step="0.01"
                     value={discountAmount}
-                    onChange={e => setDiscountAmount(+e.target.value)}
+                    onChange={(e) => setDiscountAmount(+e.target.value)}
                   />
                 </div>
                 <div>
@@ -305,7 +282,7 @@ export function ReservationDetailModal({
                     min="0"
                     step="0.01"
                     value={advanceAmount}
-                    onChange={e => setAdvanceAmount(+e.target.value)}
+                    onChange={(e) => setAdvanceAmount(+e.target.value)}
                   />
                 </div>
               </div>
@@ -316,10 +293,10 @@ export function ReservationDetailModal({
                   <select
                     className="input"
                     value={roomId}
-                    onChange={e => setRoomId(e.target.value)}
+                    onChange={(e) => setRoomId(e.target.value)}
                   >
                     <option value="">— Sin sala —</option>
-                    {rooms.map(r => (
+                    {rooms.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} (cap. {r.capacity})
                       </option>
@@ -331,9 +308,9 @@ export function ReservationDetailModal({
                   <select
                     className="input"
                     value={paymentMethod}
-                    onChange={e => setPaymentMethod(e.target.value)}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
                   >
-                    {PAYMENT_METHODS.map(m => (
+                    {PAYMENT_METHODS.map((m) => (
                       <option key={m}>{m}</option>
                     ))}
                   </select>
@@ -346,7 +323,7 @@ export function ReservationDetailModal({
                   className="input"
                   rows={2}
                   value={notes}
-                  onChange={e => setNotes(e.target.value)}
+                  onChange={(e) => setNotes(e.target.value)}
                   placeholder="Instrucciones especiales…"
                 />
               </div>

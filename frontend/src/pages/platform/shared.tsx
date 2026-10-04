@@ -60,7 +60,10 @@ export function PlatformPage({
       </header>
 
       {error && (
-        <div className="mb-5 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300" role="alert">
+        <div
+          className="mb-5 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          role="alert"
+        >
           {error}
         </div>
       )}
@@ -88,8 +91,14 @@ export function StatCard({
   hint?: string;
 }) {
   return (
-    <div className="card p-4" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider" style={{ color: "var(--color-muted)" }}>
+    <div
+      className="card p-4"
+      style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+    >
+      <div
+        className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
+        style={{ color: "var(--color-muted)" }}
+      >
         <Icon size={14} />
         {label}
       </div>
@@ -125,7 +134,9 @@ function summarizeDetail(entry: AuditEntry): string {
   if (entry.action === "module.toggle" && Array.isArray(detail)) {
     const on = detail.filter((d) => d?.isEnabled).map((d) => d.moduleId);
     const off = detail.filter((d) => d && !d.isEnabled).map((d) => d.moduleId);
-    return [on.length ? `+${on.join(", ")}` : "", off.length ? `−${off.join(", ")}` : ""].filter(Boolean).join("  ");
+    return [on.length ? `+${on.join(", ")}` : "", off.length ? `−${off.join(", ")}` : ""]
+      .filter(Boolean)
+      .join("  ");
   }
 
   const record = detail as Record<string, unknown>;

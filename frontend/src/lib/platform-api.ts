@@ -61,14 +61,23 @@ export interface AuditEntry {
   createdAt: string;
 }
 
-export interface DaycareDetail extends Omit<DaycareSummary, "userCount" | "enabledModuleCount" | "enabledModules"> {
+export interface DaycareDetail extends Omit<
+  DaycareSummary,
+  "userCount" | "enabledModuleCount" | "enabledModules"
+> {
   users: PlatformUser[];
   entitlements: Entitlement[];
   audit: AuditEntry[];
 }
 
 export interface ModuleCatalog {
-  modules: Array<{ id: ProductModuleId; label: string; description: string; requires: string[]; backendModuleIds: string[] }>;
+  modules: Array<{
+    id: ProductModuleId;
+    label: string;
+    description: string;
+    requires: string[];
+    backendModuleIds: string[];
+  }>;
   core: Array<{ id: string; label: string; description: string; backendModuleIds: string[] }>;
   units: string[];
   roles: string[];
@@ -89,14 +98,24 @@ export const platformApi = {
   catalog: () => api.get<ModuleCatalog>("/platform/modules"),
   listDaycares: () => api.get<DaycareSummary[]>("/platform/daycares"),
   getDaycare: (id: string) => api.get<DaycareDetail>(`/platform/daycares/${id}`),
-  createDaycare: (payload: CreateDaycarePayload) => api.post<{ daycare: DaycareSummary; admin: PlatformUser }>("/platform/daycares", payload),
-  updateDaycare: (id: string, payload: Partial<Pick<DaycareSummary, "name" | "legalName" | "timezone" | "isActive">> & { units?: string[] }) =>
-    api.patch<DaycareSummary>(`/platform/daycares/${id}`, payload),
+  createDaycare: (payload: CreateDaycarePayload) =>
+    api.post<{ daycare: DaycareSummary; admin: PlatformUser }>("/platform/daycares", payload),
+  updateDaycare: (
+    id: string,
+    payload: Partial<Pick<DaycareSummary, "name" | "legalName" | "timezone" | "isActive">> & {
+      units?: string[];
+    },
+  ) => api.patch<DaycareSummary>(`/platform/daycares/${id}`, payload),
   setModules: (id: string, modules: Array<{ moduleId: string; isEnabled: boolean }>) =>
     api.put<Entitlement[]>(`/platform/daycares/${id}/modules`, { modules }),
-  provisionUser: (id: string, payload: { username: string; password: string; name: string; role: string }) =>
-    api.post<PlatformUser>(`/platform/daycares/${id}/users`, payload),
-  updateUser: (id: string, userId: string, payload: { name?: string; role?: string; password?: string; isActive?: boolean }) =>
-    api.patch<PlatformUser>(`/platform/daycares/${id}/users/${userId}`, payload),
+  provisionUser: (
+    id: string,
+    payload: { username: string; password: string; name: string; role: string },
+  ) => api.post<PlatformUser>(`/platform/daycares/${id}/users`, payload),
+  updateUser: (
+    id: string,
+    userId: string,
+    payload: { name?: string; role?: string; password?: string; isActive?: boolean },
+  ) => api.patch<PlatformUser>(`/platform/daycares/${id}/users/${userId}`, payload),
   audit: (limit = 50) => api.get<AuditEntry[]>(`/platform/audit?limit=${limit}`),
 };

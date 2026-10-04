@@ -12,7 +12,12 @@ const BASE_URL = "http://localhost:3001/api/v1";
 const PETHIJOS_ID = "daycare_pethijos";
 const DEMO_ID = "daycare_demo";
 
-interface TestResult { name: string; passed: boolean; error?: string; duration: number }
+interface TestResult {
+  name: string;
+  passed: boolean;
+  error?: string;
+  duration: number;
+}
 const results: TestResult[] = [];
 
 async function test(name: string, fn: () => Promise<void>): Promise<void> {
@@ -81,7 +86,7 @@ async function run() {
       expectStatus(own.status, 200, `GET ${path} (propia)`);
       const other = await b.get(path);
       expectStatus(other.status, 200, `GET ${path} (demo)`);
-      const rows = Array.isArray(other.data) ? other.data : other.data?.data ?? [];
+      const rows = Array.isArray(other.data) ? other.data : (other.data?.data ?? []);
       if (rows.length !== 0) {
         throw new Error(`GET ${path}: la guardería demo no debería ver ${rows.length} registro(s)`);
       }
@@ -94,12 +99,22 @@ async function run() {
     // The demo tenant is seeded without finanzas, inventario, informes, cumplimiento or
     // guarderia. Isolation and entitlement are different protections and must not be confused:
     // an empty list would mean "you have none", 403 means "you did not buy this".
-    for (const path of ["/incomes", "/payables", "/providers", "/inventory/items", "/reports/kpis", "/contracts", "/alerts"]) {
+    for (const path of [
+      "/incomes",
+      "/payables",
+      "/providers",
+      "/inventory/items",
+      "/reports/kpis",
+      "/contracts",
+      "/alerts",
+    ]) {
       expectStatus((await a.get(path)).status, 200, `GET ${path} (tenant con el módulo)`);
       const denied = await b.get(path);
       expectStatus(denied.status, 403, `GET ${path} (tenant sin el módulo)`);
       if (denied.data?.code !== "MODULE_DISABLED") {
-        throw new Error(`GET ${path}: se esperaba code MODULE_DISABLED, se recibió ${JSON.stringify(denied.data)}`);
+        throw new Error(
+          `GET ${path}: se esperaba code MODULE_DISABLED, se recibió ${JSON.stringify(denied.data)}`,
+        );
       }
     }
   });
@@ -120,11 +135,16 @@ async function run() {
     const a = clientFor(pethijos);
     const b = clientFor(demo);
     const clientId = (await a.get("/clients")).data[0]?.id;
-    expectStatus((await b.put(`/clients/${clientId}`, { firstName: "Hack", lastName: "Hack" })).status, 404, "PUT cruzado");
+    expectStatus(
+      (await b.put(`/clients/${clientId}`, { firstName: "Hack", lastName: "Hack" })).status,
+      404,
+      "PUT cruzado",
+    );
     expectStatus((await b.delete(`/clients/${clientId}`)).status, 404, "DELETE cruzado");
     // ...and the record is untouched.
     const after = await a.get(`/clients/${clientId}`);
-    if (after.data.firstName === "Hack") throw new Error("El registro fue modificado por otra guardería");
+    if (after.data.firstName === "Hack")
+      throw new Error("El registro fue modificado por otra guardería");
   });
 
   await test("Una mascota no puede crearse contra un cliente de otra guardería", async () => {
@@ -148,10 +168,12 @@ async function run() {
     const globalCount = everything.data.length;
 
     const pinnedDemo = await clientFor(superadmin, DEMO_ID).get("/clients");
-    if (pinnedDemo.data.length !== 0) throw new Error("La guardería demo no debería tener clientes");
+    if (pinnedDemo.data.length !== 0)
+      throw new Error("La guardería demo no debería tener clientes");
 
     const pinnedMain = await clientFor(superadmin, PETHIJOS_ID).get("/clients");
-    if (pinnedMain.data.length === 0) throw new Error("La guardería principal debería tener clientes");
+    if (pinnedMain.data.length === 0)
+      throw new Error("La guardería principal debería tener clientes");
     if (pinnedMain.data.length > globalCount) throw new Error("El alcance fijado excede el global");
   });
 
@@ -204,7 +226,109 @@ async function run() {
     const payload = JSON.parse(Buffer.from(stale.data.token.split(".")[1], "base64").toString());
     if (payload.tv !== 2) throw new Error(`El token debería declarar tv=2, trae ${payload.tv}`);
     if (payload.daycareId !== PETHIJOS_ID) {
-      throw new Error(`El token debería llevar daycareId=${PETHIJOS_ID}, trae ${payload.daycareId}`);
+      throw new Error(
+        `El token debería llevar daycareId=${PETHIJOS_ID}, trae ${payload.daycareId}`,
+      );
+    }
+  });
+
+  await test("No se puede agendar una cita de peluquería con el cliente de otra guardería", async () => {
+    // Found by the tenant-scope guard, then confirmed exploitable: createAppointment took
+    // clientId and petIds from the body and validated only that the pets belonged to the
+    // client -- never that the client belonged to the caller's daycare. It wrote a reservation
+    // into the attacker's tenant pointing at the victim's client, and returned the victim's
+    // pet name in `concept`.
+    const victims = await clientFor(pethijos, undefined, "DAYCARE").get("/clients");
+    const victim = (victims.data as any[]).find((c) => c.pets?.length > 0);
+    if (!victim) throw new Error("La guardería principal debería tener un cliente con mascotas");
+
+    const denied = await clientFor(demo, undefined, "GROOMING").post("/peluqueria/appointments", {
+      clientId: victim.id,
+      petIds: [victim.pets[0].id],
+      serviceId: "bano",
+      startTime: new Date(Date.now() + 86_400_000).toISOString(),
+      durationMinutes: 60,
+    });
+    if (denied.status === 201) {
+      throw new Error("Se creó una cita contra el cliente de otra guardería");
+    }
+    expectStatus(denied.status, 404, "Cita con cliente ajeno");
+    // The victim's pet name must not come back in the error either.
+    if (JSON.stringify(denied.data).includes(victim.pets[0].name)) {
+      throw new Error("La respuesta filtró el nombre de la mascota de otra guardería");
+    }
+  });
+
+  await test("No se puede crear una reserva con el cliente de otra guardería", async () => {
+    const victims = await clientFor(pethijos, undefined, "DAYCARE").get("/clients");
+    const victim = (victims.data as any[]).find((c) => c.pets?.length > 0);
+
+    const denied = await clientFor(demo, undefined, "GROOMING").post("/reservations", {
+      clientId: victim.id,
+      petIds: [victim.pets[0].id],
+      service: "PELUQUERIA_CANINA",
+      checkIn: new Date(Date.now() + 86_400_000).toISOString(),
+      checkOut: new Date(Date.now() + 90_000_000).toISOString(),
+      basePrice: 20,
+    });
+    if (denied.status === 201)
+      throw new Error("Se creó una reserva contra el cliente de otra guardería");
+    expectStatus(denied.status, 404, "Reserva con cliente ajeno");
+  });
+
+  await test("No se puede reservar una sala de otra guardería", async () => {
+    // The room used to be looked up by id and checked only against businessUnit. Every
+    // daycare has a DAYCARE and/or GROOMING unit, so that check passed for a foreign room:
+    // the booking landed in someone else's room and its capacity was computed from that
+    // tenant's occupancy, which the product treats as a hard physical limit.
+    const rooms = await clientFor(pethijos, undefined, "DAYCARE").get("/rooms");
+    const foreignRoom = (rooms.data as any[])[0];
+    if (!foreignRoom) throw new Error("La guardería principal debería tener salas");
+
+    // The demo tenant is seeded without clients, and two assertions above depend on that, so
+    // this fixture is removed again whatever happens. Using demo's OWN client is the point:
+    // the only thing under test here is the room.
+    const demoClient = clientFor(demo, undefined, "GROOMING");
+    const { prisma } = await import("../src/db");
+    let fixtureClientId = "";
+
+    try {
+      const created = await demoClient.post("/clients", {
+        firstName: "Aislamiento",
+        lastName: `Sala ${Date.now().toString(36)}`,
+        phone: "0999999999",
+      });
+      expectStatus(created.status, 201, "Alta de cliente propio en demo");
+      fixtureClientId = created.data.id;
+
+      const createdPet = await demoClient.post("/pets", {
+        clientId: fixtureClientId,
+        name: "Fixture",
+        species: "dog",
+        sex: "M",
+      });
+      expectStatus(createdPet.status, 201, "Alta de mascota propia en demo");
+
+      const denied = await demoClient.post("/reservations", {
+        clientId: fixtureClientId,
+        petIds: [createdPet.data.id],
+        roomId: foreignRoom.id,
+        service: "PELUQUERIA_CANINA",
+        checkIn: new Date(Date.now() + 86_400_000).toISOString(),
+        checkOut: new Date(Date.now() + 90_000_000).toISOString(),
+        basePrice: 20,
+      });
+      if (denied.status === 201) throw new Error("Se reservó una sala de otra guardería");
+      expectStatus(denied.status, 404, "Reserva en sala ajena");
+    } finally {
+      // A hard delete, not the API's soft delete: an inactive row would still be a row, and
+      // the assertions above count what the demo tenant has.
+      await prisma.pet.deleteMany({ where: { clientId: fixtureClientId || "none" } });
+      await prisma.client.deleteMany({ where: { id: fixtureClientId || "none" } });
+      // Anything a previous interrupted run left behind.
+      await prisma.pet.deleteMany({ where: { client: { firstName: "Aislamiento" } } });
+      await prisma.client.deleteMany({ where: { firstName: "Aislamiento" } });
+      await prisma.$disconnect();
     }
   });
 

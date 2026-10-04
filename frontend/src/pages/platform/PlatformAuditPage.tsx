@@ -17,14 +17,26 @@ export function PlatformAuditPage() {
       isLoading={isLoading}
       error={error}
     >
-      <div className="card divide-y" style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}>
+      <div
+        className="card divide-y"
+        style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+      >
         {entries.length === 0 && (
-          <p className="p-4 text-sm" style={{ color: "var(--color-muted)" }}>Sin actividad registrada.</p>
+          <p className="p-4 text-sm" style={{ color: "var(--color-muted)" }}>
+            Sin actividad registrada.
+          </p>
         )}
         {entries.map((entry) => (
-          <div key={entry.id} className="p-3 text-sm flex items-baseline gap-3" style={{ borderColor: "var(--color-border)" }}>
+          <div
+            key={entry.id}
+            className="p-3 text-sm flex items-baseline gap-3"
+            style={{ borderColor: "var(--color-border)" }}
+          >
             <span className="text-xs shrink-0 font-mono" style={{ color: "var(--color-muted)" }}>
-              {new Date(entry.createdAt).toLocaleString("es-EC", { dateStyle: "short", timeStyle: "short" })}
+              {new Date(entry.createdAt).toLocaleString("es-EC", {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
             </span>
             <span className="min-w-0">{auditLine(entry)}</span>
           </div>

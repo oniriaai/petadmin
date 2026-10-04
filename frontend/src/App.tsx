@@ -35,7 +35,9 @@ export function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   if (isLoading) return <Loading />;
   if (user) {
-    const to = (location.state as { from?: string } | null)?.from ?? (user.role === "superadmin" ? "/platform" : "/");
+    const to =
+      (location.state as { from?: string } | null)?.from ??
+      (user.role === "superadmin" ? "/platform" : "/");
     return <Navigate to={to} replace />;
   }
   return <>{children}</>;
@@ -58,8 +60,15 @@ export function SuperAdminRoute({ children }: { children: React.ReactNode }) {
  * a bug rather than as a permission boundary. And it does not fall back to treating an
  * undefined user as an admin, which the old `user?.role ?? "admin"` did.
  */
-export function GuardedRoute({ children, route }: { children: React.ReactNode; route: ModuleRoute }) {
-  const { user, isLoading, isSessionLoading, hasModules, fullAccess, activeBusinessUnit } = useAuth();
+export function GuardedRoute({
+  children,
+  route,
+}: {
+  children: React.ReactNode;
+  route: ModuleRoute;
+}) {
+  const { user, isLoading, isSessionLoading, hasModules, fullAccess, activeBusinessUnit } =
+    useAuth();
   if (isLoading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
 
@@ -121,7 +130,14 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+          <Route
+            path="/login"
+            element={
+              <PublicOnlyRoute>
+                <Login />
+              </PublicOnlyRoute>
+            }
+          />
           <Route
             path="/platform/*"
             element={

@@ -1,10 +1,10 @@
 /**
  * End-to-End Test Suite for Check-in/Check-out Module
- * 
+ *
  * Usage: tsx tests/check-in-out.e2e.ts
  */
 
-import axios, { AxiosError } from "axios";
+import axios from "axios";
 
 const BASE_URL = "http://localhost:3001/api/v1";
 let authToken: string;
@@ -19,10 +19,7 @@ interface TestResult {
 const results: TestResult[] = [];
 
 // Test helper function
-async function test(
-  name: string,
-  fn: () => Promise<void>
-): Promise<void> {
+async function test(name: string, fn: () => Promise<void>): Promise<void> {
   const startTime = Date.now();
   try {
     await fn();
@@ -73,7 +70,7 @@ let checkInOutId: string;
 
 async function prepareData(): Promise<void> {
   const client = createClient();
-  
+
   // Create a test client
   const clientResponse = await client.post("/clients", {
     firstName: "Test",
@@ -104,7 +101,7 @@ async function prepareData(): Promise<void> {
 
 async function testCreateCheckInOut(): Promise<void> {
   const client = createClient();
-  
+
   // Test with single petId (expected to work, now returns an array)
   const response = await client.post("/check-in-out", {
     clientId,
@@ -122,7 +119,7 @@ async function testCreateCheckInOut(): Promise<void> {
 
 async function testCreateCheckInOutPlural(): Promise<void> {
   const client = createClient();
-  
+
   // Test with petIds array (what frontend sends, should now work)
   const response = await client.post("/check-in-out", {
     clientId,
@@ -130,7 +127,7 @@ async function testCreateCheckInOutPlural(): Promise<void> {
     roomId,
     notes: "Ad-hoc check-in test with plural petIds",
   });
-  
+
   if (response.status !== 201) throw new Error(`Expected status 201, got ${response.status}`);
   if (!Array.isArray(response.data)) throw new Error("Expected an array of records");
   if (response.data.length === 0) throw new Error("Empty array returned");
@@ -138,7 +135,7 @@ async function testCreateCheckInOutPlural(): Promise<void> {
 
 async function testGetActive(): Promise<void> {
   const client = createClient();
-  
+
   // Register check-in first so it appears in active
   await client.post(`/check-in-out/${checkInOutId}/check-in`, {
     checkInTime: new Date().toISOString(),
@@ -146,7 +143,7 @@ async function testGetActive(): Promise<void> {
 
   const response = await client.get("/check-in-out/active");
   if (response.status !== 200) throw new Error(`Expected status 200, got ${response.status}`);
-  
+
   // Note: active list might not be mapped yet, let's check structure
   const found = response.data.find((r: any) => r.id === checkInOutId);
   if (!found) throw new Error("Created record not found in active list");
@@ -154,7 +151,7 @@ async function testGetActive(): Promise<void> {
 
 async function testCheckOut(): Promise<void> {
   const client = createClient();
-  
+
   const response = await client.post(`/check-in-out/${checkInOutId}/check-out`, {
     checkOutTime: new Date().toISOString(),
   });
@@ -165,17 +162,17 @@ async function testCheckOut(): Promise<void> {
 
 async function testGetHistory(): Promise<void> {
   const client = createClient();
-  
+
   const response = await client.get("/check-in-out/history");
   if (response.status !== 200) throw new Error(`Expected status 200, got ${response.status}`);
-  
+
   const found = response.data.data.find((r: any) => r.id === checkInOutId);
   if (!found) throw new Error("Created record not found in history");
 }
 
 async function testGetBaseRoute(): Promise<void> {
   const client = createClient();
-  
+
   // Test GET /check-in-out (what frontend calls, should now work)
   const response = await client.get("/check-in-out");
   if (response.status !== 200) throw new Error(`Expected status 200, got ${response.status}`);
@@ -186,7 +183,7 @@ let reservationId: string;
 
 async function testReservationCheckInOut(): Promise<void> {
   const client = createClient();
-  
+
   // 1. Create a reservation
   const resResponse = await client.post("/reservations", {
     clientId,
@@ -197,14 +194,15 @@ async function testReservationCheckInOut(): Promise<void> {
     checkOut: new Date(Date.now() + 3600000).toISOString(),
     basePrice: 20,
   });
-  
+
   if (resResponse.status !== 201) throw new Error("Failed to create reservation");
   reservationId = resResponse.data.id;
   console.log(`   Created reservation: ${reservationId}`);
 
   // 2. Verify CheckInOut records were created
   const historyResponse = await client.get(`/check-in-out/history?reservationId=${reservationId}`);
-  if (historyResponse.data.data.length === 0) throw new Error("No CheckInOut records created for reservation");
+  if (historyResponse.data.data.length === 0)
+    throw new Error("No CheckInOut records created for reservation");
   const linkedCheckInOutId = historyResponse.data.data[0].id;
   console.log(`   Found linked CheckInOut: ${linkedCheckInOutId}`);
 
@@ -215,17 +213,22 @@ async function testReservationCheckInOut(): Promise<void> {
 
   // 4. Verify CheckInOut record was updated
   const updatedRecord = await client.get(`/check-in-out/${linkedCheckInOutId}`);
-  if (!updatedRecord.data.checkInTime) throw new Error("Linked CheckInOut record was not updated with check-in time");
+  if (!updatedRecord.data.checkInTime)
+    throw new Error("Linked CheckInOut record was not updated with check-in time");
   console.log("   Verified linked CheckInOut check-in time");
 
   // 5. Check-out via reservations endpoint
   const checkOutTime = new Date(Date.now() + 1000).toISOString();
-  await client.post(`/reservations/${reservationId}/checkout`, { time: checkOutTime, createIncome: true });
+  await client.post(`/reservations/${reservationId}/checkout`, {
+    time: checkOutTime,
+    createIncome: true,
+  });
   console.log("   Performed reservation check-out");
 
   // 6. Verify CheckInOut record was updated
   const finalRecord = await client.get(`/check-in-out/${linkedCheckInOutId}`);
-  if (!finalRecord.data.checkOutTime) throw new Error("Linked CheckInOut record was not updated with check-out time");
+  if (!finalRecord.data.checkOutTime)
+    throw new Error("Linked CheckInOut record was not updated with check-out time");
   console.log("   Verified linked CheckInOut check-out time");
 }
 
@@ -233,11 +236,11 @@ async function testReservationCheckInOut(): Promise<void> {
 
 async function runTests() {
   console.log("🚀 Starting Check-in/Check-out E2E Tests\n");
-  
+
   try {
     await login();
     console.log("✓ Authentication successful");
-    
+
     await prepareData();
     console.log("✓ Data preparation successful\n");
 
@@ -251,7 +254,7 @@ async function runTests() {
 
     console.log("\n============================================================");
     console.log(`📊 Test Summary:`);
-    const passed = results.filter(r => r.passed).length;
+    const passed = results.filter((r) => r.passed).length;
     console.log(`   Passed: ${passed}/${results.length}`);
     console.log(`   Failed: ${results.length - passed}/${results.length}`);
     console.log("============================================================\n");

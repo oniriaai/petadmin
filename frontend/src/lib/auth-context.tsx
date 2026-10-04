@@ -50,7 +50,13 @@ interface AuthCtx {
   fullAccess: boolean;
   hasModule: (id: ProductModuleId | undefined) => boolean;
   hasModules: (ids: readonly ProductModuleId[] | undefined) => boolean;
-  login: (businessUnit: BusinessUnit | null, username: string, password: string) => Promise<User>;
+  login: (
+    businessUnit: BusinessUnit | null,
+    username: string,
+    password: string,
+    /** The daycare slug. Only needed when the username exists in more than one daycare. */
+    daycare?: string,
+  ) => Promise<User>;
   logout: () => void;
   clearSession: () => void;
   refreshSession: () => Promise<void>;
@@ -132,7 +138,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("user", JSON.stringify(normalized));
     setDaycare(data.daycare);
     setEnabledModules((data.enabledModules ?? []) as ProductModuleId[]);
-    setUnits((data.units ?? []).map(normalizeBusinessUnit).filter((u): u is BusinessUnit => u !== null));
+    setUnits(
+      (data.units ?? []).map(normalizeBusinessUnit).filter((u): u is BusinessUnit => u !== null),
+    );
     setFullAccess(Boolean(data.fullAccess));
     return normalized;
   }, []);
@@ -211,8 +219,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSession]);
 
   /** Returns the signed-in user so the caller can route by role without waiting for a re-render. */
-  async function login(businessUnit: BusinessUnit | null, username: string, password: string): Promise<User> {
-    const payload = businessUnit ? { businessUnit, username, password } : { username, password };
+  async function login(
+    businessUnit: BusinessUnit | null,
+    username: string,
+    password: string,
+    daycare?: string,
+  ): Promise<User> {
+    const payload = {
+      username,
+      password,
+      ...(businessUnit ? { businessUnit } : {}),
+      // Usernames are unique per daycare, so one that exists in several needs the slug to
+      // disambiguate. Omitted when empty: for the common unique username the server resolves
+      // it on its own and nobody has to know their daycare's identifier.
+      ...(daycare ? { daycare } : {}),
+    };
     const data = await api.post<{ token: string; user: User }>("/auth/login", payload);
     const normalized = normalizeStoredUser(data.user);
     if (!normalized) throw new Error("El servidor devolvió un rol no reconocido.");
@@ -258,7 +279,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const hasModules = useCallback(
-    (ids: readonly ProductModuleId[] | undefined) => !ids || ids.every((id) => enabledModules.includes(id)),
+    (ids: readonly ProductModuleId[] | undefined) =>
+      !ids || ids.every((id) => enabledModules.includes(id)),
     [enabledModules],
   );
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { Login } from "../pages/Login";
+import { ApiError } from "../lib/api";
 
 const login = vi.fn();
 const navigate = vi.fn();
@@ -51,8 +52,40 @@ describe("login", () => {
     login.mockResolvedValue({ role: "grooming" });
     renderLogin();
     await signIn("pethijos_admin", "pethijos123");
-    // The first argument is the unit; sending one is what could contradict the account.
-    await waitFor(() => expect(login).toHaveBeenCalledWith(null, "pethijos_admin", "pethijos123"));
+    // The first argument is the unit; sending one is what could contradict the account. The
+    // fourth is the daycare slug, which stays undefined until the server asks for it: a
+    // username that is unique across the installation resolves without one.
+    await waitFor(() =>
+      expect(login).toHaveBeenCalledWith(null, "pethijos_admin", "pethijos123", undefined),
+    );
+  });
+
+  it("asks for the daycare only when the server says the username is ambiguous", async () => {
+    const ambiguous = new ApiError(
+      400,
+      "Este usuario existe en varias guarderías.",
+      "DAYCARE_REQUIRED",
+    );
+    login.mockRejectedValueOnce(ambiguous);
+    renderLogin();
+
+    // Usernames are unique per daycare now, so two clients can both have a `recepcion`. The
+    // field must not be on screen for everyone -- most staff have no reason to know their
+    // daycare's identifier -- so it appears only in answer to DAYCARE_REQUIRED.
+    expect(screen.queryByLabelText("Guardería")).not.toBeInTheDocument();
+
+    await signIn("recepcion", "secreto123");
+
+    const field = await screen.findByLabelText("Guardería");
+    expect(field).toBeInTheDocument();
+
+    // Retrying now sends the slug through.
+    login.mockResolvedValue({ role: "daycare" });
+    fireEvent.change(field, { target: { value: "demo" } });
+    fireEvent.click(screen.getByRole("button", { name: /Ingresar/ }));
+    await waitFor(() =>
+      expect(login).toHaveBeenLastCalledWith(null, "recepcion", "secreto123", "demo"),
+    );
   });
 
   it("routes the vendor to the console and a tenant user to where they came from", async () => {

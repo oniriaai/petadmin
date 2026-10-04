@@ -22,7 +22,13 @@ export function UnitSwitcher({ variant = "topbar" }: { variant?: "topbar" | "dra
 
   return (
     <label className={isDrawer ? "block px-2 pb-3" : "hidden sm:flex items-center gap-2"}>
-      <span className={isDrawer ? "block text-[11px] font-semibold uppercase tracking-wider text-shell-muted mb-1 px-1" : "sr-only"}>
+      <span
+        className={
+          isDrawer
+            ? "block text-[11px] font-semibold uppercase tracking-wider text-shell-muted mb-1 px-1"
+            : "sr-only"
+        }
+      >
         Unidad de negocio
       </span>
       <select

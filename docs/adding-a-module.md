@@ -44,12 +44,46 @@ makes it scoped and gated — there is nothing to remember per route.
    check: a row from another tenant must read as **absent** (404), not forbidden.
    A model with no `daycareId` of its own inherits tenancy through its parent —
    use `buildChildScopeWhere(req, relation)`.
+
+   This is now **enforced**, not merely expected. The Prisma client in `db.ts`
+   carries the guard in `backend/src/core/tenancy/guard.ts`, which throws in
+   development and CI when a query inside a tenant user's request touches an owned
+   model without a tenant filter. If it fires, the fix is almost always to add the
+   filter rather than to reach for an exemption.
+
+   Two things it deliberately does not catch, so do not rely on it for them:
+
+   - **Singular `update`/`delete`.** Prisma requires their `where` to select a unique
+     row, so `daycareId` cannot legally go in one. Scope the read, then write by id.
+   - **An id taken from the request body.** A foreign key is not proof of tenancy on
+     an owned model: `{ id: { in: petIds }, clientId }` with a body-supplied
+     `clientId` is exactly the query that let one tenant book against another's
+     client. Resolve the parent against the tenant first.
+
+   For a query scoped through a parent row you have *already* verified, use
+   `withVerifiedScope(reason, fn)` and say why it is safe. Note it must `await`
+   inside the callback — a Prisma promise is lazy, so returning it unawaited runs the
+   query back inside the request context.
 8. Do not import another module's internal files. Use Core contracts or a
    documented public module interface.
 9. Add a representative workflow test, an authorization test, and a **cross-tenant
    isolation test** in `backend/tests/tenant-isolation.e2e.ts`. Inherited tenancy is
    an invariant, not a schema constraint, so it only holds if something asserts it.
-10. Run:
+
+   Write the isolation test for **writes** as well as reads. Every cross-tenant
+   defect found so far was a write that accepted an id from the request body and
+   validated it against something other than the tenant, and a read-only test would
+   have passed for all of them.
+
+   A module with no e2e coverage is a module the guard never sees: the unscoped
+   `GET /export/clients` existed for as long as it did because nothing called it.
+10. **Bound any list endpoint.** Use `readPage`/`sendPage` from
+    `backend/src/utils/pagination.ts` so the response is capped. Keep the bare array
+    when no pagination is requested — some callers fill a `<select>` from these, and
+    a silently truncated picker is worse than a slow query. If the handler filters
+    results in JS after the query, do not paginate it: the page would be short and
+    the total would disagree with it.
+11. Run:
 
     ```bash
     cd backend
@@ -115,3 +149,10 @@ makes it scoped and gated — there is nothing to remember per route.
   `users_superadmin_untenanted` CHECK constraint backs it in the database.
 - Anything that writes entitlements must call `invalidate(daycareId)` from
   `backend/src/platform/module-access.ts`, or the change waits out the 30s cache.
+- Anything that deactivates a user or a daycare must call `invalidatePrincipal` /
+  `invalidatePrincipalsForDaycare` from `backend/src/core/tenancy/principal.ts`, or
+  the suspension waits out that cache instead of biting on the next request.
+- Every async route handler needs its own `try/catch` ending in
+  `handleAuthzError(res, error)`. Express 4 does not handle a rejected async
+  handler: `GET /export/clients` had no catch, so a throw inside it became an
+  unhandled rejection and took the process down.

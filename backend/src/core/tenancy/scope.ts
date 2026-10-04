@@ -14,9 +14,7 @@ import { AuthzError, assertBusinessUnitAccess, getBusinessUnitScope } from "../.
 
 export const DAYCARE_HEADER = "x-daycare-id";
 
-export type DaycareScope =
-  | { mode: "single"; daycareId: string }
-  | { mode: "all" };
+export type DaycareScope = { mode: "single"; daycareId: string } | { mode: "all" };
 
 function readPinnedDaycareId(req: Request): string | undefined {
   const raw = req.headers[DAYCARE_HEADER];
@@ -57,7 +55,10 @@ export function buildDaycareWhere(req: Request, field = "daycareId"): Record<str
  * The combined tenant + business-unit fragment. This is the replacement for
  * `buildBusinessUnitWhere` and what most routers should use.
  */
-export function buildScopeWhere(req: Request, businessUnitField = "businessUnit"): Record<string, unknown> {
+export function buildScopeWhere(
+  req: Request,
+  businessUnitField = "businessUnit",
+): Record<string, unknown> {
   const units = getBusinessUnitScope(req);
   const unitWhere =
     units.length === 1 ? { [businessUnitField]: units[0] } : { [businessUnitField]: { in: units } };

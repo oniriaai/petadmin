@@ -68,7 +68,8 @@ async function testIncomeCreate(): Promise<void> {
   });
   if (response.status !== 201) throw new Error(`Expected 201, got ${response.status}`);
   if (!response.data?.id) throw new Error("Income ID missing");
-  if (response.data.total !== 115) throw new Error(`Expected total 115, got ${response.data.total}`);
+  if (response.data.total !== 115)
+    throw new Error(`Expected total 115, got ${response.data.total}`);
   incomeId = response.data.id;
 }
 
@@ -101,7 +102,8 @@ async function testPayableCreate(): Promise<void> {
   });
   if (response.status !== 201) throw new Error(`Expected 201, got ${response.status}`);
   if (!response.data?.id) throw new Error("Payable ID missing");
-  if (response.data.total !== 115) throw new Error(`Expected total 115, got ${response.data.total}`);
+  if (response.data.total !== 115)
+    throw new Error(`Expected total 115, got ${response.data.total}`);
   payableId = response.data.id;
 }
 
@@ -169,4 +171,3 @@ runTests().catch((error) => {
   console.error("Fatal error:", error);
   process.exit(1);
 });
-

@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import { api, checkInOutApi, CheckInOutRecord } from '../../lib/api';
+import { useState, useCallback, useEffect } from "react";
+import { api, checkInOutApi, CheckInOutRecord } from "../../lib/api";
 
 // Core Reservation interface
 export interface Reservation {
@@ -34,8 +34,8 @@ export interface ReservationWithCheckInOut extends Reservation {
   checkInOuts?: CheckInOutRecord[];
 }
 
-export type OperationalEventType = 'RESERVATION' | 'ADHOC';
-export type OperationalEventStatus = 'PENDING' | 'CHECKED_IN' | 'CHECKED_OUT';
+export type OperationalEventType = "RESERVATION" | "ADHOC";
+export type OperationalEventStatus = "PENDING" | "CHECKED_IN" | "CHECKED_OUT";
 
 export interface OperationalEvent {
   id: string;
@@ -77,7 +77,7 @@ export function useOperacionesData(): UseOperacionesDataReturn {
     setError(null);
     try {
       const [reservationsData, checkInOutData] = await Promise.all([
-        api.get<Reservation[]>('/reservations'),
+        api.get<Reservation[]>("/reservations"),
         checkInOutApi.getHistory({ limit: 1000, offset: 0 }),
       ]);
 
@@ -111,32 +111,36 @@ export function useOperacionesData(): UseOperacionesDataReturn {
         });
         const lastCheckInOut = sortedCIOs[0];
 
-        let status: OperationalEventStatus = 'PENDING';
-        if (res.status === 'COMPLETADA') {
-          status = 'CHECKED_OUT';
-        } else if (res.status === 'ACTIVA' || res.status === 'RECEPCIONADA' || res.status === 'EN_PROCESO') {
+        let status: OperationalEventStatus = "PENDING";
+        if (res.status === "COMPLETADA") {
+          status = "CHECKED_OUT";
+        } else if (
+          res.status === "ACTIVA" ||
+          res.status === "RECEPCIONADA" ||
+          res.status === "EN_PROCESO"
+        ) {
           // Grooming statuses RECEPCIONADA and EN_PROCESO are active in-progress states
-          status = 'CHECKED_IN';
-        } else if (res.status === 'LISTO') {
+          status = "CHECKED_IN";
+        } else if (res.status === "LISTO") {
           // LISTO means grooming is finished but pet hasn't been picked up yet – show as checked-out
-          status = 'CHECKED_OUT';
+          status = "CHECKED_OUT";
         }
 
         unifiedEvents.push({
           id: `res-${res.id}`,
           originalId: res.id,
-          type: 'RESERVATION',
+          type: "RESERVATION",
           isReservation: true,
           businessUnit: res.businessUnit,
           clientId: res.clientId,
           clientName: `${res.client.firstName} ${res.client.lastName}`,
-          petNames: res.pets.map((p) => p.pet.name).join(', '),
+          petNames: res.pets.map((p) => p.pet.name).join(", "),
           petIds: res.pets.map((p) => p.pet.id),
-          roomId: res.roomId || '',
-          roomName: res.room?.name || 'Sin asignar',
+          roomId: res.roomId || "",
+          roomName: res.room?.name || "Sin asignar",
           service: res.service,
           status,
-          scheduledCheckIn: res.checkIn || '',
+          scheduledCheckIn: res.checkIn || "",
           scheduledCheckOut: res.checkOut,
           actualCheckIn: lastCheckInOut?.checkInTime,
           actualCheckOut: lastCheckInOut?.checkOutTime,
@@ -147,23 +151,23 @@ export function useOperacionesData(): UseOperacionesDataReturn {
 
       // Map Ad-hoc Check-ins to OperationalEvents
       adHoc.forEach((record) => {
-        let status: OperationalEventStatus = 'PENDING';
-        if (record.checkOutTime) status = 'CHECKED_OUT';
-        else if (record.checkInTime) status = 'CHECKED_IN';
+        let status: OperationalEventStatus = "PENDING";
+        if (record.checkOutTime) status = "CHECKED_OUT";
+        else if (record.checkInTime) status = "CHECKED_IN";
 
         unifiedEvents.push({
           id: `adhoc-${record.id}`,
           originalId: record.id,
-          type: 'ADHOC',
+          type: "ADHOC",
           isReservation: false,
           businessUnit: record.businessUnit,
           clientId: record.clientId,
-          clientName: record.clientName || 'Desconocido',
-          petNames: record.petName || 'Desconocido',
+          clientName: record.clientName || "Desconocido",
+          petNames: record.petName || "Desconocido",
           petIds: [record.petId],
           roomId: record.roomId,
-          roomName: record.roomName || 'Sin asignar',
-          service: 'AD-HOC',
+          roomName: record.roomName || "Sin asignar",
+          service: "AD-HOC",
           status,
           scheduledCheckIn: record.checkInTime || record.createdAt,
           scheduledCheckOut: record.checkOutTime || undefined,
@@ -175,13 +179,14 @@ export function useOperacionesData(): UseOperacionesDataReturn {
       });
 
       // Sort by scheduled check-in date (descending)
-      unifiedEvents.sort((a, b) => 
-        new Date(b.scheduledCheckIn).getTime() - new Date(a.scheduledCheckIn).getTime()
+      unifiedEvents.sort(
+        (a, b) => new Date(b.scheduledCheckIn).getTime() - new Date(a.scheduledCheckIn).getTime(),
       );
 
       setEvents(unifiedEvents);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error al cargar datos de operaciones';
+      const errorMessage =
+        err instanceof Error ? err.message : "Error al cargar datos de operaciones";
       setError(errorMessage);
     } finally {
       setLoading(false);

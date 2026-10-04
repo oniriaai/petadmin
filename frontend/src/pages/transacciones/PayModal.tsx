@@ -32,7 +32,7 @@ export function PayModal({ payable, onClose, onSaved }: Props) {
     try {
       await api.post(`/payables/${payable.id}/payments`, {
         amount: +amount,
-        method
+        method,
       });
       onSaved();
       onClose();
@@ -51,7 +51,9 @@ export function PayModal({ payable, onClose, onSaved }: Props) {
       size="sm"
       footer={
         <>
-          <button className="btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="btn-secondary" onClick={onClose}>
+            Cancelar
+          </button>
           <button className="btn-success" onClick={save} disabled={saving}>
             {saving ? "Registrando..." : "Registrar pago"}
           </button>
@@ -72,18 +74,16 @@ export function PayModal({ payable, onClose, onSaved }: Props) {
               className="input"
               type="number"
               value={amount}
-              onChange={e => setAmount(e.target.value)}
+              onChange={(e) => setAmount(e.target.value)}
             />
           </div>
           <div>
             <label className="label">Forma de pago</label>
-            <select
-              className="input"
-              value={method}
-              onChange={e => setMethod(e.target.value)}
-            >
-              {PAYMENT_METHODS.map(m => (
-                <option key={m} value={m}>{m}</option>
+            <select className="input" value={method} onChange={(e) => setMethod(e.target.value)}>
+              {PAYMENT_METHODS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
           </div>

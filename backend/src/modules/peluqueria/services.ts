@@ -22,7 +22,8 @@ export const DEFAULT_GROOMING_SERVICES: GroomingServiceItem[] = [
     category: "BANO",
     durationMinutes: 60,
     basePrice: 20,
-    description: "Baño completo más despeje de almohadillas, zona genital, lagrimales y corte de uñas.",
+    description:
+      "Baño completo más despeje de almohadillas, zona genital, lagrimales y corte de uñas.",
   },
   {
     id: "peluqueria_completa",
@@ -30,7 +31,8 @@ export const DEFAULT_GROOMING_SERVICES: GroomingServiceItem[] = [
     category: "COMPLETO",
     durationMinutes: 90,
     basePrice: 30,
-    description: "Servicio completo: corte de raza o personalizado a máquina/tijera, baño nutritivo y perfume.",
+    description:
+      "Servicio completo: corte de raza o personalizado a máquina/tijera, baño nutritivo y perfume.",
   },
   {
     id: "deslanado_profundo",
@@ -38,7 +40,8 @@ export const DEFAULT_GROOMING_SERVICES: GroomingServiceItem[] = [
     category: "TRATAMIENTO",
     durationMinutes: 75,
     basePrice: 25,
-    description: "Tratamiento intensivo para mantos con doble capa para retirar subpelo muerto y evitar nudos.",
+    description:
+      "Tratamiento intensivo para mantos con doble capa para retirar subpelo muerto y evitar nudos.",
   },
   {
     id: "corte_unas_spa",
@@ -54,6 +57,7 @@ export const DEFAULT_GROOMING_SERVICES: GroomingServiceItem[] = [
     category: "TRATAMIENTO",
     durationMinutes: 50,
     basePrice: 22,
-    description: "Aplicación de champú medicado con tiempo de reposo para tratamiento dérmico específico.",
+    description:
+      "Aplicación de champú medicado con tiempo de reposo para tratamiento dérmico específico.",
   },
 ];

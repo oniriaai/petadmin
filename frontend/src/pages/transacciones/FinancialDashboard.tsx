@@ -1,5 +1,19 @@
 import { useEffect, useState, useCallback } from "react";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { api } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
@@ -115,7 +129,9 @@ export function FinancialDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-gray-600">Ingresos</div>
-                <div className="text-2xl font-bold text-green-600 mt-1">${(summary.income ?? 0).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-green-600 mt-1">
+                  ${(summary.income ?? 0).toLocaleString()}
+                </div>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <TrendingUp className="text-green-600" size={24} />
@@ -127,7 +143,9 @@ export function FinancialDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm text-gray-600">Gastos</div>
-                <div className="text-2xl font-bold text-red-600 mt-1">${(summary.expenses ?? 0).toLocaleString()}</div>
+                <div className="text-2xl font-bold text-red-600 mt-1">
+                  ${(summary.expenses ?? 0).toLocaleString()}
+                </div>
               </div>
               <div className="bg-red-100 p-3 rounded-lg">
                 <TrendingDown className="text-red-600" size={24} />
@@ -138,7 +156,9 @@ export function FinancialDashboard() {
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div>
               <div className="text-sm text-gray-600">Ganancias</div>
-              <div className={`text-2xl font-bold mt-1 ${summary.profit >= 0 ? "text-blue-600" : "text-orange-600"}`}>
+              <div
+                className={`text-2xl font-bold mt-1 ${summary.profit >= 0 ? "text-blue-600" : "text-orange-600"}`}
+              >
                 ${(summary.profit ?? 0).toLocaleString()}
               </div>
               <div className="text-xs text-gray-500 mt-2">
@@ -151,7 +171,9 @@ export function FinancialDashboard() {
             {occupancy && (
               <div>
                 <div className="text-sm text-gray-600">Ocupación</div>
-                <div className="text-2xl font-bold text-blue-600 mt-1">{occupancy.occupancyPercent}%</div>
+                <div className="text-2xl font-bold text-blue-600 mt-1">
+                  {occupancy.occupancyPercent}%
+                </div>
                 <div className="text-xs text-gray-500 mt-2">
                   {occupancy.activeReservations}/{occupancy.totalCapacity} espacios
                 </div>

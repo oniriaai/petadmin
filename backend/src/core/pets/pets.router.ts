@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { handleAuthzError } from "../../middleware/auth";
 import { buildChildScopeWhere, buildDaycareWhere } from "../../core/tenancy/scope";
+import { readPage, sendPage } from "../../utils/pagination";
 import { prisma } from "../../db";
 
 export const petsRouter = Router();
@@ -27,23 +28,33 @@ const petSchema = z.object({
 
 petsRouter.get("/", async (req, res) => {
   try {
-  const { search, clientId, species } = req.query as Record<string, string>;
-  const where: Record<string, unknown> = { isActive: true, ...buildDaycareWhere(req) };
-  if (clientId) where.clientId = clientId;
-  if (species) where.species = species;
-  if (search) {
-    where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { breed: { contains: search, mode: "insensitive" } },
-      { microchip: { contains: search } },
-    ];
-  }
-  const pets = await prisma.pet.findMany({
-    where,
-    include: { client: { select: { id: true, firstName: true, lastName: true, phone: true } }, vaccinations: true },
-    orderBy: { name: "asc" },
-  });
-  res.json(pets);
+    const { search, clientId, species } = req.query as Record<string, string>;
+    const where: Record<string, unknown> = { isActive: true, ...buildDaycareWhere(req) };
+    if (clientId) where.clientId = clientId;
+    if (species) where.species = species;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { breed: { contains: search, mode: "insensitive" } },
+        { microchip: { contains: search } },
+      ];
+    }
+    // Bare array by default, as for clients: HerramientasPage loads this whole list.
+    const page = readPage(req);
+    const [pets, total] = await Promise.all([
+      prisma.pet.findMany({
+        where,
+        include: {
+          client: { select: { id: true, firstName: true, lastName: true, phone: true } },
+          vaccinations: true,
+        },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.pet.count({ where }),
+    ]);
+    sendPage(res, page, pets, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -53,25 +64,25 @@ petsRouter.get("/", async (req, res) => {
 
 petsRouter.get("/:id", async (req, res) => {
   try {
-  const pet = await prisma.pet.findFirst({
-    where: { id: req.params.id, ...buildDaycareWhere(req) },
-    include: {
-      client: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
-      vaccinations: { orderBy: { date: "desc" } },
-      documents: { orderBy: { uploadedAt: "desc" } },
-      alerts: { where: { isResolved: false }, orderBy: { createdAt: "desc" } },
-      reservationPets: {
-        include: { reservation: { include: { room: { select: { name: true } } } } },
-        orderBy: { reservation: { createdAt: "desc" } },
-        take: 10,
+    const pet = await prisma.pet.findFirst({
+      where: { id: req.params.id, ...buildDaycareWhere(req) },
+      include: {
+        client: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
+        vaccinations: { orderBy: { date: "desc" } },
+        documents: { orderBy: { uploadedAt: "desc" } },
+        alerts: { where: { isResolved: false }, orderBy: { createdAt: "desc" } },
+        reservationPets: {
+          include: { reservation: { include: { room: { select: { name: true } } } } },
+          orderBy: { reservation: { createdAt: "desc" } },
+          take: 10,
+        },
       },
-    },
-  });
-  if (!pet) {
-    res.status(404).json({ message: "Animal no encontrado" });
-    return;
-  }
-  res.json(pet);
+    });
+    if (!pet) {
+      res.status(404).json({ message: "Animal no encontrado" });
+      return;
+    }
+    res.json(pet);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);
@@ -100,7 +111,11 @@ petsRouter.post("/", async (req, res) => {
     }
 
     const pet = await prisma.pet.create({
-      data: { ...rest, daycareId: owner.daycareId, birthdate: birthdate ? new Date(birthdate) : null },
+      data: {
+        ...rest,
+        daycareId: owner.daycareId,
+        birthdate: birthdate ? new Date(birthdate) : null,
+      },
     });
     res.status(201).json(pet);
   } catch (error) {
@@ -200,7 +215,12 @@ petsRouter.post("/:id/vaccinations", async (req, res) => {
     }
     const { date, nextDue, ...rest } = parsed.data;
     const vaccination = await prisma.petVaccination.create({
-      data: { petId: pet.id, date: new Date(date), nextDue: nextDue ? new Date(nextDue) : null, ...rest },
+      data: {
+        petId: pet.id,
+        date: new Date(date),
+        nextDue: nextDue ? new Date(nextDue) : null,
+        ...rest,
+      },
     });
     res.status(201).json(vaccination);
   } catch (error) {

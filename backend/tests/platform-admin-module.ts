@@ -25,7 +25,11 @@ assert.equal(module.public, undefined, "the console must never be public");
 const productModule = productModuleForBackendId("platform");
 assert.equal(productModule?.id, "plataforma");
 assert.equal(productModule?.platformOnly, true);
-assert.equal(productModule?.core, undefined, "platform-only is not core: core modules are free to tenants");
+assert.equal(
+  productModule?.core,
+  undefined,
+  "platform-only is not core: core modules are free to tenants",
+);
 
 // It must not appear in the console's own toggle matrix.
 assert.ok(getProductModule("plataforma"));

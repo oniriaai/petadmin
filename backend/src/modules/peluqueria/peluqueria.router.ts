@@ -16,7 +16,11 @@ peluqueriaRouter.get("/services", (_req, res) => {
 peluqueriaRouter.get("/appointments", async (req, res) => {
   try {
     const { date, status, search } = req.query as Record<string, string>;
-    const list = await GroomingAppointmentsService.listAppointments(getRequiredDaycareId(req), { date, status, search });
+    const list = await GroomingAppointmentsService.listAppointments(getRequiredDaycareId(req), {
+      date,
+      status,
+      search,
+    });
     res.json(list);
   } catch (error: any) {
     if (handleAuthzError(res, error)) return;
@@ -28,7 +32,10 @@ peluqueriaRouter.get("/appointments", async (req, res) => {
 // Get Appointment Detail
 peluqueriaRouter.get("/appointments/:id", async (req, res) => {
   try {
-    const appt = await GroomingAppointmentsService.getAppointment(getRequiredDaycareId(req), req.params.id);
+    const appt = await GroomingAppointmentsService.getAppointment(
+      getRequiredDaycareId(req),
+      req.params.id,
+    );
     if (!appt) {
       res.status(404).json({ message: "Cita no encontrada" });
       return;
@@ -65,7 +72,10 @@ peluqueriaRouter.post("/appointments", async (req, res) => {
       return;
     }
 
-    const created = await GroomingAppointmentsService.createAppointment({ ...parsed.data, daycareId: getRequiredDaycareId(req) });
+    const created = await GroomingAppointmentsService.createAppointment({
+      ...parsed.data,
+      daycareId: getRequiredDaycareId(req),
+    });
     res.status(201).json(created);
   } catch (error: any) {
     if (handleAuthzError(res, error)) return;
@@ -88,7 +98,11 @@ peluqueriaRouter.patch("/appointments/:id/status", async (req, res) => {
       return;
     }
 
-    const updated = await GroomingAppointmentsService.updateStatus(getRequiredDaycareId(req), req.params.id, parsed.data);
+    const updated = await GroomingAppointmentsService.updateStatus(
+      getRequiredDaycareId(req),
+      req.params.id,
+      parsed.data,
+    );
     res.json(updated);
   } catch (error: any) {
     if (handleAuthzError(res, error)) return;
@@ -112,7 +126,11 @@ peluqueriaRouter.post("/appointments/:id/complete", async (req, res) => {
       return;
     }
 
-    const completed = await GroomingAppointmentsService.completeAndCollect(getRequiredDaycareId(req), req.params.id, parsed.data);
+    const completed = await GroomingAppointmentsService.completeAndCollect(
+      getRequiredDaycareId(req),
+      req.params.id,
+      parsed.data,
+    );
     res.json(completed);
   } catch (error: any) {
     if (handleAuthzError(res, error)) return;

@@ -51,10 +51,11 @@ export class DaycareAttendanceService {
       },
     });
 
-    return rooms.map(room => {
+    return rooms.map((room) => {
       const activeCount = room.checkInOuts.length;
       const available = Math.max(0, room.capacity - activeCount);
-      const occupancyRate = room.capacity > 0 ? Math.min(100, Math.round((activeCount / room.capacity) * 100)) : 0;
+      const occupancyRate =
+        room.capacity > 0 ? Math.min(100, Math.round((activeCount / room.capacity) * 100)) : 0;
 
       return {
         id: room.id,
@@ -65,7 +66,7 @@ export class DaycareAttendanceService {
         availableSlots: available,
         occupancyRate,
         isFull: activeCount >= room.capacity,
-        currentPets: room.checkInOuts.map(c => ({
+        currentPets: room.checkInOuts.map((c) => ({
           checkInOutId: c.id,
           petId: c.pet.id,
           petName: c.pet.name,
@@ -99,7 +100,9 @@ export class DaycareAttendanceService {
       },
       include: {
         client: { select: { id: true, firstName: true, lastName: true, phone: true } },
-        pets: { include: { pet: { select: { id: true, name: true, breed: true, photoUrl: true } } } },
+        pets: {
+          include: { pet: { select: { id: true, name: true, breed: true, photoUrl: true } } },
+        },
         room: { select: { id: true, name: true, capacity: true } },
         checkInOuts: { where: { isActive: true } },
       },
@@ -141,7 +144,12 @@ export class DaycareAttendanceService {
     const room = await prisma.room.findUnique({
       where: { id: roomId },
     });
-    if (!room || room.daycareId !== daycareId || room.businessUnit !== GUARDERIA_BUSINESS_UNIT || !room.isActive) {
+    if (
+      !room ||
+      room.daycareId !== daycareId ||
+      room.businessUnit !== GUARDERIA_BUSINESS_UNIT ||
+      !room.isActive
+    ) {
       throw new Error("Sala de guardería inválida o inactiva");
     }
 
@@ -170,7 +178,9 @@ export class DaycareAttendanceService {
       },
     });
     if (currentActiveInRoom >= room.capacity) {
-      throw new Error(`La sala ${room.name} ha alcanzado su capacidad máxima (${room.capacity} perrhijos)`);
+      throw new Error(
+        `La sala ${room.name} ha alcanzado su capacidad máxima (${room.capacity} perrhijos)`,
+      );
     }
 
     return await prisma.$transaction(async (tx) => {
@@ -243,7 +253,14 @@ export class DaycareAttendanceService {
    * Registra check-out de Guardería con opción de cobro independiente para Kinderdog
    */
   static async registerCheckOut(dto: DaycareCheckOutDTO) {
-    const { daycareId, checkInOutId, performedByUserId, createIncome, paymentMethod = "EFECTIVO", notes } = dto;
+    const {
+      daycareId,
+      checkInOutId,
+      performedByUserId,
+      createIncome,
+      paymentMethod = "EFECTIVO",
+      notes,
+    } = dto;
     const checkOutDate = dto.checkOutTime ? new Date(dto.checkOutTime) : new Date();
 
     const record = await prisma.checkInOut.findUnique({
@@ -251,7 +268,11 @@ export class DaycareAttendanceService {
       include: { pet: true, client: true, reservation: true },
     });
 
-    if (!record || record.daycareId !== daycareId || record.businessUnit !== GUARDERIA_BUSINESS_UNIT) {
+    if (
+      !record ||
+      record.daycareId !== daycareId ||
+      record.businessUnit !== GUARDERIA_BUSINESS_UNIT
+    ) {
       throw new Error("Registro de asistencia no encontrado en Guardería");
     }
 
@@ -344,14 +365,18 @@ export class DaycareAttendanceService {
         status: { not: "CANCELADA" },
       },
       include: {
-        client: { select: { id: true, firstName: true, lastName: true, phone: true, address: true } },
+        client: {
+          select: { id: true, firstName: true, lastName: true, phone: true, address: true },
+        },
         pets: { include: { pet: { select: { id: true, name: true, breed: true } } } },
       },
       orderBy: { checkIn: "asc" },
     });
 
-    const recogidas = transportReservations.filter(r => r.transportType === "RECOGIDA" || !r.transportType);
-    const entregas = transportReservations.filter(r => r.transportType === "ENTREGA");
+    const recogidas = transportReservations.filter(
+      (r) => r.transportType === "RECOGIDA" || !r.transportType,
+    );
+    const entregas = transportReservations.filter((r) => r.transportType === "ENTREGA");
 
     return {
       total: transportReservations.length,

@@ -16,11 +16,21 @@ const MODULE_LABELS: Record<ProductModuleId, string> = {
   cumplimiento: "Contratos y Alertas",
 };
 
-function Shell({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
+function Shell({
+  icon,
+  title,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="p-6 sm:p-10 max-w-xl">
       <div className="card p-6 sm:p-8">
-        <div className="w-12 h-12 rounded-xl bg-gray-100 text-gray-500 grid place-items-center mb-4">{icon}</div>
+        <div className="w-12 h-12 rounded-xl bg-gray-100 text-gray-500 grid place-items-center mb-4">
+          {icon}
+        </div>
         <h1 className="text-xl font-bold text-gray-900 mb-2">{title}</h1>
         <div className="text-sm text-gray-600 space-y-3">{children}</div>
         <Link to="/" className="btn btn-secondary mt-6 inline-flex">
@@ -52,7 +62,10 @@ export function ModuleUnavailable({
   if (reason === "role") {
     return (
       <Shell icon={<Lock size={22} />} title="No tienes acceso a esta sección">
-        <p>Tu rol no permite entrar aquí. Si necesitas acceso, pídeselo a un administrador de tu guardería.</p>
+        <p>
+          Tu rol no permite entrar aquí. Si necesitas acceso, pídeselo a un administrador de tu
+          guardería.
+        </p>
       </Shell>
     );
   }
@@ -76,7 +89,7 @@ export function ModuleUnavailable({
  */
 function WrongUnit({ unit }: { unit?: BusinessUnit }) {
   const { setActiveBusinessUnit } = useAuth();
-  const label = unit ? UNIT_LABELS[unit] ?? unit : "otra unidad";
+  const label = unit ? (UNIT_LABELS[unit] ?? unit) : "otra unidad";
 
   return (
     <Shell icon={<ArrowLeftRight size={22} />} title={`Esta sección es de ${label}`}>

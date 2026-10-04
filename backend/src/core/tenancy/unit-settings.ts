@@ -25,7 +25,10 @@ const keyFor = (daycareId: string, businessUnit: string) => `${daycareId}:${busi
  * on every occurrence the scheduler evaluates. `invalidateUnitSettings` is called when the
  * settings screen writes.
  */
-export async function getUnitSettings(daycareId: string, businessUnit: string): Promise<UnitSettings> {
+export async function getUnitSettings(
+  daycareId: string,
+  businessUnit: string,
+): Promise<UnitSettings> {
   const key = keyFor(daycareId, businessUnit);
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;

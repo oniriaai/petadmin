@@ -1,7 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 
 import { prisma } from "../db";
-import { AuthzError, BUSINESS_UNITS, getBusinessUnitScope, handleAuthzError } from "../middleware/auth";
+import {
+  AuthzError,
+  BUSINESS_UNITS,
+  getBusinessUnitScope,
+  handleAuthzError,
+} from "../middleware/auth";
 import type { BusinessUnit } from "../middleware/auth";
 import type { BackendModule } from "./module";
 import { productModuleForBackendId } from "./product-modules";
@@ -69,7 +74,10 @@ export async function getEnabledProductModules(daycareId: string): Promise<Set<s
  * already refuses to boot in that state, so reaching here means something is wrong, and the
  * safe answer to "is this sold?" is no.
  */
-export async function isBackendModuleEnabled(daycareId: string, backendModuleId: string): Promise<boolean> {
+export async function isBackendModuleEnabled(
+  daycareId: string,
+  backendModuleId: string,
+): Promise<boolean> {
   const productModule = productModuleForBackendId(backendModuleId);
   if (!productModule) return false;
   if (productModule.core) return true;
@@ -102,10 +110,7 @@ export function invalidateAll(): void {
  * A module that lists every unit constrains nothing. Exported as a pure function so the
  * architecture suite can assert the rule without a database behind it.
  */
-export function moduleServesUnits(
-  module: BackendModule,
-  scope: readonly BusinessUnit[],
-): boolean {
+export function moduleServesUnits(module: BackendModule, scope: readonly BusinessUnit[]): boolean {
   const allowedUnits = module.access?.businessUnits;
   if (!allowedUnits || allowedUnits.length >= BUSINESS_UNITS.length) return true;
   return scope.some((unit) => allowedUnits.includes(unit));
@@ -118,7 +123,11 @@ export function requireModuleAccess(module: BackendModule) {
   const allowedUnits = module.access?.businessUnits;
   const constrainsUnits = allowedUnits !== undefined && allowedUnits.length < BUSINESS_UNITS.length;
 
-  return async function moduleAccessGate(req: Request, res: Response, next: NextFunction): Promise<void> {
+  return async function moduleAccessGate(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const user = req.user;
       if (!user) {

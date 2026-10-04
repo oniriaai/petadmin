@@ -33,6 +33,26 @@ se ponen al día en lugar de dejar una ruta muerta en pantalla.
 (`status`, `code`, `details`). Antes colapsaba cualquier respuesta no-2xx en `new Error(message)`,
 lo que hacía imposible distinguir un 404 de un 403 y dejaba `MODULE_DISABLED` fuera de alcance.
 
+### Sesiones revocadas
+
+`ApiError.isSessionRevoked` cubre `USER_INACTIVE` y `DAYCARE_INACTIVE`. Llegan como **403** y no
+como 401 porque el token es perfectamente válido: a alguien a quien han desactivado la cuenta —o
+cuya guardería ha sido suspendida— no le sirve volver a iniciar sesión, así que reintentar no es la
+respuesta. `api.ts` los enruta por el mismo camino que un 401 (limpiar la sesión y volver a
+`/login`); sin eso el navegador conservaría un token muerto y mostraría un error en cada pantalla
+en lugar de volver al login.
+
+### El campo de guardería en el login
+
+Los nombres de usuario son únicos **por guardería**, no globalmente, así que uno puede existir en
+varias. El campo "Guardería" de `src/pages/Login.tsx` está oculto por defecto y aparece **solo**
+cuando el servidor responde `400` con `code: "DAYCARE_REQUIRED"`; entonces se recuerda en
+`localStorage` para la próxima vez.
+
+Que esté oculto es deliberado: la mayoría del personal no tiene motivo para conocer el
+identificador de su guardería, y un usuario único en toda la instalación entra sin él. `login()`
+acepta el slug como cuarto argumento y lo omite cuando está vacío.
+
 Cabeceras que envía automáticamente: `Authorization`, `X-Business-Unit` (unidad activa) y
 `X-Daycare-Id` (inquilino fijado por un superadmin). `downloadFile` también las envía; sin la
 segunda, una exportación del proveedor saldría del alcance equivocado.
@@ -150,6 +170,18 @@ await platformApi.setModules(daycareId, [{ moduleId: "finanzas", isEnabled: true
 
 `platform-api.ts` se mantiene fuera de `lib/api.ts` para que solo entre en el bundle diferido.
 
+### Forma de los listados
+
+Los listados del backend **siguen devolviendo un array desnudo** mientras no se les pida una
+página, así que ningún cliente de aquí tuvo que cambiar. Aceptan `?page` y `?pageSize` (tope 200) y
+entonces devuelven `{ items, total, page, pageSize, pageCount }`.
+
+El array desnudo no es inercia: `CheckInOutForm`, `NuevaReservaModal` y `RecurringPlanForm` cargan
+la lista completa en un `<select>`, y un selector truncado en silencio es peor que una consulta
+lenta —el cliente que buscas simplemente no está y nada lo dice—. Cuando una pantalla necesite
+paginar de verdad, pedirá la página y leerá `items`; `X-Total-Count` viaja en ambas formas para
+poder detectar que la respuesta venía recortada.
+
 ---
 
 ## Scripts
@@ -163,7 +195,8 @@ npm run test -- --run        # Vitest
 
 Suites: `route-guards`, `module-gating` (gating de rutas y navegación, rutas del superadmin y
 validación del registro), `app-shell` (topbar, cajón móvil, colapso, selector de unidad, menú de
-usuario y banner de plataforma), `module-registry` y `shared-contracts`.
+usuario y banner de plataforma), `login` (que no se envíe unidad de negocio, y que el campo de
+guardería aparezca **solo** ante `DAYCARE_REQUIRED`), `module-registry` y `shared-contracts`.
 
 ---
 

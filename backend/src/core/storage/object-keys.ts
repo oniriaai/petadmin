@@ -69,7 +69,11 @@ export function daycarePrefix(daycareId: string): string {
  * normalizes "/../../x" to "/x", so host checking — not traversal checking — is what makes
  * a foreign URL unusable here.
  */
-export function resolveObjectKey(input: string, bucketName: string, endpoint?: string): string | null {
+export function resolveObjectKey(
+  input: string,
+  bucketName: string,
+  endpoint?: string,
+): string | null {
   let candidate = input.trim();
 
   if (/^https?:\/\//i.test(candidate)) {
@@ -83,8 +87,14 @@ export function resolveObjectKey(input: string, bucketName: string, endpoint?: s
     // Without a configured endpoint we cannot tell our own bucket from anyone else's.
     if (!endpoint) return null;
     const host = url.host.toLowerCase();
-    const bareEndpoint = endpoint.replace(/^https?:\/\//i, "").replace(/\/.*$/, "").toLowerCase();
-    const allowedHosts = [bareEndpoint, bucketName ? `${bucketName.toLowerCase()}.${bareEndpoint}` : ""];
+    const bareEndpoint = endpoint
+      .replace(/^https?:\/\//i, "")
+      .replace(/\/.*$/, "")
+      .toLowerCase();
+    const allowedHosts = [
+      bareEndpoint,
+      bucketName ? `${bucketName.toLowerCase()}.${bareEndpoint}` : "",
+    ];
     if (!allowedHosts.includes(host)) return null;
 
     const pathName = url.pathname;

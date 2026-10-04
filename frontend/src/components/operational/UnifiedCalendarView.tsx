@@ -1,5 +1,14 @@
 import { useState, useMemo } from "react";
-import { ChevronLeft, ChevronRight, CheckCircle, LogOut, Truck, Clock, Calendar as CalendarIcon, Plus } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  LogOut,
+  Truck,
+  Clock,
+  Calendar as CalendarIcon,
+  Plus,
+} from "lucide-react";
 import { fmt, fmtTime } from "../../lib/utils";
 import { Badge } from "../ui/Badge";
 import type { OperationalEvent, OperationalEventStatus } from "./useOperacionesData";
@@ -133,10 +142,16 @@ export function UnifiedCalendarView({
   });
 
   const weekRange = `${fmt(weekStart)} - ${fmt(
-    new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000)
+    new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000),
   )}`;
 
-  const EventCard = ({ event, compact = false }: { event: OperationalEvent; compact?: boolean }) => {
+  const EventCard = ({
+    event,
+    compact = false,
+  }: {
+    event: OperationalEvent;
+    compact?: boolean;
+  }) => {
     const statusColor = getStatusColor(event.status);
     const unit = getUnitConfig(event.businessUnit);
     return (
@@ -146,9 +161,7 @@ export function UnifiedCalendarView({
         title={`${event.clientName} - ${event.petNames}`}
       >
         <div className="flex justify-between items-start gap-1">
-          <div className="font-bold text-gray-900 truncate">
-            {event.clientName}
-          </div>
+          <div className="font-bold text-gray-900 truncate">{event.clientName}</div>
           <div className="flex gap-0.5 sm:gap-1 shrink-0">
             {event.needsTransport && <Truck size={10} className="text-blue-600 sm:w-3 sm:h-3" />}
             {event.type === "RESERVATION" ? (
@@ -158,14 +171,16 @@ export function UnifiedCalendarView({
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1 text-gray-600 font-medium truncate">
           <span>{event.petNames}</span>
         </div>
 
         {!compact && (
           <div className="flex items-center justify-between gap-1">
-            <span className={`text-[8px] sm:text-[10px] px-1 rounded ${unit.bg} border border-current opacity-70`}>
+            <span
+              className={`text-[8px] sm:text-[10px] px-1 rounded ${unit.bg} border border-current opacity-70`}
+            >
               {unit.label}
             </span>
             <div className="flex items-center gap-0.5 text-gray-400">
@@ -285,7 +300,10 @@ export function UnifiedCalendarView({
           {/* Day headers */}
           <div className="grid grid-cols-7 bg-gray-50 border-b border-gray-200">
             {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
-              <div key={day} className="py-2 text-center font-bold text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider">
+              <div
+                key={day}
+                className="py-2 text-center font-bold text-[10px] sm:text-xs text-gray-500 uppercase tracking-wider"
+              >
                 {day}
               </div>
             ))}
@@ -313,7 +331,9 @@ export function UnifiedCalendarView({
                   <div className="flex justify-between items-center mb-1 px-1">
                     <span
                       className={`text-[10px] sm:text-xs font-bold ${
-                        isToday ? "bg-blue-600 text-white w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full" : "text-gray-700"
+                        isToday
+                          ? "bg-blue-600 text-white w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full"
+                          : "text-gray-700"
                       }`}
                     >
                       {date.getDate()}
@@ -341,7 +361,10 @@ export function UnifiedCalendarView({
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
             <div className="min-w-[800px]">
-              <div className="grid bg-gray-50 border-b border-gray-200" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
+              <div
+                className="grid bg-gray-50 border-b border-gray-200"
+                style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
+              >
                 {/* Time column header */}
                 <div className="p-2 border-r border-gray-200" />
 
@@ -358,7 +381,9 @@ export function UnifiedCalendarView({
                       <div className="text-[10px] font-bold text-gray-500 uppercase">
                         {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"][date.getDay()]}
                       </div>
-                      <div className={`text-base sm:text-lg font-bold ${isToday ? "text-blue-600" : "text-gray-900"}`}>
+                      <div
+                        className={`text-base sm:text-lg font-bold ${isToday ? "text-blue-600" : "text-gray-900"}`}
+                      >
                         {date.getDate()}
                       </div>
                     </div>
@@ -371,7 +396,11 @@ export function UnifiedCalendarView({
                 {Array.from({ length: 14 }).map((_, hourIdx) => {
                   const hour = 7 + hourIdx;
                   return (
-                    <div key={`hour-${hour}`} className="grid border-b border-gray-100 last:border-b-0" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
+                    <div
+                      key={`hour-${hour}`}
+                      className="grid border-b border-gray-100 last:border-b-0"
+                      style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
+                    >
                       {/* Hour label */}
                       <div className="p-2 text-[10px] text-gray-400 font-bold border-r border-gray-200 bg-gray-50/50 flex items-center justify-center">
                         {String(hour).padStart(2, "0")}:00
@@ -410,7 +439,9 @@ export function UnifiedCalendarView({
       {/* Legend */}
       <div className="card p-3 sm:p-4 flex flex-wrap items-center gap-4 sm:gap-6">
         <div className="flex items-center gap-3 sm:gap-4 border-r border-gray-200 pr-4 sm:pr-6">
-          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Estados:</span>
+          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            Estados:
+          </span>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gray-100 rounded border border-gray-200" />
@@ -428,7 +459,9 @@ export function UnifiedCalendarView({
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4 border-r border-gray-200 pr-4 sm:pr-6">
-          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tipos:</span>
+          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            Tipos:
+          </span>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <CalendarIcon size={12} className="text-blue-500 sm:w-3.5 sm:h-3.5" />
@@ -440,9 +473,11 @@ export function UnifiedCalendarView({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3 sm:gap-4">
-          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Unidades:</span>
+          <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+            Unidades:
+          </span>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-amber-500" />
