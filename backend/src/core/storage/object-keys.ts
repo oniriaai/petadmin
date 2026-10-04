@@ -60,6 +60,39 @@ export function daycarePrefix(daycareId: string): string {
   return `${DAYCARE_PREFIX}/${tenant}/`;
 }
 
+/** The daycare segment a key is filed under, or null for a key written before tenancy. */
+export function tenantOfKey(key: string): string | null {
+  const match = /^daycares\/([^/]+)\//.exec(key);
+  return match ? match[1] : null;
+}
+
+/** Whether a canonical key sits under this daycare's own prefix. */
+export function isOwnKey(key: string, daycareId: string): boolean {
+  return key.startsWith(daycarePrefix(daycareId));
+}
+
+const TENANT_PREFIX_ANYWHERE = /(?:^|\/)daycares\/([^/?#]+)\//g;
+
+/**
+ * Whether a stored reference (a key or a URL on any host) names another daycare's prefix.
+ *
+ * Deletion is authorized by a row of the caller's tenant referencing the key, so a reference a
+ * tenant writes must never point into someone else's prefix. The host is deliberately ignored:
+ * the reference check matches on the key alone, wherever the URL claims to live.
+ */
+export function namesForeignPrefix(value: string, daycareId: string): boolean {
+  const own = sanitizeSegment(daycareId);
+  const candidates = [value];
+  try {
+    candidates.push(decodeURIComponent(value));
+  } catch {
+    // Not valid percent-encoding: the raw value is all there is to inspect.
+  }
+  return candidates.some((candidate) =>
+    [...candidate.matchAll(TENANT_PREFIX_ANYWHERE)].some((match) => match[1] !== own),
+  );
+}
+
 /**
  * Accepts either a raw object key or a full public URL and returns the canonical key.
  * Returns null for anything that does not resolve to a plausible in-bucket key, so the

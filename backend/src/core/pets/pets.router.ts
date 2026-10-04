@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { handleAuthzError } from "../../middleware/auth";
 import { buildChildScopeWhere, buildDaycareWhere } from "../../core/tenancy/scope";
+import { namesForeignPrefix } from "../../core/storage/object-keys";
 import { readPage, sendPage } from "../../utils/pagination";
 import { prisma } from "../../db";
 
@@ -25,6 +26,10 @@ const petSchema = z.object({
   bannerId: z.string().optional(),
   photoUrl: z.string().url().optional().or(z.literal("")),
 });
+
+// A photo reference is what authorizes deleting the object behind it, so it may never point
+// into another daycare's storage prefix.
+const FOREIGN_PHOTO_MESSAGE = "La foto no pertenece a esta guardería";
 
 petsRouter.get("/", async (req, res) => {
   try {
@@ -109,6 +114,10 @@ petsRouter.post("/", async (req, res) => {
       res.status(404).json({ message: "Cliente no encontrado" });
       return;
     }
+    if (rest.photoUrl && namesForeignPrefix(rest.photoUrl, owner.daycareId)) {
+      res.status(400).json({ message: FOREIGN_PHOTO_MESSAGE });
+      return;
+    }
 
     const pet = await prisma.pet.create({
       data: {
@@ -134,13 +143,17 @@ petsRouter.put("/:id", async (req, res) => {
     }
     const existing = await prisma.pet.findFirst({
       where: { id: req.params.id, ...buildDaycareWhere(req) },
-      select: { id: true },
+      select: { id: true, daycareId: true },
     });
     if (!existing) {
       res.status(404).json({ message: "Animal no encontrado" });
       return;
     }
     const { birthdate, clientId, ...rest } = parsed.data;
+    if (rest.photoUrl && namesForeignPrefix(rest.photoUrl, existing.daycareId)) {
+      res.status(400).json({ message: FOREIGN_PHOTO_MESSAGE });
+      return;
+    }
 
     // Reassigning an owner may not move the pet to another tenant.
     if (clientId) {

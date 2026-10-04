@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { prisma } from "../src/db";
+
 /**
  * The veterinary clinic: a visit from the waiting room to the till, and who may reach it.
  *
@@ -9,6 +11,47 @@ import axios from "axios";
  */
 
 const BASE_URL = process.env.API_URL || "http://localhost:3001/api/v1";
+const DAYCARE_ID = "daycare_pethijos";
+
+/**
+ * Removes what this suite writes into the seeded tenant.
+ *
+ * Straight to the database, because the API refuses by design: a closed visit is clinical
+ * history, a signed consent stays, and catalogue and stock rows are only ever deactivated.
+ * Matched by the names this suite uses rather than by this run's ids, so a run that died
+ * half-way is cleaned up by the next one.
+ */
+async function purgeSuiteData(): Promise<void> {
+  const clients = await prisma.client.findMany({
+    where: {
+      daycareId: DAYCARE_ID,
+      firstName: "Clínica",
+      lastName: "Tester",
+      email: { startsWith: "clinica_", endsWith: "@example.com" },
+    },
+    select: { id: true, pets: { select: { id: true } } },
+  });
+  const clientId = { in: clients.map((client) => client.id) };
+  const petId = { in: clients.flatMap((client) => client.pets.map((pet) => pet.id)) };
+
+  await prisma.$transaction([
+    prisma.income.deleteMany({ where: { daycareId: DAYCARE_ID, reservation: { clientId } } }),
+    prisma.vetConsent.deleteMany({ where: { daycareId: DAYCARE_ID, clientId } }),
+    // Takes each visit with it, and through the visit everything recorded during it.
+    prisma.reservation.deleteMany({ where: { daycareId: DAYCARE_ID, clientId } }),
+    // Recorded against the patient outside a visit.
+    prisma.vetPreventive.deleteMany({ where: { daycareId: DAYCARE_ID, petId } }),
+    prisma.vetVitals.deleteMany({ where: { daycareId: DAYCARE_ID, petId } }),
+    prisma.pet.deleteMany({ where: { daycareId: DAYCARE_ID, id: petId } }),
+    prisma.client.deleteMany({ where: { daycareId: DAYCARE_ID, id: clientId } }),
+    prisma.inventoryItem.deleteMany({
+      where: { daycareId: DAYCARE_ID, name: { startsWith: "Tramadol E2E " } },
+    }),
+    prisma.vetService.deleteMany({
+      where: { daycareId: DAYCARE_ID, name: { startsWith: "Servicio E2E " } },
+    }),
+  ]);
+}
 
 interface TestResult {
   name: string;
@@ -776,6 +819,28 @@ async function run() {
       409,
       "reserva de un paciente fallecido",
     );
+
+    // The same refusal on the two ways around a new booking: editing an existing one to bring
+    // the patient in, and an ad-hoc check-in.
+    const living = await vet.post("/veterinaria/visits", { clientId, petId, triage: "URGENCIA" });
+    expectStatus(living.status, 201, "consulta de un paciente vivo");
+    cleanupVisitIds.push(living.data.id);
+    const reservationId: string = living.data.reservation.id;
+    expectStatus(
+      (await vet.put(`/reservations/${reservationId}`, { petIds: [pet.data.id] })).status,
+      409,
+      "cambiar las mascotas de una reserva a un paciente fallecido",
+    );
+    expectStatus(
+      (await vet.put(`/reservations/${reservationId}`, { clientId, petIds: [pet.data.id] })).status,
+      409,
+      "cambiar tutor y mascotas de una reserva a un paciente fallecido",
+    );
+    expectStatus(
+      (await vet.post("/check-in-out", { clientId, petIds: [pet.data.id], roomId })).status,
+      409,
+      "check-in de un paciente fallecido",
+    );
   });
 
   await test("Los recordatorios se calculan de vacunas, controles y exámenes pendientes", async () => {
@@ -906,6 +971,33 @@ async function run() {
     cleanupVisitIds.push(again.data.id);
   });
 
+  await test("Dos reservas simultáneas del mismo hueco no pasan las dos", async () => {
+    // Sent at once, not one after another: the check and the insert used to be separate
+    // statements with nothing held between them, so both requests could find the slot free.
+    const start = new Date(Date.now() + (400 + Math.floor(Math.random() * 300)) * 86_400_000);
+    start.setHours(11, 0, 0, 0);
+    const base = { clientId, petId, startTime: start.toISOString(), durationMinutes: 30 };
+
+    for (const [what, slot] of [
+      ["veterinario", { veterinarianId }],
+      ["sala", { roomId }],
+    ] as const) {
+      const responses = await Promise.all(
+        Array.from({ length: 5 }, () => vet.post("/veterinaria/visits", { ...base, ...slot })),
+      );
+      const created = responses.filter((response) => response.status === 201);
+      for (const response of created) cleanupVisitIds.push(response.data.id);
+      expectEqual(created.length, 1, `reservas aceptadas para el mismo ${what}`);
+      expectEqual(
+        responses.filter((response) => response.status === 409).length,
+        4,
+        `reservas rechazadas para el mismo ${what}`,
+      );
+      // Free the slot for the next round, which reuses the hour.
+      await vet.patch(`/veterinaria/visits/${created[0].data.id}/status`, { status: "CANCELADA" });
+    }
+  });
+
   await test("Los demás roles y unidades no alcanzan la clínica", async () => {
     const denied = await grooming.get("/veterinaria/visits");
     expectStatus(denied.status, 403, "rol grooming");
@@ -928,10 +1020,18 @@ async function run() {
     expectStatus((await vet.get("/recurring-plans")).status, 403, "vet en planes recurrentes");
   });
 
-  // Unclosed visits are removed. The closed one stays: it is clinical history, and the API
-  // refuses to delete it by design.
+  // Unclosed visits go through the API, which is itself under test. The rest cannot: see
+  // purgeSuiteData.
   for (const id of cleanupVisitIds) await vet.delete(`/veterinaria/visits/${id}`);
   if (stockItemId) await vet.delete(`/inventory/items/${stockItemId}`);
+  try {
+    await purgeSuiteData();
+  } catch (error) {
+    results.push({ name: "Limpieza", passed: false, error: String(error) });
+    console.error("✗ La suite no pudo retirar sus datos de la guardería sembrada:", error);
+  } finally {
+    await prisma.$disconnect();
+  }
 
   const passed = results.filter((r) => r.passed).length;
   console.log("\n" + "=".repeat(60));

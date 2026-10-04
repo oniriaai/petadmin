@@ -36,6 +36,23 @@ La deuda que quedaba tras el trabajo de plataforma está resuelta:
 - **`inventario` y `cumplimiento` ya tienen interfaz**: pantalla de inventario con aviso de stock
   mínimo y movimientos, y pestaña de contratos junto a la de alertas.
 
+Y cuatro defectos que dejó el módulo `veterinaria`, uno de ellos anterior a él:
+
+- **Una guardería ya no puede borrar archivos de otra.** `POST /storage/remove` autorizaba por
+  referencia: bastaba que una fila propia nombrara la clave. Como la referencia la escribe el
+  propio inquilino (`photoUrl` de una mascota, en `main` desde antes; `filePath` de un documento
+  de consulta, nuevo), podía apuntarla al archivo de otra guardería y borrarlo. Ahora una clave
+  bajo `daycares/{id}/` solo la borra esa guardería, una clave antigua solo si nadie más la
+  referencia, y las dos escrituras rechazan el prefijo ajeno con `400`.
+- **La agenda del día usa la zona horaria de la unidad** en la clínica y en peluquería. Con el
+  servidor en UTC, toda consulta posterior a las 19:00 de Ecuador caía en la agenda del día
+  siguiente. De paso se corrigió la conversión de la medianoche local, que saltaba un día.
+- **Veterinario y sala se comprueban con la fila bloqueada.** Cinco reservas simultáneas del
+  mismo hueco pasaban las cinco; ahora pasa una.
+- **El bloqueo del paciente fallecido es uniforme**: `409` también en el check-in y al cambiar las
+  mascotas de una reserva existente. El planificador omite el plan y lo cuenta aparte
+  (`skippedDeceased`) en vez de fallar en cada ejecución; el plan sigue activo.
+
 ---
 
 ## Deuda Técnica Abierta: Clínica Veterinaria
@@ -49,10 +66,10 @@ encuentre aquí primero.
 - **Archivos adjuntos sin terminar.** Existen las columnas `vet_lab_orders.resultFilePath`,
   `vet_consents.filePath` y `pet_documents.vetVisitId`, pero la API no acepta un archivo para un
   resultado ni para un consentimiento, y ninguna pantalla sube nada. `POST
-  /veterinaria/visits/:id/documents` sí acepta un `filePath`, como texto libre: **no se valida
-  contra el prefijo de almacenamiento del inquilino** y no tiene interfaz. Falta también
-  `buildPetDocumentKey` en `core/storage/object-keys.ts`. Antes de exponer ese endpoint en una
-  pantalla hay que resolver la clave en el servidor, como hacen las fotos.
+  /veterinaria/visits/:id/documents` sí acepta un `filePath`, que debe ser una clave bajo el
+  prefijo de la guardería, pero no tiene interfaz ni forma de obtener esa clave: falta
+  `buildPetDocumentKey` en `core/storage/object-keys.ts` y una URL de subida para documentos,
+  como la que tienen las fotos.
 - **Sin carnet de vacunación imprimible.** Las vacunas salen en la historia clínica impresa, con
   lote y refuerzo; el carnet aparte que preveía el plan no se hizo.
 - **Los procedimientos no se cobran solos.** Una cirugía no genera cargo: el veterinario lo añade
@@ -88,15 +105,15 @@ encuentre aquí primero.
 
 ### Consistencia
 
-- **El bloqueo del paciente fallecido no es uniforme.** Crear una reserva, una cita o una
-  consulta responde `409`; el check-in responde `400`. `PUT /reservations/:id` no lo comprueba al
-  cambiar las mascotas de una reserva existente. Un plan recurrente con una mascota fallecida
-  falla en cada ejecución del planificador hasta que alguien lo edita o lo desactiva.
-- **La hora es la del servidor, no la de la unidad.** La agenda "del día" y los días de estancia
-  no usan la zona horaria configurada en `/settings`.
-- **Veterinario y sala ocupados se comprueban antes de escribir, sin bloqueo.** Dos consultas
-  creadas a la vez para el mismo veterinario pueden solaparse. El ingreso hospitalario sí bloquea
-  la fila de la sala.
+- **Un plan recurrente con una mascota fallecida sigue activo.** El planificador lo omite sin
+  fallar, pero nadie lo desactiva ni avisa: pausarlo o notificarlo es una decisión de producto.
+- **"Hoy" sigue siendo el del servidor fuera de las agendas.** El Dashboard, los informes y la
+  asistencia de guardería calculan el día con el reloj del servidor (`routes/dashboard.ts`,
+  `routes/reports.ts`, `guarderia/attendance.service.ts`), y las agendas del frontend eligen la
+  fecha inicial con `toISOString()`, que después de las 19:00 de Ecuador ya es mañana. El
+  ayudante está en `core/tenancy/local-time.ts`.
+- **Solo las consultas bloquean la sala al reservar.** `POST /reservations` y las citas de
+  peluquería siguen comprobando el conflicto antes de escribir, sin bloqueo.
 - **Farmacia no exige el módulo `inventario`, pero recibir stock sí.** Una clínica sin
   `inventario` puede dispensar y no tiene pantalla donde dar entrada a lo que dispensa.
 
@@ -114,10 +131,13 @@ encuentre aquí primero.
 
 - **Ninguna pantalla de la clínica se ha recorrido en un navegador.** El frontend solo prueba que
   la navegación aparece y desaparece con el módulo; las trece pantallas no tienen pruebas propias.
-- **`test:veterinaria` deja datos en `pethijos` en cada ejecución**: un tutor, sus pacientes (uno
-  fallecido) y las consultas cerradas, que la API se niega a eliminar por diseño.
-- **La concurrencia se prueba en serie.** El doble cierre, la doble dispensación y la doble firma
-  de una dosis se verifican con dos peticiones consecutivas, no simultáneas.
+- **`test:checkin` y `test:modular` dejan un tutor en `pethijos` en cada ejecución** ("Test User
+  Check-in", "Modular Tester"). `test:veterinaria` ya retira lo suyo, directamente en la base de
+  datos porque la API se niega a eliminar una consulta cerrada; el mismo patrón sirve para estas.
+- **La concurrencia se prueba en serie**, salvo la doble reserva. El doble cierre, la doble
+  dispensación y la doble firma de una dosis se verifican con dos peticiones consecutivas.
+- **El borrado de una clave antigua no tiene prueba e2e.** La rama de `/storage/remove` para claves
+  sin prefijo de guardería acaba llamando al bucket, y ni el entorno de desarrollo ni CI tienen uno.
 - **Las pruebas nuevas añaden `any`**: el lint del backend pasó de 67 a 70 avisos.
 
 ### Código
@@ -129,8 +149,6 @@ encuentre aquí primero.
   compilación del frontend.
 - **La impresión depende de `print:hidden`** repartido por las pantallas y en `AppShell`. No hay
   hoja de estilos de impresión: márgenes y saltos de página quedan a criterio del navegador.
-- **`CLAUDE.md` no está versionado.** Recoge las tres unidades y el rol `veterinary`, pero solo en
-  la copia local.
 
 ---
 

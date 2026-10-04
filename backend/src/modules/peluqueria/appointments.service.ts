@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AuthzError, type BusinessUnit } from "../../middleware/auth";
-import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
+import { localDayBoundsUtc } from "../../core/tenancy/local-time";
+import { getUnitTimezone, getUnitVatPercent } from "../../core/tenancy/unit-settings";
 import { assertClientInTenant, assertPetsAlive } from "../../utils/validation";
 import { DEFAULT_GROOMING_SERVICES } from "./services";
 
@@ -52,11 +53,11 @@ export class GroomingAppointmentsService {
     }
 
     if (query.date) {
-      const start = new Date(query.date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(query.date);
-      end.setHours(23, 59, 59, 999);
-      where.checkIn = { gte: start, lte: end };
+      // The salon's day, not the server's: an evening appointment belongs to today's agenda.
+      const timezone = await getUnitTimezone(daycareId, PELUQUERIA_BUSINESS_UNIT);
+      const day = localDayBoundsUtc(query.date, timezone);
+      if (!day) throw new AuthzError(400, "Fecha inválida");
+      where.checkIn = { gte: day.start, lt: day.end };
     }
 
     if (query.search) {

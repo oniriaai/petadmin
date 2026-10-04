@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { AuthzError } from "../middleware/auth";
 
@@ -14,7 +15,7 @@ export async function validatePetOwnership(
   petIds: string[],
   clientId: string,
   daycareId: string,
-): Promise<{ valid: boolean; message?: string }> {
+): Promise<{ valid: boolean; message?: string; deceased?: boolean }> {
   const pets = await prisma.pet.findMany({
     where: { id: { in: petIds }, clientId, daycareId },
   });
@@ -28,7 +29,9 @@ export async function validatePetOwnership(
 
   const deceased = pets.find((pet) => pet.deceasedAt);
   if (deceased) {
-    return { valid: false, message: deceasedPetMessage(deceased.name) };
+    // Flagged apart from "not this client's pet" so the caller can answer 409, as every other
+    // way of booking a deceased patient does.
+    return { valid: false, deceased: true, message: deceasedPetMessage(deceased.name) };
   }
 
   return { valid: true };
@@ -194,8 +197,9 @@ export async function validateNoReservationConflicts(
   checkInTime: Date,
   checkOutTime: Date,
   excludeReservationId?: string,
+  db: Prisma.TransactionClient = prisma,
 ): Promise<{ valid: boolean; message?: string }> {
-  const conflicts = await prisma.reservation.count({
+  const conflicts = await db.reservation.count({
     where: {
       daycareId,
       roomId,

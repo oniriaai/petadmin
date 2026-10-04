@@ -19,7 +19,7 @@
     "test:financial": "tsx tests/financial.e2e.ts",
     "test:checkin": "tsx tests/check-in-out.e2e.ts",
     "test:modular": "tsx tests/modular-domains.e2e.ts",
-    "test:architecture": "tsx tests/module-registry.ts && tsx tests/reservas-module.ts && tsx tests/operaciones-module.ts && tsx tests/veterinaria-module.ts && tsx tests/storage-keys.ts && tsx tests/product-modules.ts && tsx tests/module-access.ts && tsx tests/platform-admin-module.ts && tsx tests/security-config.ts && tsx tests/observability.ts && tsx tests/pagination.ts",
+    "test:architecture": "tsx tests/module-registry.ts && tsx tests/reservas-module.ts && tsx tests/operaciones-module.ts && tsx tests/veterinaria-module.ts && tsx tests/storage-keys.ts && tsx tests/product-modules.ts && tsx tests/module-access.ts && tsx tests/platform-admin-module.ts && tsx tests/security-config.ts && tsx tests/observability.ts && tsx tests/pagination.ts && tsx tests/local-time.ts",
     "db:migrate": "prisma migrate deploy",
     "job:recurring-plans": "tsx src/jobs/run-recurring-plans.ts",
     "db:migrate:dev": "prisma migrate dev",

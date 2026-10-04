@@ -3,7 +3,10 @@ import type { z } from "zod";
 
 import { prisma } from "../../db";
 import { AuthzError, type BusinessUnit } from "../../middleware/auth";
-import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
+import { isOwnKey, resolveObjectKey } from "../../core/storage/object-keys";
+import { localDayBoundsUtc } from "../../core/tenancy/local-time";
+import { getUnitTimezone, getUnitVatPercent } from "../../core/tenancy/unit-settings";
+import { B2_ENDPOINT, BUCKET_NAME } from "../../lib/s3";
 import {
   assertClientInTenant,
   assertVeterinarianInTenant,
@@ -126,11 +129,11 @@ export async function listVisits(
   if (query.petId) where.petId = query.petId;
 
   if (query.date) {
-    const start = parseDate(query.date, "Fecha");
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(start);
-    end.setHours(23, 59, 59, 999);
-    where.reservation = { checkIn: { gte: start, lte: end } };
+    // The clinic's day, not the server's: a 20:00 consultation belongs to today's agenda.
+    const timezone = await getUnitTimezone(daycareId, VETERINARIA_BUSINESS_UNIT);
+    const day = localDayBoundsUtc(query.date, timezone);
+    if (!day) throw new AuthzError(400, "Fecha inválida");
+    where.reservation = { checkIn: { gte: day.start, lt: day.end } };
   } else if (query.from || query.to) {
     where.reservation = {
       checkIn: {
@@ -206,12 +209,13 @@ async function assertNoOpenInpatientWork(daycareId: string, visitId: string) {
 
 /** A veterinarian cannot be in two consultations at once. */
 async function assertVeterinarianFree(
+  db: Prisma.TransactionClient,
   daycareId: string,
   veterinarianId: string,
   start: Date,
   end: Date,
 ) {
-  const overlapping = await prisma.vetVisit.count({
+  const overlapping = await db.vetVisit.count({
     where: {
       daycareId,
       veterinarianId,
@@ -250,24 +254,37 @@ export async function createVisit(daycareId: string, dto: z.infer<typeof createV
   // An emergency is seen regardless of what the agenda says; anything else respects it.
   const mustFitAgenda = dto.triage !== "URGENCIA";
 
-  if (dto.veterinarianId) {
-    await assertVeterinarianInTenant(dto.veterinarianId, daycareId);
-    if (mustFitAgenda) await assertVeterinarianFree(daycareId, dto.veterinarianId, start, end);
-  }
+  if (dto.veterinarianId) await assertVeterinarianInTenant(dto.veterinarianId, daycareId);
 
   if (dto.roomId) {
     const room = await validateRoomExists(dto.roomId, daycareId, VETERINARIA_BUSINESS_UNIT);
     if (!room.valid) throw new AuthzError(404, "Sala no encontrada");
-    if (mustFitAgenda) {
-      const free = await validateNoReservationConflicts(dto.roomId, daycareId, start, end);
-      if (!free.valid) throw new AuthzError(409, free.message ?? "La sala está ocupada");
-    }
   }
 
   const vatPercent = await getUnitVatPercent(daycareId, VETERINARIA_BUSINESS_UNIT);
   const serviceName = service?.name ?? VISIT_TYPE_LABELS[dto.type];
 
   return prisma.$transaction(async (tx) => {
+    // Availability is checked behind a lock on the veterinarian and the room, both verified
+    // against this daycare above: two bookings for the same slot queue up here, and the second
+    // sees the first. Always in this order, so two bookings cannot deadlock each other.
+    if (mustFitAgenda && dto.veterinarianId) {
+      await tx.$queryRaw`SELECT id FROM veterinarians WHERE id = ${dto.veterinarianId} FOR UPDATE`;
+      await assertVeterinarianFree(tx, daycareId, dto.veterinarianId, start, end);
+    }
+    if (mustFitAgenda && dto.roomId) {
+      await tx.$queryRaw`SELECT id FROM rooms WHERE id = ${dto.roomId} FOR UPDATE`;
+      const free = await validateNoReservationConflicts(
+        dto.roomId,
+        daycareId,
+        start,
+        end,
+        undefined,
+        tx,
+      );
+      if (!free.valid) throw new AuthzError(409, free.message ?? "La sala está ocupada");
+    }
+
     const reservation = await tx.reservation.create({
       data: {
         daycareId,
@@ -605,7 +622,19 @@ export async function addDocument(
   dto: { type: string; name: string; filePath?: string },
 ) {
   const visit = await requireVisit(daycareId, id);
+
+  // The path is a reference this tenant writes, and a reference is what authorizes deleting the
+  // object behind it: it must resolve to a key under this daycare's own prefix.
+  let filePath: string | undefined;
+  if (dto.filePath) {
+    const key = resolveObjectKey(dto.filePath, BUCKET_NAME ?? "", B2_ENDPOINT);
+    if (!key || !isOwnKey(key, daycareId)) {
+      throw new AuthzError(400, "La ruta del archivo no pertenece a esta guardería");
+    }
+    filePath = key;
+  }
+
   return prisma.petDocument.create({
-    data: { ...dto, petId: visit.petId, vetVisitId: visit.id },
+    data: { type: dto.type, name: dto.name, filePath, petId: visit.petId, vetVisitId: visit.id },
   });
 }

@@ -764,6 +764,77 @@ async function run() {
     }
   });
 
+  await test("Una guardería no puede referenciar ni borrar archivos de otra", async () => {
+    // Deleting an object is authorized by a row of the caller's tenant referencing its key, so
+    // a tenant that could write a reference into another's prefix could delete the file behind
+    // it. Both halves are pinned: the reference is refused, and so is the delete.
+    const attacker = clientFor(await loginAs("admin_global", "admin123"), undefined, "VETERINARY");
+    const foreignKey = `daycares/${DEMO_ID}/pets/Toby_Demo/1-foto.jpg`;
+
+    const client = (
+      (await attacker.get("/clients")).data as { id: string; pets?: { id: string }[] }[]
+    ).find((c) => (c.pets?.length ?? 0) > 0);
+    if (!client?.pets) throw new Error("Faltan clientes sembrados con mascotas");
+    const petId = client.pets[0].id;
+    const before = (await attacker.get(`/pets/${petId}`)).data.photoUrl ?? null;
+
+    for (const photoUrl of [
+      `https://s3.us-east-005.backblazeb2.com/bucket/${foreignKey}`,
+      `https://evil.example.com/${foreignKey}`,
+    ]) {
+      expectStatus(
+        (await attacker.put(`/pets/${petId}`, { photoUrl })).status,
+        400,
+        "Foto que apunta al prefijo de otra guardería",
+      );
+    }
+    expectStatus(
+      (
+        await attacker.post("/pets", {
+          clientId: client.id,
+          name: "Aislamiento",
+          sex: "M",
+          photoUrl: `https://evil.example.com/${foreignKey}`,
+        })
+      ).status,
+      400,
+      "Alta de mascota con foto ajena",
+    );
+    const after = (await attacker.get(`/pets/${petId}`)).data.photoUrl ?? null;
+    if (after !== before) throw new Error("La foto de la mascota cambió pese al rechazo");
+
+    const visit = await attacker.post("/veterinaria/visits", {
+      clientId: client.id,
+      petId,
+      triage: "URGENCIA",
+      reason: "Aislamiento de archivos",
+    });
+    expectStatus(visit.status, 201, "Consulta propia");
+    try {
+      for (const filePath of [foreignKey, `https://evil.example.com/${foreignKey}`, "../x"]) {
+        expectStatus(
+          (
+            await attacker.post(`/veterinaria/visits/${visit.data.id}/documents`, {
+              type: "INFORME",
+              name: "Aislamiento",
+              filePath,
+            })
+          ).status,
+          400,
+          `Documento con ruta ajena (${filePath})`,
+        );
+      }
+    } finally {
+      await attacker.delete(`/veterinaria/visits/${visit.data.id}`);
+    }
+
+    expectStatus(
+      (await attacker.post("/storage/remove", { key: foreignKey })).status,
+      404,
+      "Borrado de un archivo de otra guardería",
+    );
+  });
+
   const passed = results.filter((r) => r.passed).length;
   console.log("\n" + "=".repeat(60));
   console.log("📊 Resumen de aislamiento entre guarderías:");
