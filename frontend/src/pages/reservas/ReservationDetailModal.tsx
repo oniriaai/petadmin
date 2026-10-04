@@ -98,7 +98,9 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
       onSaved();
       setEditing(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
+      setError(
+        e instanceof Error ? e.message : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -144,7 +146,9 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
         )
       }
     >
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-4">{error}</p>}
+      {error && (
+        <p className="text-sm text-danger bg-danger-soft rounded-lg px-3 py-2 mb-4">{error}</p>
+      )}
 
       {!editing ? (
         <div className="space-y-4">
@@ -189,26 +193,26 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
             <h3 className="font-semibold mb-3">Pricing</h3>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Precio base:</span>
+                <span className="text-muted">Precio base:</span>
                 <span className="font-medium">{fmtCurrency(reservation.basePrice)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Descuento:</span>
+                <span className="text-muted">Descuento:</span>
                 <span className="font-medium">-{fmtCurrency(reservation.discountAmount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">IVA ({reservation.vatPercent}%):</span>
+                <span className="text-muted">IVA ({reservation.vatPercent}%):</span>
                 <span className="font-medium">{fmtCurrency(reservation.vatAmount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Adelanto:</span>
+                <span className="text-muted">Adelanto:</span>
                 <span className="font-medium">-{fmtCurrency(reservation.advanceAmount)}</span>
               </div>
               <div className="flex justify-between border-t pt-2 font-semibold">
                 <span>Total:</span>
                 <span>{fmtCurrency(reservation.totalAmount)}</span>
               </div>
-              <div className="flex justify-between border-t pt-2 font-semibold text-red-600">
+              <div className="flex justify-between border-t pt-2 font-semibold text-danger">
                 <span>Pendiente:</span>
                 <span>{fmtCurrency(reservation.pendingAmount)}</span>
               </div>
@@ -226,7 +230,7 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
               {reservation.notes && (
                 <div>
                   <p className="label">Notas</p>
-                  <p className="text-gray-600">{reservation.notes}</p>
+                  <p className="text-muted">{reservation.notes}</p>
                 </div>
               )}
             </div>
@@ -295,7 +299,7 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
                     value={roomId}
                     onChange={(e) => setRoomId(e.target.value)}
                   >
-                    <option value="">— Sin sala —</option>
+                    <option value="">Sin sala</option>
                     {rooms.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} (cap. {r.capacity})
@@ -328,7 +332,7 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
                 />
               </div>
 
-              <div className="border rounded-lg p-3 bg-gray-50 space-y-2 text-sm">
+              <div className="border rounded-lg p-3 bg-sunken space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
                   <span className="font-medium">{fmtCurrency(basePrice - discountAmount)}</span>
@@ -341,7 +345,7 @@ export function ReservationDetailModal({ open, onClose, reservation, onSaved }: 
                   <span>Total:</span>
                   <span>{fmtCurrency(total)}</span>
                 </div>
-                <div className="border-t pt-2 flex justify-between font-semibold text-red-600">
+                <div className="border-t pt-2 flex justify-between font-semibold text-danger">
                   <span>Pendiente:</span>
                   <span>{fmtCurrency(pending)}</span>
                 </div>

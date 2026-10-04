@@ -108,10 +108,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       onUnauthorized?.();
       throw new ApiError(401, "Sesión expirada. Inicia sesión nuevamente.");
     }
-    const err = await res.json().catch(() => ({ message: "Error de red" }));
+    const err = await res.json().catch(() => ({
+      message: "No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.",
+    }));
     const error = new ApiError(
       res.status,
-      err.message ?? "Error del servidor",
+      err.message ?? "Algo falló de nuestro lado. Inténtalo de nuevo en un momento.",
       err.code,
       err.errors,
     );
@@ -238,7 +240,7 @@ export async function downloadFile(path: string, filename: string) {
       ...(pinnedDaycareId ? { "X-Daycare-Id": pinnedDaycareId } : {}),
     },
   });
-  if (!res.ok) throw new Error("Error al descargar");
+  if (!res.ok) throw new Error("No pudimos descargar el archivo. Inténtalo de nuevo.");
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

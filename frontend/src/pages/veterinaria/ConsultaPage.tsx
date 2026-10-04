@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Check, FileText, Plus, Trash2 } from "lucide-react";
+import { PatientBand } from "./PatientBand";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
@@ -96,7 +97,7 @@ export function ConsultaPage() {
   if (!visit) {
     return (
       <div className="p-6">
-        <p className="text-red-600 text-sm" role="alert">
+        <p className="text-danger text-sm" role="alert">
           {error || "Consulta no encontrada"}
         </p>
         <Link to="/veterinaria" className="btn-secondary mt-4 inline-flex">
@@ -153,7 +154,7 @@ export function ConsultaPage() {
         title={
           <span className="flex flex-wrap items-center gap-2">
             <button
-              className="icon-button -ml-2 text-gray-500 hover:text-gray-800"
+              className="icon-button -ml-2 text-muted hover:text-ink"
               onClick={() => navigate("/veterinaria")}
               aria-label="Volver a la agenda"
             >
@@ -199,53 +200,39 @@ export function ConsultaPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
       {notice && (
-        <div
-          className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
-          role="status"
-        >
+        <div className="notice notice-success" role="status">
           {notice}
         </div>
       )}
 
-      <div className="card p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-        <div>
-          <p className="text-xs text-muted">Paciente</p>
-          <p className="font-medium text-gray-900">
-            {pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}
-            {pet.breed ? ` · ${pet.breed}` : ""}
-          </p>
-          <p className="text-muted">
-            {pet.sex === "F" ? "Hembra" : "Macho"}
-            {pet.isNeutered ? " esterilizado" : ""} · {petAge(pet.birthdate)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Peso</p>
-          <p className="font-medium text-gray-900">{pet.weight ? `${pet.weight} kg` : "—"}</p>
-          {pet.bloodType && <p className="text-muted">Grupo {pet.bloodType}</p>}
-        </div>
-        <div>
-          <p className="text-xs text-muted">Tutor</p>
-          <p className="font-medium text-gray-900">
-            {client.firstName} {client.lastName}
-          </p>
-          <p className="text-muted">{client.phone ?? client.whatsapp ?? "Sin teléfono"}</p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Atiende</p>
-          <p className="font-medium text-gray-900">{visit.veterinarian?.name ?? "Sin asignar"}</p>
-        </div>
+      <PatientBand
+        facts={[
+          {
+            label: "Paciente",
+            value: `${pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}${pet.breed ? ` · ${pet.breed}` : ""}`,
+            detail: `${pet.sex === "F" ? "Hembra" : "Macho"}${pet.isNeutered ? " esterilizado" : ""} · ${petAge(pet.birthdate)}`,
+          },
+          {
+            label: "Peso",
+            value: pet.weight ? `${pet.weight} kg` : "—",
+            detail: pet.bloodType ? `Grupo ${pet.bloodType}` : undefined,
+          },
+          {
+            label: "Tutor",
+            value: `${client.firstName} ${client.lastName}`,
+            detail: client.phone ?? client.whatsapp ?? "Sin teléfono",
+          },
+          { label: "Atiende", value: visit.veterinarian?.name ?? "Sin asignar" },
+        ]}
+      >
         {(pet.allergies || pet.chronicConditions) && (
-          <div className="sm:col-span-2 lg:col-span-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 flex gap-2">
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div className="notice notice-warning">
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
             <div>
               {pet.allergies && (
                 <p>
@@ -260,11 +247,11 @@ export function ConsultaPage() {
             </div>
           </div>
         )}
-      </div>
+      </PatientBand>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <section className="card p-4 space-y-4 lg:col-span-2" aria-label="Registro clínico">
-          <h2 className="font-semibold text-gray-900">Registro clínico</h2>
+          <h2 className="section-title">Registro clínico</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className="label" htmlFor="c-reason">
@@ -367,7 +354,7 @@ export function ConsultaPage() {
       {!locked && (
         <div className="flex justify-end">
           <button
-            className="btn-ghost text-red-600"
+            className="btn-ghost text-danger"
             onClick={() => {
               if (window.confirm("¿Cancelar esta consulta? Su hueco en la agenda quedará libre.")) {
                 setStatus("CANCELADA");
@@ -419,7 +406,7 @@ function VitalsPanel({ visit, locked, run }: { visit: VisitDetail; locked: boole
 
   return (
     <section className="card p-4 space-y-3" aria-label="Signos vitales">
-      <h2 className="font-semibold text-gray-900">Signos vitales</h2>
+      <h2 className="section-title">Signos vitales</h2>
       {visit.vitals.length === 0 ? (
         <p className="text-sm text-muted">Sin tomas en esta consulta.</p>
       ) : (
@@ -428,7 +415,7 @@ function VitalsPanel({ visit, locked, run }: { visit: VisitDetail; locked: boole
             <li key={vitals.id} className="flex items-start justify-between gap-2 text-sm">
               <div>
                 <p className="text-xs text-muted">{fmt(vitals.takenAt, "HH:mm")}</p>
-                <p className="text-gray-800">
+                <p className="text-ink">
                   {[
                     vitals.weightKg != null && `${vitals.weightKg} kg`,
                     vitals.temperatureC != null && `${vitals.temperatureC} °C`,
@@ -441,7 +428,7 @@ function VitalsPanel({ visit, locked, run }: { visit: VisitDetail; locked: boole
               </div>
               {!locked && (
                 <button
-                  className="text-gray-400 hover:text-red-600 p-1"
+                  className="text-muted hover:text-danger p-1"
                   aria-label="Quitar toma de signos vitales"
                   onClick={() =>
                     run(
@@ -503,7 +490,7 @@ function DiagnosesPanel({ visit, locked, run }: { visit: VisitDetail; locked: bo
 
   return (
     <section className="card p-4 space-y-3" aria-label="Diagnósticos">
-      <h2 className="font-semibold text-gray-900">Diagnósticos</h2>
+      <h2 className="section-title">Diagnósticos</h2>
       {visit.diagnoses.length === 0 ? (
         <p className="text-sm text-muted">Sin diagnósticos registrados.</p>
       ) : (
@@ -511,7 +498,7 @@ function DiagnosesPanel({ visit, locked, run }: { visit: VisitDetail; locked: bo
           {visit.diagnoses.map((diagnosis) => (
             <li key={diagnosis.id} className="flex items-start justify-between gap-2 text-sm">
               <div>
-                <p className="text-gray-800">{diagnosis.description}</p>
+                <p className="text-ink">{diagnosis.description}</p>
                 <p className="text-xs text-muted">
                   {diagnosis.kind === "DEFINITIVO" ? "Definitivo" : "Presuntivo"}
                   {diagnosis.isChronic ? " · crónico" : ""}
@@ -519,7 +506,7 @@ function DiagnosesPanel({ visit, locked, run }: { visit: VisitDetail; locked: bo
               </div>
               {!locked && (
                 <button
-                  className="text-gray-400 hover:text-red-600 p-1"
+                  className="text-muted hover:text-danger p-1"
                   aria-label={`Quitar diagnóstico ${diagnosis.description}`}
                   onClick={() =>
                     run(
@@ -554,7 +541,7 @@ function DiagnosesPanel({ visit, locked, run }: { visit: VisitDetail; locked: bo
               <option value="PRESUNTIVO">Presuntivo</option>
               <option value="DEFINITIVO">Definitivo</option>
             </select>
-            <label className="flex items-center gap-1.5 text-sm text-gray-700 whitespace-nowrap">
+            <label className="flex items-center gap-1.5 text-sm text-muted whitespace-nowrap">
               <input
                 type="checkbox"
                 checked={isChronic}
@@ -642,9 +629,9 @@ function ChargesPanel({
   return (
     <section className="card overflow-hidden" aria-label="Cargos">
       <div className="p-4 flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Cargos de la consulta</h2>
+        <h2 className="section-title">Cargos de la consulta</h2>
         <p className="text-sm text-muted">
-          Subtotal <span className="font-semibold text-gray-900">{fmtCurrency(subtotal)}</span>
+          Subtotal <span className="font-semibold text-ink">{fmtCurrency(subtotal)}</span>
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -677,7 +664,7 @@ function ChargesPanel({
                 <td className="table-td text-right">
                   {!locked && (
                     <button
-                      className="text-gray-400 hover:text-red-600 p-1"
+                      className="text-muted hover:text-danger p-1"
                       aria-label={`Quitar cargo ${charge.description}`}
                       onClick={() =>
                         run(
@@ -697,7 +684,7 @@ function ChargesPanel({
       </div>
 
       {!locked && (
-        <div className="p-4 border-t border-gray-100 grid gap-3 sm:grid-cols-12 items-end">
+        <div className="p-4 border-t border-line-subtle grid gap-3 sm:grid-cols-12 items-end">
           <div className="sm:col-span-3">
             <label className="label" htmlFor="ch-service">
               Del catálogo
@@ -764,7 +751,7 @@ function ChargesPanel({
       )}
 
       {closed && (
-        <div className="p-4 border-t border-gray-100 space-y-3 text-sm">
+        <div className="p-4 border-t border-line-subtle space-y-3 text-sm">
           <dl className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             {(
               [
@@ -777,7 +764,7 @@ function ChargesPanel({
             ).map(([label, value]) => (
               <div key={label}>
                 <dt className="text-xs text-muted">{label}</dt>
-                <dd className="font-semibold text-gray-900 tabular-nums">{fmtCurrency(value)}</dd>
+                <dd className="font-semibold text-ink tabular-nums">{fmtCurrency(value)}</dd>
               </div>
             ))}
           </dl>
@@ -897,10 +884,7 @@ function CloseModal({
     >
       <div className="space-y-4 text-sm">
         {error && (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700"
-            role="alert"
-          >
+          <div className="notice notice-danger" role="alert">
             {error}
           </div>
         )}
@@ -916,7 +900,7 @@ function CloseModal({
             <dt>IVA {visit.reservation.vatPercent}%</dt>
             <dd className="tabular-nums">{fmtCurrency(vat)}</dd>
           </div>
-          <div className="flex justify-between font-semibold text-gray-900 text-base">
+          <div className="flex justify-between font-semibold text-ink text-base">
             <dt>Total</dt>
             <dd className="tabular-nums">{fmtCurrency(total)}</dd>
           </div>
@@ -968,7 +952,7 @@ function CloseModal({
             </select>
           </div>
         </div>
-        {paid > total && <p className="text-red-600">El cobro no puede superar el total.</p>}
+        {paid > total && <p className="text-danger">El cobro no puede superar el total.</p>}
         {paid < total && (
           <p className="text-muted">Quedará un saldo pendiente de {fmtCurrency(total - paid)}.</p>
         )}

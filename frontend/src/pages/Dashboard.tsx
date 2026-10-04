@@ -1,12 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  CalendarDays,
-  Users,
-  DollarSign,
-  AlertTriangle,
   ArrowRight,
-  Clock,
   PawPrint,
   Scissors,
   Car,
@@ -20,11 +15,16 @@ import {
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
 import { ClinicRemindersCard } from "./veterinaria/ClinicRemindersCard";
-import { businessUnitLabel } from "../modules/shared/contracts";
+import { normalizeBusinessUnit } from "../modules/shared/contracts";
 import { fmtCurrency, fmt, fmtTime, fmtDayLabel, STATUSES } from "../lib/utils";
 import { Badge } from "../components/ui/Badge";
 import { PageLoader } from "../components/ui/Spinner";
 import { PageHeader } from "../components/layout/PageHeader";
+import { Stat, StatStrip } from "../components/ui/Stat";
+import { SectionCard } from "../components/ui/SectionCard";
+import { EmptyState } from "../components/ui/EmptyState";
+import { InlineError } from "../components/ui/InlineError";
+import { UnitBadge } from "../components/ui/UnitBadge";
 
 interface Summary {
   reservasHoy: number;
@@ -46,38 +46,38 @@ interface Summary {
   }>;
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  sub?: string;
-  icon: React.ElementType;
-  color: string;
-}) {
-  return (
-    <div className="card p-5 flex items-start gap-4">
-      <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${color}`}>
-        <Icon size={20} className="text-white" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900">{value}</p>
-        <p className="text-sm text-gray-500">{label}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-      </div>
-    </div>
-  );
+const SEVERITY_ICON: Record<string, React.ReactNode> = {
+  ALTA: <CircleAlert size={15} className="text-danger inline-block" aria-label="Alta" />,
+  MEDIA: <CircleAlert size={15} className="text-warning inline-block" aria-label="Media" />,
+  BAJA: <CircleAlert size={15} className="text-success inline-block" aria-label="Baja" />,
+} as const;
+
+function plural(count: number, one: string, many: string) {
+  return `${count} ${count === 1 ? one : many}`;
 }
 
-const SEVERITY_ICON: Record<string, React.ReactNode> = {
-  ALTA: <CircleAlert size={15} className="text-red-600 inline-block" aria-label="Alta" />,
-  MEDIA: <CircleAlert size={15} className="text-amber-600 inline-block" aria-label="Media" />,
-  BAJA: <CircleAlert size={15} className="text-emerald-600 inline-block" aria-label="Baja" />,
-} as const;
+/** Service tile: the unit's colour on the unit's tint, so a row says whose reservation it is. */
+function ServiceIcon({ servicio }: { servicio: string }) {
+  if (servicio === "GUARDERIA") {
+    return (
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-daycare-50 text-daycare-600">
+        <PawPrint size={17} aria-hidden="true" />
+      </span>
+    );
+  }
+  if (servicio.startsWith("PELUQUERIA")) {
+    return (
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-grooming-50 text-grooming-600">
+        <Scissors size={17} aria-hidden="true" />
+      </span>
+    );
+  }
+  return (
+    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-sunken text-muted">
+      <Car size={17} aria-hidden="true" />
+    </span>
+  );
+}
 
 export function Dashboard() {
   const { user, activeBusinessUnit, hasModule } = useAuth();
@@ -89,7 +89,8 @@ export function Dashboard() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     api
       .get<Summary>("/dashboard/summary")
       .then(setSummary)
@@ -97,177 +98,181 @@ export function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <PageLoader />;
-  if (!summary) return <p className="text-red-600 p-6">Error cargando dashboard</p>;
+  useEffect(load, [load]);
 
-  const dashboardLabel =
-    user?.role === "admin"
-      ? activeBusinessUnit
-        ? businessUnitLabel(activeBusinessUnit)
-        : "Consolidado"
-      : businessUnitLabel(user?.businessUnit);
+  if (loading) return <PageLoader />;
+  if (!summary) {
+    return (
+      <InlineError onRetry={load}>
+        No pudimos cargar el resumen de hoy. Revisa tu conexión e inténtalo de nuevo.
+      </InlineError>
+    );
+  }
+
+  const dashboardUnit =
+    user?.role === "admin" ? activeBusinessUnit : normalizeBusinessUnit(user?.businessUnit);
+  // "Dra. Paula Ríos" greets as "Dra. Paula", not as the title alone.
+  const nameParts = (user?.name ?? user?.username ?? "").trim().split(/\s+/);
+  const firstName = nameParts[0]?.endsWith(".") ? nameParts.slice(0, 2).join(" ") : nameParts[0];
+
+  // The list is not bounded to today, so it is read by day rather than as one run of times.
+  const days: Array<{ label: string; items: Summary["proximasReservas"] }> = [];
+  for (const reserva of summary.proximasReservas) {
+    const label = fmtDayLabel(reserva.checkIn);
+    const last = days[days.length - 1];
+    if (last && last.label === label) last.items.push(reserva);
+    else days.push({ label, items: [reserva] });
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
       <PageHeader
-        title={<>{dashboardLabel} — Dashboard</>}
-        subtitle={<>{fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}</>}
+        title={firstName ? `¡Hola, ${firstName}!` : "¡Hola!"}
+        subtitle={
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <UnitBadge unit={dashboardUnit} />
+            <span className="first-letter:uppercase">
+              {fmt(new Date(), "EEEE, d 'de' MMMM yyyy")}
+            </span>
+            <span>
+              Hoy tienes {plural(summary.reservasHoy, "reserva", "reservas")},{" "}
+              {plural(summary.activas, "activa", "activas")}.
+            </span>
+          </span>
+        }
+        actions={
+          <>
+            <Link to="/informes" className="btn-ghost no-underline">
+              <BarChart3 size={16} aria-hidden="true" /> Informes
+            </Link>
+            <Link to="/transacciones" className="btn-ghost no-underline">
+              <BriefcaseBusiness size={16} aria-hidden="true" /> Finanzas
+            </Link>
+            <Link to="/clientes" className="btn-secondary no-underline">
+              <UserPlus size={16} aria-hidden="true" /> Nuevo cliente
+            </Link>
+            <Link to="/operaciones" className="btn-primary no-underline">
+              <CalendarPlus size={16} aria-hidden="true" /> Nueva reserva
+            </Link>
+          </>
+        }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
+      <StatStrip>
+        <Stat
           label="Reservas hoy"
           value={summary.reservasHoy}
-          sub={`${summary.activas} activas`}
-          icon={CalendarDays}
-          color="bg-blue-500"
+          hint={plural(summary.activas, "activa", "activas")}
         />
-        <StatCard
-          label="Entradas / Salidas"
-          value={`${summary.entradas} / ${summary.salidas}`}
-          icon={Clock}
-          color="bg-green-500"
+        <Stat
+          label="Entradas y salidas"
+          value={
+            <>
+              {summary.entradas}
+              <span className="mx-1.5 font-normal text-faint">/</span>
+              {summary.salidas}
+            </>
+          }
+          hint="Registradas hoy"
         />
-        <StatCard
+        <Stat
           label="Ingresos del día"
           value={fmtCurrency(summary.ingresosHoy)}
-          sub={`Mes: ${fmtCurrency(summary.ingresosMes)}`}
-          icon={DollarSign}
-          color="bg-emerald-500"
+          hint={`En el mes: ${fmtCurrency(summary.ingresosMes)}`}
         />
-        <StatCard
-          label="Clientes activos"
-          value={summary.totalClientes}
-          icon={Users}
-          color="bg-purple-500"
-        />
-      </div>
+        <Stat label="Clientes activos" value={summary.totalClientes} />
+      </StatStrip>
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800">Próximas reservas</h2>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <SectionCard
+          className="lg:col-span-2"
+          title="Próximas reservas"
+          action={
             <Link
               to="/operaciones"
-              className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+              className="flex items-center gap-1 text-action hover:text-action-hover"
             >
-              Ver todas <ArrowRight size={14} />
+              Ver todas <ArrowRight size={14} aria-hidden="true" />
             </Link>
-          </div>
-          {summary.proximasReservas.length === 0 ? (
-            <p className="text-center text-gray-400 py-10">Sin reservas programadas</p>
+          }
+        >
+          {days.length === 0 ? (
+            <EmptyState
+              title="Todavía no hay reservas programadas."
+              action={
+                <Link to="/operaciones" className="btn-secondary btn-sm no-underline">
+                  Agendar la primera
+                </Link>
+              }
+            />
           ) : (
-            <div className="divide-y divide-gray-100">
-              {summary.proximasReservas.map((r) => {
-                const st = STATUSES[r.estado] ?? {
-                  label: r.estado,
-                  color: "bg-gray-100 text-gray-700",
-                };
-                return (
-                  <div key={r.id} className="flex items-center gap-3 px-5 py-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-lg shrink-0">
-                      {r.servicio === "GUARDERIA" ? (
-                        <PawPrint size={18} className="text-amber-700" />
-                      ) : r.servicio.startsWith("PELUQUERIA") ? (
-                        <Scissors size={18} className="text-violet-700" />
-                      ) : (
-                        <Car size={18} className="text-blue-700" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">{r.cliente}</p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {r.mascotas} · {r.sala ?? r.servicio}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-medium text-gray-700">
-                        <span className="text-gray-500 font-normal">{fmtDayLabel(r.checkIn)}</span>{" "}
-                        {fmtTime(r.checkIn)}
-                      </p>
-                      <Badge color={st.color}>{st.label}</Badge>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            days.map((day) => (
+              <div key={day.label}>
+                <p className="bg-sunken px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted sm:px-5">
+                  {day.label}
+                </p>
+                <ul className="divide-y divide-line-subtle">
+                  {day.items.map((r) => {
+                    const st = STATUSES[r.estado] ?? {
+                      label: r.estado,
+                      color: "bg-sunken text-muted",
+                    };
+                    return (
+                      <li key={r.id} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                        <ServiceIcon servicio={r.servicio} />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-ink">{r.cliente}</p>
+                          <p className="truncate text-xs text-muted">
+                            {r.mascotas} · {r.sala ?? r.servicio}
+                          </p>
+                        </div>
+                        <Badge color={st.color}>{st.label}</Badge>
+                        <p className="w-12 shrink-0 text-right text-sm font-medium tabular-nums text-ink">
+                          {fmtTime(r.checkIn)}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))
           )}
-        </div>
+        </SectionCard>
 
-        <div className="card">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-              <AlertTriangle size={16} className="text-yellow-500" /> Alertas activas
-            </h2>
-            <span className="badge bg-red-100 text-red-700">{summary.alertas.length}</span>
-          </div>
+        <SectionCard
+          title="Alertas activas"
+          action={
+            summary.alertas.length > 0 ? (
+              <Badge tone="danger">{summary.alertas.length}</Badge>
+            ) : undefined
+          }
+        >
           {summary.alertas.length === 0 ? (
-            <p className="text-center text-gray-400 py-10 text-sm">
-              <CheckCircle2 size={16} className="inline-block mr-1 text-emerald-600" />
-              Sin alertas pendientes
-            </p>
+            <EmptyState icon={CheckCircle2} title="Todo en orden: no hay alertas pendientes." />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <ul className="divide-y divide-line-subtle">
               {summary.alertas.map((a) => (
-                <div key={a.id} className="px-5 py-3">
-                  <p className="text-sm font-medium text-gray-800">
+                <li key={a.id} className="px-4 py-3 sm:px-5">
+                  <p className="text-sm font-medium text-ink">
                     {SEVERITY_ICON[a.severity]} {a.title}
                   </p>
-                  {a.pet && <p className="text-xs text-gray-500 mt-0.5">Mascota: {a.pet}</p>}
-                </div>
+                  {a.pet && <p className="mt-0.5 text-xs text-muted">Perrhijo: {a.pet}</p>}
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-          <div className="px-5 py-3 border-t border-gray-100">
+          <div className="border-t border-line-subtle px-4 py-3 sm:px-5">
             <Link
               to="/herramientas"
-              className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+              className="flex items-center gap-1 text-sm text-action hover:text-action-hover"
             >
-              Ver todas las alertas <ArrowRight size={14} />
+              Ver todas las alertas <ArrowRight size={14} aria-hidden="true" />
             </Link>
           </div>
-        </div>
+        </SectionCard>
       </div>
 
       {showClinic && <ClinicRemindersCard />}
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          {
-            to: "/operaciones",
-            label: "Nueva Reserva",
-            Icon: CalendarPlus,
-            bg: "bg-blue-50 hover:bg-blue-100",
-          },
-          {
-            to: "/clientes",
-            label: "Nuevo Cliente",
-            Icon: UserPlus,
-            bg: "bg-purple-50 hover:bg-purple-100",
-          },
-          {
-            to: "/informes",
-            label: "Ver Informes",
-            Icon: BarChart3,
-            bg: "bg-green-50 hover:bg-green-100",
-          },
-          {
-            to: "/transacciones",
-            label: "Gestión Financiera",
-            Icon: BriefcaseBusiness,
-            bg: "bg-amber-50 hover:bg-amber-100",
-          },
-        ].map(({ to, label, Icon, bg }) => (
-          <Link
-            key={to}
-            to={to}
-            className={`card p-4 ${bg} flex items-center gap-3 transition-colors cursor-pointer no-underline`}
-          >
-            <Icon size={22} className="text-slate-700" aria-hidden="true" />
-            <span className="font-medium text-gray-800 text-sm">{label}</span>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }

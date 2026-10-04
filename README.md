@@ -1,4 +1,4 @@
-# Pethijos Admin — Plataforma Modular Multi-Guardería
+# Argos Suite — Plataforma Modular Multi-Guardería
 
 Sistema administrativo modular (**Modular Monolith**) multi-inquilino para la gestión operativa y
 financiera de guarderías, peluquerías y clínicas veterinarias. Cada guardería cliente es un **inquilino** (`Daycare`)

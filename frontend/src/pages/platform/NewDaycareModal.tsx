@@ -109,17 +109,12 @@ export function NewDaycareModal({
       <form
         onSubmit={submit}
         data-theme="platform"
-        className="card w-full max-w-2xl p-6 my-8"
-        style={{
-          background: "var(--color-surface)",
-          borderColor: "var(--color-border)",
-          color: "var(--color-ink)",
-        }}
+        className="card w-full max-w-2xl p-6 my-8 bg-surface border-line text-ink"
       >
         <div className="flex items-start justify-between mb-5">
           <div>
             <h2 className="text-lg font-bold">Nueva guardería</h2>
-            <p className="text-sm mt-0.5" style={{ color: "var(--color-muted)" }}>
+            <p className="text-sm mt-0.5 text-muted">
               Se crea con sus módulos y su primer administrador.
             </p>
           </div>
@@ -130,7 +125,7 @@ export function NewDaycareModal({
 
         {error && (
           <div
-            className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+            className="mb-4 rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger"
             role="alert"
           >
             {error}
@@ -139,29 +134,24 @@ export function NewDaycareModal({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-name">
+            <label className="label text-muted" htmlFor="nd-name">
               Nombre
             </label>
             <input
               id="nd-name"
-              className="input"
+              className="input bg-canvas text-ink border-line"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              style={{
-                background: "var(--color-canvas)",
-                color: "var(--color-ink)",
-                borderColor: "var(--color-border)",
-              }}
             />
           </div>
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-slug">
+            <label className="label text-muted" htmlFor="nd-slug">
               Identificador
             </label>
             <input
               id="nd-slug"
-              className="input font-mono"
+              className="input font-mono bg-canvas text-ink border-line"
               value={effectiveSlug}
               onChange={(e) => {
                 setSlugTouched(true);
@@ -169,51 +159,34 @@ export function NewDaycareModal({
               }}
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
               required
-              style={{
-                background: "var(--color-canvas)",
-                color: "var(--color-ink)",
-                borderColor: "var(--color-border)",
-              }}
             />
           </div>
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-legal">
+            <label className="label text-muted" htmlFor="nd-legal">
               Razón social (opcional)
             </label>
             <input
               id="nd-legal"
-              className="input"
+              className="input bg-canvas text-ink border-line"
               value={legalName}
               onChange={(e) => setLegalName(e.target.value)}
-              style={{
-                background: "var(--color-canvas)",
-                color: "var(--color-ink)",
-                borderColor: "var(--color-border)",
-              }}
             />
           </div>
           <div>
-            <label className="label" style={{ color: "var(--color-muted)" }} htmlFor="nd-tz">
+            <label className="label text-muted" htmlFor="nd-tz">
               Zona horaria
             </label>
             <input
               id="nd-tz"
-              className="input"
+              className="input bg-canvas text-ink border-line"
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              style={{
-                background: "var(--color-canvas)",
-                color: "var(--color-ink)",
-                borderColor: "var(--color-border)",
-              }}
             />
           </div>
         </div>
 
         <fieldset className="mt-5">
-          <legend className="label" style={{ color: "var(--color-muted)" }}>
-            Unidades de negocio
-          </legend>
+          <legend className="label text-muted">Unidades de negocio</legend>
           <div className="flex gap-2">
             {catalog.units.map((unit) => (
               <button
@@ -238,15 +211,12 @@ export function NewDaycareModal({
         </fieldset>
 
         <fieldset className="mt-5">
-          <legend className="label" style={{ color: "var(--color-muted)" }}>
-            Módulos incluidos
-          </legend>
+          <legend className="label text-muted">Módulos incluidos</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {catalog.modules.map((module) => (
               <label
                 key={module.id}
-                className="flex items-start gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-white/5"
-                style={{ border: "1px solid var(--color-border)" }}
+                className="flex items-start gap-2.5 p-2.5 rounded-lg cursor-pointer hover:bg-white/5 border border-line"
               >
                 <input
                   type="checkbox"
@@ -257,7 +227,7 @@ export function NewDaycareModal({
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">{module.label}</span>
                   {module.requires.length > 0 && (
-                    <span className="block text-[11px]" style={{ color: "var(--color-muted)" }}>
+                    <span className="block text-[11px] text-muted">
                       Requiere: {module.requires.join(", ")}
                     </span>
                   )}
@@ -268,57 +238,36 @@ export function NewDaycareModal({
         </fieldset>
 
         <fieldset className="mt-5">
-          <legend className="label" style={{ color: "var(--color-muted)" }}>
-            Primer administrador
-          </legend>
+          <legend className="label text-muted">Primer administrador</legend>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label
-                className="label text-xs"
-                style={{ color: "var(--color-muted)" }}
-                htmlFor="nd-an"
-              >
+              <label className="label text-xs text-muted" htmlFor="nd-an">
                 Nombre
               </label>
               <input
                 id="nd-an"
-                className="input"
+                className="input bg-canvas text-ink border-line"
                 value={adminName}
                 onChange={(e) => setAdminName(e.target.value)}
                 required
-                style={{
-                  background: "var(--color-canvas)",
-                  color: "var(--color-ink)",
-                  borderColor: "var(--color-border)",
-                }}
               />
             </div>
             <div>
-              <label
-                className="label text-xs"
-                style={{ color: "var(--color-muted)" }}
-                htmlFor="nd-au"
-              >
+              <label className="label text-xs text-muted" htmlFor="nd-au">
                 Usuario
               </label>
               <input
                 id="nd-au"
-                className="input font-mono"
+                className="input font-mono bg-canvas text-ink border-line"
                 value={adminUsername}
                 onChange={(e) => setAdminUsername(e.target.value)}
                 required
                 minLength={3}
-                style={{
-                  background: "var(--color-canvas)",
-                  color: "var(--color-ink)",
-                  borderColor: "var(--color-border)",
-                }}
               />
               {suggestion && (
                 <button
                   type="button"
-                  className="text-[11px] mt-1 hover:underline"
-                  style={{ color: "var(--color-muted)" }}
+                  className="text-[11px] mt-1 hover:underline text-muted"
                   onClick={() => setAdminUsername(suggestion)}
                 >
                   Usar {suggestion}
@@ -326,30 +275,21 @@ export function NewDaycareModal({
               )}
             </div>
             <div>
-              <label
-                className="label text-xs"
-                style={{ color: "var(--color-muted)" }}
-                htmlFor="nd-ap"
-              >
+              <label className="label text-xs text-muted" htmlFor="nd-ap">
                 Contraseña
               </label>
               <input
                 id="nd-ap"
                 type="password"
-                className="input"
+                className="input bg-canvas text-ink border-line"
                 value={adminPassword}
                 onChange={(e) => setAdminPassword(e.target.value)}
                 required
                 minLength={8}
-                style={{
-                  background: "var(--color-canvas)",
-                  color: "var(--color-ink)",
-                  borderColor: "var(--color-border)",
-                }}
               />
             </div>
           </div>
-          <p className="text-[11px] mt-2" style={{ color: "var(--color-muted)" }}>
+          <p className="text-[11px] mt-2 text-muted">
             El usuario debe ser único en todo el sistema: el inicio de sesión no pide la guardería.
           </p>
         </fieldset>
@@ -357,13 +297,8 @@ export function NewDaycareModal({
         <div className="flex justify-end gap-2 mt-6">
           <button
             type="button"
-            className="btn btn-secondary"
+            className="btn btn-secondary bg-canvas text-muted border-line"
             onClick={onClose}
-            style={{
-              background: "var(--color-canvas)",
-              color: "var(--color-muted)",
-              borderColor: "var(--color-border)",
-            }}
           >
             Cancelar
           </button>

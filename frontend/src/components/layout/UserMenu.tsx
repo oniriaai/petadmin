@@ -40,7 +40,7 @@ export function UserMenu() {
   return (
     <div className="relative" ref={containerRef}>
       <button
-        className="icon-button text-muted rounded-lg hover:bg-black/5"
+        className="icon-button text-muted rounded-lg hover:bg-sunken"
         onClick={() => setIsOpen((open) => !open)}
         aria-haspopup="menu"
         aria-expanded={isOpen}
@@ -64,7 +64,7 @@ export function UserMenu() {
           {user.role === "superadmin" && (
             <button
               role="menuitem"
-              className="w-full text-left px-3 py-2 text-sm text-ink rounded-lg hover:bg-black/5 flex items-center gap-2"
+              className="w-full text-left px-3 py-2 text-sm text-ink rounded-lg hover:bg-sunken flex items-center gap-2"
               onClick={() => {
                 setIsOpen(false);
                 navigate("/platform");
@@ -76,7 +76,7 @@ export function UserMenu() {
 
           <button
             role="menuitem"
-            className="w-full text-left px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 flex items-center gap-2"
+            className="w-full text-left px-3 py-2 text-sm text-danger rounded-lg hover:bg-danger-soft flex items-center gap-2"
             onClick={() => {
               setIsOpen(false);
               logout();

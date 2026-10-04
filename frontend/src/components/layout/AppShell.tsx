@@ -7,6 +7,8 @@ import { Sidebar } from "./Sidebar";
 import { PlatformBanner } from "./PlatformBanner";
 import { UnitSwitcher } from "./UnitSwitcher";
 import { UserMenu } from "./UserMenu";
+import { UnitBadge } from "../ui/UnitBadge";
+import { normalizeBusinessUnit } from "../../modules/shared/contracts";
 
 const COLLAPSE_KEY = "sidebarCollapsed";
 
@@ -20,6 +22,7 @@ const COLLAPSE_KEY = "sidebarCollapsed";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { daycare, user } = useAuth();
   const location = useLocation();
+  const ownUnit = normalizeBusinessUnit(user?.businessUnit);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     // A per-viewer convenience. Storage can throw in a private window, and the shell must still
@@ -60,12 +63,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [isDrawerOpen]);
 
   return (
-    <div className="min-h-screen bg-canvas flex">
+    <div className="min-h-[100dvh] bg-canvas flex">
       {/* Desktop navigation. Hidden below lg, where the drawer takes over. */}
       <aside
         className={cls(
           // Navigation and topbar stay off paper: prescriptions and histories print from here.
-          "hidden lg:flex print:hidden shrink-0 h-screen sticky top-0 transition-[width] duration-200",
+          "hidden lg:flex print:hidden shrink-0 h-[100dvh] sticky top-0 transition-[width] duration-200",
           isCollapsed ? "w-sidebar-collapsed" : "w-sidebar",
         )}
       >
@@ -76,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {isDrawerOpen && (
         <div className="lg:hidden fixed inset-0 z-drawer">
           <button
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-[rgb(28_25_23/0.5)]"
             onClick={() => setIsDrawerOpen(false)}
             aria-label="Cerrar menú"
             tabIndex={-1}
@@ -88,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-shell bg-raised border-b border-line-subtle shadow-raised print:hidden">
+        <header className="sticky top-0 z-shell bg-raised border-b border-line-subtle print:hidden">
           <div className="flex items-center gap-2 px-3 sm:px-4 h-14">
             <button
               className="icon-button lg:hidden text-muted"
@@ -108,13 +111,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-ink truncate leading-tight">
-                {daycare?.name ?? "Pethijos Admin"}
+                {daycare?.name ?? "Argos Suite"}
               </p>
               {daycare?.legalName && (
                 <p className="text-[11px] text-muted truncate leading-tight">{daycare.legalName}</p>
               )}
             </div>
 
+            {/* A unit-scoped role has no switcher, so the topbar says which unit this is. */}
+            {ownUnit && <UnitBadge unit={ownUnit} className="hidden sm:inline-flex" />}
             <UnitSwitcher />
             <UserMenu />
           </div>

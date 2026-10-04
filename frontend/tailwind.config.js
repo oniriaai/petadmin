@@ -1,17 +1,44 @@
 /** @type {import('tailwindcss').Config} */
+
+// A status tone: `DEFAULT` for fills and icons, `soft` for the tint behind a badge or notice,
+// `ink` for text on that tint and `line` for its border.
+const tone = (name) => ({
+  DEFAULT: `var(--color-${name})`,
+  soft: `var(--color-${name}-soft)`,
+  ink: `var(--color-${name}-ink)`,
+  line: `var(--color-${name}-line)`,
+});
+
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          '"Inter Variable"',
+          "Inter",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          '"Segoe UI"',
+          "Roboto",
+          "sans-serif",
+        ],
+        // The 20 Pixel Rule (BRAND.md): these two never render below 20px.
+        display: ["Marcellus", "Georgia", "serif"],
+        wordmark: ["Cinzel", '"Times New Roman"', "serif"],
+      },
       colors: {
         // The design tokens from src/styles.css, exposed to Tailwind so pages can use
-        // `bg-surface` / `text-muted` instead of re-deriving slate-*. Defined as CSS variables
+        // `bg-surface` / `text-muted` instead of re-deriving stone-*. Defined as CSS variables
         // rather than literals so `[data-theme="platform"]` retheme the console for free.
         canvas: "var(--color-canvas)",
         surface: "var(--color-surface)",
         raised: "var(--color-raised)",
+        sunken: "var(--color-sunken)",
         ink: "var(--color-ink)",
         muted: "var(--color-muted)",
+        // Decorative icons only; too light to carry text.
+        faint: "var(--color-faint)",
         line: "var(--color-border)",
         "line-subtle": "var(--color-border-subtle)",
         action: {
@@ -23,36 +50,46 @@ export default {
           ink: "var(--color-shell-ink)",
           muted: "var(--color-shell-muted)",
         },
+        // Decorative only (the meander on the dark shell). Never text on a light background.
+        oro: "#ca8a04",
 
-        // Business-unit accents. `daycare` is the amber ramp, `grooming` the violet one and
-        // `veterinary` the teal one.
-        // Use these instead of raw amber-*/violet-* so the unit accent lives in one place.
+        danger: tone("danger"),
+        success: tone("success"),
+        warning: tone("warning"),
+        info: tone("info"),
+
+        // Business-unit accents: Terracota (Guardería), Púrpura de Tiro (Peluquería) and
+        // Verde Olivo (Veterinaria). A unit's 500 is never text on a light background; text
+        // starts at 600 for terracotta and purple and at 700 for olive.
         daycare: {
-          50: "#fffbeb",
-          100: "#fef3c7",
-          500: "#f59e0b",
-          600: "#d97706",
-          700: "#b45309",
-          800: "#92400e",
-          900: "#78350f",
+          50: "#fff7ed",
+          100: "#ffedd5",
+          200: "#fed7aa",
+          500: "#ea580c",
+          600: "#c2410c",
+          700: "#9a3412",
+          800: "#7c2d12",
+          900: "#431407",
         },
         grooming: {
-          50: "#f5f3ff",
-          100: "#ede9fe",
-          500: "#8b5cf6",
-          600: "#7c3aed",
-          700: "#6d28d9",
-          800: "#5b21b6",
-          900: "#4c1d95",
+          50: "#faf5ff",
+          100: "#f3e8ff",
+          200: "#e9d5ff",
+          500: "#a855f7",
+          600: "#9333ea",
+          700: "#7e22ce",
+          800: "#6b21a8",
+          900: "#581c87",
         },
         veterinary: {
-          50: "#f0fdfa",
-          100: "#ccfbf1",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
-          800: "#115e59",
-          900: "#134e4a",
+          50: "#f7fee7",
+          100: "#ecfccb",
+          200: "#d9f99d",
+          500: "#84cc16",
+          600: "#65a30d",
+          700: "#4d7c0f",
+          800: "#3f6212",
+          900: "#365314",
         },
       },
       boxShadow: {

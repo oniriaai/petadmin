@@ -5,6 +5,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { Login } from "./pages/Login";
 import { ModuleUnavailable, NotFound } from "./pages/StatusPages";
 import { frontendModules, ModuleRoute, validateFrontendModules } from "./modules/registry";
+import { Spinner } from "./components/ui/Spinner";
 
 validateFrontendModules();
 
@@ -19,7 +20,14 @@ validateFrontendModules();
 const PlatformApp = lazy(() => import("./pages/platform/PlatformApp"));
 
 function Loading({ label = "Cargando sesión..." }: { label?: string }) {
-  return <div className="min-h-screen grid place-items-center text-gray-500">{label}</div>;
+  return (
+    <div className="min-h-[100dvh] grid place-items-center text-muted" role="status">
+      <span className="flex items-center gap-3">
+        <Spinner size={18} />
+        {label}
+      </span>
+    </div>
+  );
 }
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {

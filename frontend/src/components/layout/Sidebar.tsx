@@ -1,16 +1,21 @@
-import { NavLink } from "react-router-dom";
+import type React from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { Compass, LayoutDashboard, LogOut, PawPrint, Scissors, Stethoscope, X } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { frontendModules, ModuleNavigationItem } from "../../modules/registry";
 import { cls } from "../../lib/utils";
+import { unitTheme } from "../../lib/unit-theme";
+import { Wordmark } from "../brand/Wordmark";
+import { BrandTile } from "../brand/BrandTile";
+import { Meander } from "../brand/Meander";
 import { UnitSwitcher } from "./UnitSwitcher";
 
 /**
  * Primary navigation.
  *
  * Renders in three configurations from one tree: full width, collapsed to icons (desktop), and as
- * an off-canvas drawer (mobile). The item filtering is identical in all three — role, active
- * business unit and product-module entitlement — so a hidden item is hidden everywhere.
+ * an off-canvas drawer (mobile). The item filtering is identical in all three: role, active
+ * business unit and product-module entitlement, so a hidden item is hidden everywhere.
  */
 export function Sidebar({
   isCollapsed = false,
@@ -62,55 +67,70 @@ export function Sidebar({
     }))
     .filter((module) => module.navigation && module.navigation.items.length > 0);
 
+  // "/veterinaria" is a prefix of "/veterinaria/farmacia", so prefix matching alone lights up two
+  // items at once. Only the longest matching item is the current one.
+  const { pathname } = useLocation();
+  const currentItem = visibleModules
+    .flatMap((module) => module.navigation!.items.map((item) => item.to))
+    .filter((to) => pathname === to || pathname.startsWith(`${to}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  const theme = unitTheme(effectiveUnit);
+  const UnitIcon = isDaycare
+    ? PawPrint
+    : isGrooming
+      ? Scissors
+      : isVeterinary
+        ? Stethoscope
+        : Compass;
+
   return (
-    <div className="flex flex-col h-full bg-shell text-shell-ink">
+    <div
+      className="flex flex-col h-full bg-shell text-shell-ink"
+      // The active nav item and the meander read the unit's colour from here; Oro when consolidated.
+      style={{ "--unit-accent": theme.accent } as React.CSSProperties}
+    >
+      <div
+        className={cls("flex items-center gap-3 px-4 pt-5 pb-3", compact && "justify-center px-2")}
+      >
+        {compact ? <BrandTile /> : <Wordmark className="flex-1" />}
+        {isDrawer && (
+          <button
+            onClick={onNavigate}
+            className="icon-button text-shell-muted hover:text-shell-ink"
+            aria-label="Cerrar menú"
+          >
+            <X size={20} />
+          </button>
+        )}
+      </div>
+      {/* One unit colour per logo: the band follows the unit you are working in. */}
+      <div className="px-4 text-[color:var(--unit-accent)]" aria-hidden="true">
+        {!compact && <Meander height={6} />}
+      </div>
+
       <div
         className={cls(
-          "flex items-center gap-3 border-b border-white/10 px-4 py-4",
+          "flex items-center gap-3 border-b border-white/10 px-4 py-3",
           compact && "justify-center px-2",
         )}
       >
         <div
           className={cls(
-            "w-9 h-9 rounded-xl grid place-items-center shrink-0 text-white",
-            isDaycare
-              ? "bg-daycare-600"
-              : isGrooming
-                ? "bg-grooming-700"
-                : isVeterinary
-                  ? "bg-veterinary-700"
-                  : "bg-white/15",
+            "w-8 h-8 rounded-lg grid place-items-center shrink-0 text-white",
+            theme.tile,
           )}
         >
-          {isDaycare ? (
-            <PawPrint size={18} />
-          ) : isGrooming ? (
-            <Scissors size={18} />
-          ) : isVeterinary ? (
-            <Stethoscope size={18} />
-          ) : (
-            <Compass size={18} />
-          )}
+          <UnitIcon size={16} aria-hidden="true" />
         </div>
         {!compact && (
           <div className="min-w-0 flex-1">
-            {/* The daycare is named in the topbar; this says which unit you are working in. */}
-            <p className="text-[11px] uppercase tracking-wider text-shell-muted font-semibold truncate">
-              {unitLabel}
-            </p>
-            <p className="text-sm font-bold leading-tight truncate">
+            <p className="text-sm font-semibold leading-tight truncate">
               {user?.name ?? user?.username}
             </p>
+            {/* The daycare is named in the topbar; this says which unit you are working in. */}
+            <p className="text-xs text-shell-muted truncate">{unitLabel}</p>
           </div>
-        )}
-        {isDrawer && (
-          <button
-            onClick={onNavigate}
-            className="icon-button text-shell-muted hover:text-white"
-            aria-label="Cerrar menú"
-          >
-            <X size={20} />
-          </button>
         )}
       </div>
 
@@ -138,8 +158,8 @@ export function Sidebar({
               {compact ? (
                 <div className="h-px bg-white/10 mx-2 mb-2" role="presentation" />
               ) : (
-                <p className="px-3 text-[11px] font-bold text-shell-muted uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                  <ModuleIcon size={13} /> {module.navigation!.label}
+                <p className="px-3 text-[11px] font-semibold text-shell-muted uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <ModuleIcon size={13} aria-hidden="true" /> {module.navigation!.label}
                 </p>
               )}
               <div className="space-y-0.5">
@@ -149,9 +169,12 @@ export function Sidebar({
                     to={to}
                     onClick={onNavigate}
                     title={compact ? label : undefined}
-                    className={({ isActive }) =>
-                      cls("sidebar-link", compact && "justify-center px-2", isActive && "active")
-                    }
+                    className={cls(
+                      "sidebar-link",
+                      compact && "justify-center px-2",
+                      to === currentItem && "active",
+                    )}
+                    aria-current={to === currentItem ? "page" : undefined}
                   >
                     <ItemIcon size={16} className="shrink-0" />
                     {!compact && <span>{label}</span>}
@@ -167,10 +190,7 @@ export function Sidebar({
         <button
           onClick={logout}
           title={compact ? "Cerrar sesión" : undefined}
-          className={cls(
-            "sidebar-link w-full text-red-400 hover:text-red-300 hover:bg-red-500/10",
-            compact && "justify-center px-2",
-          )}
+          className={cls("sidebar-link w-full", compact && "justify-center px-2")}
         >
           <LogOut size={16} className="shrink-0" />
           {!compact && <span>Cerrar Sesión</span>}

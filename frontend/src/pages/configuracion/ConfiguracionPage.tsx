@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Download, BarChart3, Building2, Check, Settings } from "lucide-react";
 import { api, ApiError, downloadFile } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
-import { Spinner } from "../../components/ui/Spinner";
+import { ListSkeleton, Spinner } from "../../components/ui/Spinner";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { businessUnitLabel } from "../../modules/shared/contracts";
 import type { BusinessUnit } from "../../modules/shared/contracts";
@@ -57,7 +57,7 @@ export function ConfiguracionPage() {
       setError(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : "Error al cargar la configuración",
+          : "No pudimos cargar la configuración. Inténtalo de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -90,7 +90,11 @@ export function ConfiguracionPage() {
       setTimeout(() => setSavedUnit(null), 2000);
     } catch (err) {
       // The server refuses an unrecognised timezone by name; showing its message is the point.
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al guardar");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSavingUnit(null);
     }
@@ -101,7 +105,7 @@ export function ConfiguracionPage() {
     try {
       await downloadFile(path, filename);
     } catch {
-      setError("Error al descargar el archivo");
+      setError("No pudimos descargar el archivo. Inténtalo de nuevo.");
     } finally {
       setDownloading(null);
     }
@@ -120,16 +124,13 @@ export function ConfiguracionPage() {
       <PageHeader title="Configuración" subtitle="Parámetros de tu guardería" />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
       {loading ? (
-        <p className="text-sm text-muted">Cargando...</p>
+        <ListSkeleton rows={3} />
       ) : (
         settings && (
           <>
@@ -295,9 +296,9 @@ export function ConfiguracionPage() {
                 <h2 className="font-semibold text-ink border-b border-line-subtle pb-3 flex items-center gap-2">
                   <BarChart3 size={17} /> Power BI
                 </h2>
-                <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-700 space-y-2">
+                <div className="p-4 bg-info-soft rounded-xl text-sm text-info-ink space-y-2">
                   <p className="font-medium">Instrucciones para cargar en Power BI:</p>
-                  <ol className="list-decimal list-inside space-y-1 text-blue-600">
+                  <ol className="list-decimal list-inside space-y-1 text-action">
                     <li>Descarga los archivos Excel de la sección anterior</li>
                     <li>Abre Power BI Desktop</li>
                     <li>Selecciona "Obtener datos" → "Excel"</li>

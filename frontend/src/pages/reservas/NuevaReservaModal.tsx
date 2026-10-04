@@ -162,7 +162,9 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
       onClose();
       resetForm();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
+      setError(
+        e instanceof Error ? e.message : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -226,7 +228,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
       ) : (
         <div className="space-y-6">
           {error && (
-            <div className="flex items-center gap-2 text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg p-3">
+            <div className="notice notice-danger">
               <X size={16} onClick={() => setError("")} className="cursor-pointer" />
               <span>{error}</span>
             </div>
@@ -236,13 +238,13 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="relative">
-                <label className="label flex items-center gap-2 text-gray-700 font-semibold mb-1.5">
-                  <User size={16} className="text-blue-500" /> Cliente *
+                <label className="label flex items-center gap-2 text-muted font-semibold mb-1.5">
+                  <User size={16} className="text-action" /> Cliente *
                 </label>
                 <div className="relative">
                   <Search
                     size={16}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
                   />
                   <input
                     className="input pl-9"
@@ -262,7 +264,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                         setClientSearch("");
                         setSelectedPetIds([]);
                       }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-danger"
                     >
                       <X size={14} />
                     </button>
@@ -270,17 +272,17 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                 </div>
 
                 {showClientResults && filteredClients.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="absolute z-20 w-full mt-1 bg-surface border border-line-subtle rounded-lg shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
                     {filteredClients.map((c) => (
                       <button
                         key={c.id}
-                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between group"
+                        className="w-full text-left px-4 py-2.5 hover:bg-info-soft transition-colors flex items-center justify-between group"
                         onClick={() => handleSelectClient(c)}
                       >
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-ink">
                           {c.lastName}, {c.firstName}
                         </span>
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100">
+                        <span className="text-[10px] bg-sunken text-muted px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100">
                           Seleccionar
                         </span>
                       </button>
@@ -290,10 +292,10 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
               </div>
 
               {selectedClient && (
-                <div className="p-4 bg-blue-50 rounded-xl border border-blue-100 animate-in zoom-in-95 duration-200">
-                  <label className="label text-blue-800 font-semibold mb-2 block">Mascotas *</label>
+                <div className="p-4 bg-info-soft rounded-xl border border-info-line animate-in zoom-in-95 duration-200">
+                  <label className="label text-info-ink font-semibold mb-2 block">Mascotas *</label>
                   {selectedClient.pets.length === 0 ? (
-                    <p className="text-xs text-blue-600">
+                    <p className="text-xs text-action">
                       Este cliente no tiene mascotas registradas
                     </p>
                   ) : (
@@ -305,8 +307,8 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                           onClick={() => togglePet(p.id)}
                           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                             selectedPetIds.includes(p.id)
-                              ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-200 ring-2 ring-blue-100"
-                              : "bg-white border-blue-200 text-blue-700 hover:border-blue-400"
+                              ? "bg-action text-white border-action shadow-md ring-2 ring-info-line"
+                              : "bg-surface border-info-line text-info-ink hover:border-action"
                           }`}
                         >
                           {p.species === "dog" ? "Perro" : "Gato"} · {p.name}
@@ -323,7 +325,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 sm:col-span-1">
                   <label className="label flex items-center gap-2">
-                    <Clock size={15} className="text-indigo-500" /> Servicio
+                    <Clock size={15} className="text-action" /> Servicio
                   </label>
                   <select
                     className="input"
@@ -339,14 +341,14 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                 </div>
                 <div className="col-span-2 sm:col-span-1">
                   <label className="label flex items-center gap-2">
-                    <Calendar size={15} className="text-indigo-500" /> Sala
+                    <Calendar size={15} className="text-action" /> Sala
                   </label>
                   <select
                     className="input"
                     value={roomId}
                     onChange={(e) => setRoomId(e.target.value)}
                   >
-                    <option value="">— Sin sala —</option>
+                    <option value="">Sin sala</option>
                     {rooms.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name} (cap. {r.capacity})
@@ -355,7 +357,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                   </select>
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="label font-medium text-gray-600">Entrada</label>
+                  <label className="label font-medium text-muted">Entrada</label>
                   <input
                     className="input"
                     type="datetime-local"
@@ -364,7 +366,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                   />
                 </div>
                 <div className="col-span-2 sm:col-span-1">
-                  <label className="label font-medium text-gray-600">Salida</label>
+                  <label className="label font-medium text-muted">Salida</label>
                   <input
                     className="input"
                     type="datetime-local"
@@ -376,29 +378,27 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
             </div>
           </div>
 
-          <hr className="border-gray-100" />
+          <hr className="border-line-subtle" />
 
           {/* Section: Financials & Transport */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 space-y-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 shadow-sm space-y-4">
-                <div className="flex items-center gap-2 border-b border-gray-200 pb-2 mb-2">
-                  <DollarSign size={18} className="text-green-600" />
-                  <h3 className="font-bold text-gray-800 uppercase tracking-wider text-xs">
+              <div className="bg-sunken border border-line-subtle rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 border-b border-line-subtle pb-2 mb-2">
+                  <DollarSign size={18} className="text-success" />
+                  <h3 className="font-bold text-ink uppercase tracking-wider text-xs">
                     Desglose de Importes
                   </h3>
                 </div>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                   <div>
-                    <label className="label text-[11px] text-gray-500 uppercase font-bold">
+                    <label className="label text-[11px] text-muted uppercase font-bold">
                       Precio Base
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        $
-                      </span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
                       <input
-                        className="input pl-7 bg-white"
+                        className="input pl-7 bg-surface"
                         type="number"
                         min="0"
                         step="0.01"
@@ -408,11 +408,11 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                     </div>
                   </div>
                   <div>
-                    <label className="label text-[11px] text-gray-500 uppercase font-bold">
+                    <label className="label text-[11px] text-muted uppercase font-bold">
                       IVA (%)
                     </label>
                     <input
-                      className="input bg-white"
+                      className="input bg-surface"
                       type="number"
                       min="0"
                       max="100"
@@ -421,15 +421,13 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                     />
                   </div>
                   <div>
-                    <label className="label text-[11px] text-gray-500 uppercase font-bold">
+                    <label className="label text-[11px] text-muted uppercase font-bold">
                       Descuento ($)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                        $
-                      </span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">$</span>
                       <input
-                        className="input pl-7 bg-white"
+                        className="input pl-7 bg-surface"
                         type="number"
                         min="0"
                         step="0.01"
@@ -439,15 +437,15 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                     </div>
                   </div>
                   <div>
-                    <label className="label text-[11px] text-gray-500 uppercase font-bold text-blue-600">
+                    <label className="label text-[11px] text-muted uppercase font-bold text-action">
                       Adelanto ($)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-action">
                         $
                       </span>
                       <input
-                        className="input pl-7 bg-white border-blue-200 focus:border-blue-500"
+                        className="input pl-7 bg-surface border-info-line focus:border-action"
                         type="number"
                         min="0"
                         step="0.01"
@@ -458,20 +456,20 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 pt-3 border-t border-gray-200">
+                <div className="flex flex-col gap-2 pt-3 border-t border-line-subtle">
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-500 font-medium italic">IVA ({vatPercent}%)</span>
-                    <span className="font-bold text-gray-700">${vatAmount.toFixed(2)}</span>
+                    <span className="text-muted font-medium italic">IVA ({vatPercent}%)</span>
+                    <span className="font-bold text-muted">${vatAmount.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-white p-2 rounded-lg border border-gray-100">
-                    <span className="text-gray-700 font-bold uppercase text-xs">Total a pagar</span>
-                    <span className="text-lg font-black text-gray-900">${total.toFixed(2)}</span>
+                  <div className="flex justify-between items-center bg-surface p-2 rounded-lg border border-line-subtle">
+                    <span className="text-muted font-bold uppercase text-xs">Total a pagar</span>
+                    <span className="text-lg font-black text-ink">${total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm px-2">
-                    <span className="text-red-500 font-bold uppercase text-[10px]">
+                    <span className="text-danger font-bold uppercase text-[10px]">
                       Saldo Pendiente
                     </span>
-                    <span className="text-base font-black text-red-600">${pending.toFixed(2)}</span>
+                    <span className="text-base font-black text-danger">${pending.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -481,7 +479,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
               <div className="space-y-4">
                 <div>
                   <label className="label flex items-center gap-2">
-                    <CreditCard size={15} className="text-gray-500" /> Forma de pago
+                    <CreditCard size={15} className="text-muted" /> Forma de pago
                   </label>
                   <select
                     className="input"
@@ -497,7 +495,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                 </div>
                 <div>
                   <label className="label flex items-center gap-2">
-                    <FileText size={15} className="text-gray-500" /> Concepto
+                    <FileText size={15} className="text-muted" /> Concepto
                   </label>
                   <input
                     className="input"
@@ -507,22 +505,22 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                   />
                 </div>
 
-                <div className="border border-dashed border-gray-200 rounded-xl p-4 space-y-3">
+                <div className="border border-dashed border-line-subtle rounded-xl p-4 space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={needsTransport}
                       onChange={(e) => setNeedsTransport(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 transition-all"
+                      className="w-4 h-4 rounded text-action transition-all"
                     />
-                    <span className="text-sm font-bold text-gray-600 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-muted group-hover:text-action transition-colors flex items-center gap-1.5">
                       <Truck size={16} /> Requiere transporte
                     </span>
                   </label>
                   {needsTransport && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-left-2 duration-300">
                       <div>
-                        <label className="label text-[10px] uppercase font-bold text-gray-400">
+                        <label className="label text-[10px] uppercase font-bold text-muted">
                           Tipo
                         </label>
                         <select
@@ -536,7 +534,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                         </select>
                       </div>
                       <div>
-                        <label className="label text-[10px] uppercase font-bold text-gray-400">
+                        <label className="label text-[10px] uppercase font-bold text-muted">
                           Dirección
                         </label>
                         <input
@@ -554,7 +552,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
           </div>
 
           <div>
-            <label className="label font-medium text-gray-600 mb-1.5 block">
+            <label className="label font-medium text-muted mb-1.5 block">
               Notas e Instrucciones
             </label>
             <textarea

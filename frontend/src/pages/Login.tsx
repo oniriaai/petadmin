@@ -1,9 +1,19 @@
 import React, { useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CalendarCheck2, CircleAlert, Eye, EyeOff, PawPrint, Wallet } from "lucide-react";
+import {
+  CalendarCheck2,
+  CircleAlert,
+  Eye,
+  EyeOff,
+  PawPrint,
+  Stethoscope,
+  Wallet,
+} from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/api";
 import { Spinner } from "../components/ui/Spinner";
+import { Wordmark } from "../components/brand/Wordmark";
+import { Meander } from "../components/brand/Meander";
 
 /**
  * Sign-in.
@@ -32,9 +42,14 @@ const CAPABILITIES = [
     line: "Cupos por sala, entradas y salidas con control de aforo.",
   },
   {
+    Icon: Stethoscope,
+    title: "Clínica veterinaria",
+    line: "Agenda, ficha clínica, farmacia y hospitalización.",
+  },
+  {
     Icon: Wallet,
     title: "Finanzas por unidad",
-    line: "Cobros e ingresos separados por unidad de negocio.",
+    line: "Cobros e ingresos con las cuentas de cada unidad por separado.",
   },
 ];
 
@@ -106,45 +121,54 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas flex flex-col lg:grid lg:grid-cols-[minmax(24rem,42%)_1fr]">
+    <div className="min-h-[100dvh] bg-canvas flex flex-col lg:grid lg:grid-cols-[minmax(24rem,42%)_1fr]">
       {/*
         The shell colour the operator lands in, so signing in and working look like one product.
-        On a phone it collapses to a title bar rather than eating the fold.
+        On a phone it collapses to the lockup rather than eating the fold.
       */}
-      <aside className="bg-shell text-shell-ink px-6 py-7 sm:px-8 lg:px-12 lg:py-14 lg:flex lg:flex-col lg:justify-between">
-        <div className="flex items-center gap-3">
-          <span className="w-10 h-10 rounded-xl bg-white/10 grid place-items-center shrink-0">
-            <PawPrint size={21} aria-hidden="true" />
-          </span>
-          <span className="text-lg font-semibold tracking-tight">Pethijos Admin</span>
+      <aside className="bg-shell text-shell-ink px-6 py-6 sm:px-8 lg:px-12 lg:py-14 lg:flex lg:flex-col lg:justify-between">
+        <div className="rise-in max-w-sm">
+          <Wordmark size="lg" />
+          <div className="mt-4 w-40 text-oro">
+            <Meander />
+          </div>
         </div>
 
         <div className="hidden lg:block max-w-sm">
-          <h1 className="text-4xl font-bold tracking-tight leading-[1.1]">
-            Guardería y peluquería en un solo sistema
+          <h1
+            className="rise-in font-display text-4xl leading-[1.1]"
+            style={{ "--i": 1 } as React.CSSProperties}
+          >
+            Cuidamos tu negocio, para que tú cuides de ellos.
           </h1>
-          <ul className="mt-10 space-y-6">
-            {CAPABILITIES.map(({ Icon, title, line }) => (
-              <li key={title} className="flex gap-3.5">
-                <Icon size={18} className="mt-0.5 shrink-0 text-slate-400" aria-hidden="true" />
+          <ul className="mt-10 space-y-5">
+            {CAPABILITIES.map(({ Icon, title, line }, index) => (
+              <li
+                key={title}
+                className="rise-in flex gap-3.5"
+                style={{ "--i": index + 2 } as React.CSSProperties}
+              >
+                <Icon size={18} className="mt-0.5 shrink-0 text-shell-muted" aria-hidden="true" />
                 <div>
                   <p className="font-medium leading-snug">{title}</p>
-                  <p className="text-sm text-slate-400 leading-snug mt-0.5">{line}</p>
+                  <p className="text-sm text-shell-muted leading-snug mt-0.5">{line}</p>
                 </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <p className="hidden lg:block text-sm text-slate-400 max-w-sm">
-          Tu unidad de trabajo se ajusta sola según tu cuenta.
+        <p className="hidden lg:block text-sm text-shell-muted max-w-sm">
+          Gestión de guarderías, peluquerías y veterinarias.
         </p>
       </aside>
 
       <main className="flex-1 flex items-center justify-center px-4 py-12 sm:px-6">
-        <div className="w-full max-w-sm">
-          <h2 className="text-2xl font-bold tracking-tight text-ink">Iniciar sesión</h2>
-          <p className="text-muted mt-1.5">Entra con la cuenta que te entregó tu guardería.</p>
+        <div className="rise-in w-full max-w-sm" style={{ "--i": 1 } as React.CSSProperties}>
+          <h2 className="font-display text-3xl leading-tight text-ink">Iniciar sesión</h2>
+          <p className="text-muted mt-1.5">
+            Entra con la cuenta que te entregó tu negocio. Tu unidad de trabajo se ajusta sola.
+          </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5" noValidate>
             {needsDaycare && (
@@ -222,16 +246,12 @@ export function Login() {
                 </button>
               </div>
               {hasCapsLock && (
-                <p className="mt-2 text-xs text-amber-700">Bloq Mayús está activado.</p>
+                <p className="mt-2 text-xs text-warning-ink">Bloq Mayús está activado.</p>
               )}
             </div>
 
             {error && (
-              <p
-                id="login-error"
-                role="alert"
-                className="login-error flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5"
-              >
+              <p id="login-error" role="alert" className="login-error notice notice-danger">
                 <CircleAlert size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
                 {error}
               </p>
@@ -248,7 +268,7 @@ export function Login() {
           </form>
 
           <p className="mt-8 text-sm text-muted">
-            ¿Olvidaste tu contraseña? Pídele a un administrador de tu guardería que la restablezca.
+            ¿Olvidaste tu contraseña? Pídele a un administrador de tu negocio que la restablezca.
           </p>
         </div>
       </main>

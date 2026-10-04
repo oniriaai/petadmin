@@ -59,15 +59,15 @@ export const SERVICES = [
 ];
 
 export const STATUSES: Record<string, { label: string; color: string }> = {
-  PENDIENTE: { label: "Pendiente", color: "bg-yellow-100 text-yellow-800" },
-  CONFIRMADA: { label: "Confirmada", color: "bg-blue-100 text-blue-800" },
-  ACTIVA: { label: "Activa", color: "bg-green-100 text-green-800" },
-  COMPLETADA: { label: "Completada", color: "bg-gray-100 text-gray-700" },
-  CANCELADA: { label: "Cancelada", color: "bg-red-100 text-red-700" },
+  PENDIENTE: { label: "Pendiente", color: "bg-warning-soft text-warning-ink" },
+  CONFIRMADA: { label: "Confirmada", color: "bg-info-soft text-info-ink" },
+  ACTIVA: { label: "Activa", color: "bg-success-soft text-success-ink" },
+  COMPLETADA: { label: "Completada", color: "bg-sunken text-muted" },
+  CANCELADA: { label: "Cancelada", color: "bg-danger-soft text-danger-ink" },
   // Grooming / Peluquería workflow statuses
-  RECEPCIONADA: { label: "Recepcionada", color: "bg-indigo-100 text-indigo-800" },
-  EN_PROCESO: { label: "En proceso", color: "bg-orange-100 text-orange-800" },
-  LISTO: { label: "Listo", color: "bg-teal-100 text-teal-800" },
+  RECEPCIONADA: { label: "Recepcionada", color: "bg-grooming-100 text-grooming-800" },
+  EN_PROCESO: { label: "En proceso", color: "bg-grooming-600 text-white" },
+  LISTO: { label: "Listo", color: "bg-success-soft text-success-ink" },
 };
 
 export const PAYMENT_METHODS = ["EFECTIVO", "TRANSFERENCIA", "TARJETA", "OTRO"];
@@ -86,7 +86,7 @@ export const EXPENSE_CATEGORIES = [
 ];
 
 export const SEVERITY_COLOR: Record<string, string> = {
-  ALTA: "bg-red-100 text-red-800",
-  MEDIA: "bg-yellow-100 text-yellow-800",
-  BAJA: "bg-green-100 text-green-800",
+  ALTA: "bg-danger-soft text-danger-ink",
+  MEDIA: "bg-warning-soft text-warning-ink",
+  BAJA: "bg-success-soft text-success-ink",
 };

@@ -34,60 +34,26 @@ export function DaycaresPage() {
         </button>
       }
     >
-      <div
-        className="card overflow-hidden"
-        style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
-      >
+      <div className="card overflow-hidden bg-surface border-line">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr>
-                <th
-                  className="table-th"
-                  style={{ background: "transparent", color: "var(--color-muted)" }}
-                >
-                  Nombre
-                </th>
-                <th
-                  className="table-th"
-                  style={{ background: "transparent", color: "var(--color-muted)" }}
-                >
-                  Identificador
-                </th>
-                <th
-                  className="table-th"
-                  style={{ background: "transparent", color: "var(--color-muted)" }}
-                >
-                  Unidades
-                </th>
-                <th
-                  className="table-th"
-                  style={{ background: "transparent", color: "var(--color-muted)" }}
-                >
-                  Usuarios
-                </th>
-                <th
-                  className="table-th"
-                  style={{ background: "transparent", color: "var(--color-muted)" }}
-                >
-                  Módulos
-                </th>
-                <th
-                  className="table-th"
-                  style={{ background: "transparent", color: "var(--color-muted)" }}
-                >
-                  Estado
-                </th>
+                <th className="table-th bg-transparent text-muted">Nombre</th>
+                <th className="table-th bg-transparent text-muted">Identificador</th>
+                <th className="table-th bg-transparent text-muted">Unidades</th>
+                <th className="table-th bg-transparent text-muted">Usuarios</th>
+                <th className="table-th bg-transparent text-muted">Módulos</th>
+                <th className="table-th bg-transparent text-muted">Estado</th>
               </tr>
             </thead>
             <tbody>
               {daycares.map((daycare) => (
                 <tr
                   key={daycare.id}
-                  className="border-t hover:bg-white/5 transition-colors"
-                  style={{ borderColor: "var(--color-border)" }}
+                  className="border-t hover:bg-white/5 transition-colors border-line"
                 >
-                  <td className="table-td" style={{ color: "var(--color-ink)" }}>
+                  <td className="table-td text-ink">
                     <Link
                       to={`/platform/daycares/${daycare.id}`}
                       className="font-medium hover:underline"
@@ -95,24 +61,15 @@ export function DaycaresPage() {
                       {daycare.name}
                     </Link>
                   </td>
-                  <td
-                    className="table-td font-mono text-xs"
-                    style={{ color: "var(--color-muted)" }}
-                  >
-                    {daycare.slug}
-                  </td>
-                  <td className="table-td" style={{ color: "var(--color-muted)" }}>
+                  <td className="table-td font-mono text-xs text-muted">{daycare.slug}</td>
+                  <td className="table-td text-muted">
                     {daycare.unitList.map(businessUnitLabel).join(" · ")}
                   </td>
-                  <td className="table-td" style={{ color: "var(--color-muted)" }}>
-                    {daycare.userCount}
-                  </td>
-                  <td className="table-td" style={{ color: "var(--color-muted)" }}>
-                    {daycare.enabledModuleCount}
-                  </td>
+                  <td className="table-td text-muted">{daycare.userCount}</td>
+                  <td className="table-td text-muted">{daycare.enabledModuleCount}</td>
                   <td className="table-td">
                     <span
-                      className={`badge ${daycare.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}
+                      className={`badge ${daycare.isActive ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}
                     >
                       {daycare.isActive ? "Activa" : "Inactiva"}
                     </span>
@@ -121,11 +78,7 @@ export function DaycaresPage() {
               ))}
               {daycares.length === 0 && (
                 <tr>
-                  <td
-                    className="table-td text-center py-8"
-                    colSpan={6}
-                    style={{ color: "var(--color-muted)" }}
-                  >
+                  <td className="table-td text-center py-8 text-muted" colSpan={6}>
                     Todavía no hay guarderías registradas.
                   </td>
                 </tr>

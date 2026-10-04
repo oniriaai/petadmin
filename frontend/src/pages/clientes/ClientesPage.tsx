@@ -8,6 +8,7 @@ import { PageLoader } from "../../components/ui/Spinner";
 import { ClienteForm } from "./ClienteForm";
 import { PetForm } from "./PetForm";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 interface Pet {
   id: string;
@@ -62,7 +63,7 @@ export function ClientesPage() {
   }, [load]);
 
   async function deactivate(id: string) {
-    if (!confirm("¿Desactivar este cliente?")) return;
+    if (!confirm("¿Desactivamos este cliente? Su historial se conserva.")) return;
     await api.del(`/clients/${id}`);
     load();
   }
@@ -92,7 +93,7 @@ export function ClientesPage() {
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar por nombre, email o teléfono…"
@@ -115,7 +116,7 @@ export function ClientesPage() {
         {loading ? (
           <PageLoader />
         ) : clients.length === 0 ? (
-          <p className="text-center text-gray-400 py-16">Sin clientes. ¡Registra el primero!</p>
+          <EmptyState title="Todavía no hay clientes. ¿Registramos el primero?" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -133,10 +134,10 @@ export function ClientesPage() {
                 {clients.map((c) => (
                   <tr key={c.id} className="table-tr">
                     <td className="table-td">
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-ink">
                         {c.lastName}, {c.firstName}
                       </p>
-                      {c.idNumber && <p className="text-xs text-gray-400">CI: {c.idNumber}</p>}
+                      {c.idNumber && <p className="text-xs text-muted">CI: {c.idNumber}</p>}
                     </td>
                     <td className="table-td">
                       {c.phone && (
@@ -145,9 +146,7 @@ export function ClientesPage() {
                           {c.phone}
                         </p>
                       )}
-                      {c.email && (
-                        <p className="text-xs text-gray-400 truncate max-w-36">{c.email}</p>
-                      )}
+                      {c.email && <p className="text-xs text-muted truncate max-w-36">{c.email}</p>}
                     </td>
                     <td className="table-td text-xs">
                       {[c.city, c.province].filter(Boolean).join(", ") || "—"}
@@ -155,21 +154,19 @@ export function ClientesPage() {
                     <td className="table-td">
                       <div className="flex flex-wrap gap-1">
                         {c.pets.slice(0, 3).map((p) => (
-                          <span key={p.id} className="badge bg-indigo-50 text-indigo-700">
+                          <span key={p.id} className="badge bg-info-soft text-info-ink">
                             {p.species === "dog" ? <Dog size={14} /> : <Cat size={14} />} {p.name}
                           </span>
                         ))}
                         {c.pets.length > 3 && (
-                          <span className="badge bg-gray-100 text-gray-500">
-                            +{c.pets.length - 3}
-                          </span>
+                          <span className="badge bg-sunken text-muted">+{c.pets.length - 3}</span>
                         )}
                       </div>
                     </td>
                     <td className="table-td">
                       <Badge
                         color={
-                          c.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                          c.isActive ? "bg-success-soft text-success-ink" : "bg-sunken text-muted"
                         }
                       >
                         {c.isActive ? "Activo" : "Inactivo"}
@@ -196,7 +193,7 @@ export function ClientesPage() {
                         </button>
                         <button
                           onClick={() => openNewPet(c)}
-                          className="btn-ghost btn-sm p-1.5 text-indigo-600"
+                          className="btn-ghost btn-sm p-1.5 text-action"
                           title="Agregar mascota"
                         >
                           <PawPrint size={14} />
@@ -204,7 +201,7 @@ export function ClientesPage() {
                         {c.isActive && (
                           <button
                             onClick={() => deactivate(c.id)}
-                            className="btn-ghost btn-sm p-1.5 text-red-500"
+                            className="btn-ghost btn-sm p-1.5 text-danger"
                             title="Desactivar"
                           >
                             <UserX size={14} />
@@ -290,17 +287,19 @@ export function ClientesPage() {
               </div>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 mb-3">Mascotas registradas</h3>
+              <h3 className="font-semibold text-ink mb-3">Mascotas registradas</h3>
               {selectedClient.pets.length === 0 ? (
-                <p className="text-gray-400 text-sm">Sin mascotas registradas</p>
+                <p className="text-muted text-sm">
+                  Este tutor todavía no tiene perrhijos registrados.
+                </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {selectedClient.pets.map((p) => (
-                    <div key={p.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                    <div key={p.id} className="flex items-center gap-2 p-2 bg-sunken rounded-lg">
                       {p.species === "dog" ? <Dog size={20} /> : <Cat size={20} />}
                       <div>
                         <p className="font-medium text-sm">{p.name}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-xs text-muted">
                           {p.breed ?? p.species} · {p.sex === "M" ? "Macho" : "Hembra"}
                         </p>
                       </div>

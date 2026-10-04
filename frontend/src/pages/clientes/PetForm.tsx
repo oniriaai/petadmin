@@ -123,7 +123,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
       return;
     }
     if (!client && !pet) {
-      setError("No hay cliente asociado");
+      setError("Falta elegir el tutor de este perrhijo.");
       return;
     }
     setSaving(true);
@@ -146,7 +146,9 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
+      setError(
+        e instanceof Error ? e.message : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -156,7 +158,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title={`${pet ? "Editar" : "Nueva"} Mascota${client ? ` — ${client.firstName} ${client.lastName}` : ""}`}
+      title={`${pet ? "Editar" : "Nueva"} Mascota${client ? `: ${client.firstName} ${client.lastName}` : ""}`}
       size="lg"
       footer={
         <>
@@ -170,7 +172,9 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
       }
     >
       <div className="space-y-4">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && (
+          <p className="text-sm text-danger bg-danger-soft rounded-lg px-3 py-2">{error}</p>
+        )}
 
         <div className="flex justify-center pb-4">
           <ImageUpload
@@ -258,7 +262,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
               onChange={(e) => setForm((p) => ({ ...p, isNeutered: e.target.checked }))}
               className="w-4 h-4 rounded"
             />
-            <label htmlFor="neutered" className="text-sm text-gray-700 cursor-pointer">
+            <label htmlFor="neutered" className="text-sm text-muted cursor-pointer">
               Esterilizado/a
             </label>
           </div>

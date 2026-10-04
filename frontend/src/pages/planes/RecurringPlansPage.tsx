@@ -5,6 +5,7 @@ import { fmt, SERVICES } from "../../lib/utils";
 import { PageLoader } from "../../components/ui/Spinner";
 import { RecurringPlanForm } from "./RecurringPlanForm";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 interface RecurringPlan {
   id: string;
@@ -50,12 +51,12 @@ export function RecurringPlansPage() {
   }, [load]);
 
   async function deletePlan(id: string) {
-    if (!confirm("¿Eliminar este plan?")) return;
+    if (!confirm("¿Eliminamos este plan? Esta acción no se puede deshacer.")) return;
     try {
       await api.del(`/recurring-plans/${id}`);
       load();
     } catch (e) {
-      alert("Error al eliminar: " + (e instanceof Error ? e.message : "Unknown error"));
+      alert(e instanceof Error ? e.message : "No pudimos eliminarlo. Inténtalo de nuevo.");
     }
   }
 
@@ -98,7 +99,7 @@ export function RecurringPlansPage() {
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar cliente o sala…"
@@ -124,7 +125,7 @@ export function RecurringPlansPage() {
         {loading ? (
           <PageLoader />
         ) : plans.length === 0 ? (
-          <p className="text-center text-gray-400 py-16">Sin planes registrados</p>
+          <EmptyState title="Todavía no hay planes recurrentes. ¿Creamos el primero?" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -154,7 +155,7 @@ export function RecurringPlansPage() {
                     <td className="table-td text-sm">{fmt(plan.startDate)}</td>
                     <td className="table-td text-sm">{fmt(plan.endDate)}</td>
                     <td className="table-td text-xs">
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      <span className="bg-sunken text-muted px-2 py-1 rounded">
                         {daysLabel(plan.daysOfWeek)}
                       </span>
                     </td>
@@ -165,8 +166,8 @@ export function RecurringPlansPage() {
                       <span
                         className={`text-xs px-2 py-1 rounded-full ${
                           plan.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-success-soft text-success-ink"
+                            : "bg-sunken text-muted"
                         }`}
                       >
                         {plan.isActive ? "Activo" : "Inactivo"}
@@ -184,7 +185,7 @@ export function RecurringPlansPage() {
                         {plan.isActive && (
                           <button
                             onClick={() => deletePlan(plan.id)}
-                            className="btn-ghost btn-sm p-1.5 text-red-500 hover:bg-red-50"
+                            className="btn-ghost btn-sm p-1.5 text-danger hover:bg-danger-soft"
                             title="Eliminar"
                           >
                             <Trash2 size={14} />

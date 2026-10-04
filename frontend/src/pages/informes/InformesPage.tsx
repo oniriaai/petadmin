@@ -15,8 +15,11 @@ import {
 import { Download, TrendingUp, TrendingDown } from "lucide-react";
 import { api, downloadFile } from "../../lib/api";
 import { fmtCurrency } from "../../lib/utils";
+import { CHART_COLORS, CHART_GRID } from "../../lib/chart-theme";
 import { PageLoader } from "../../components/ui/Spinner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { Stat, StatStrip } from "../../components/ui/Stat";
 
 interface KPIs {
   ingresosMes: number;
@@ -47,7 +50,6 @@ interface ExpenseReport {
   byStatus: Array<{ status: string; _count: number }>;
 }
 
-const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6"];
 const SVC_LABEL: Record<string, string> = {
   GUARDERIA: "Guardería",
   PELUQUERIA_CANINA: "Pel. Canina",
@@ -57,36 +59,6 @@ const SVC_LABEL: Record<string, string> = {
   RESERVA: "Reserva",
   TIENDA: "Tienda",
 };
-
-function KPICard({
-  label,
-  value,
-  sub,
-  trend,
-  color = "text-gray-900",
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  trend?: number;
-  color?: string;
-}) {
-  return (
-    <div className="card p-4">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-      {trend !== undefined && (
-        <p
-          className={`text-xs flex items-center gap-1 mt-1 ${trend >= 0 ? "text-green-600" : "text-red-500"}`}
-        >
-          {trend >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
-          {Math.abs(trend).toFixed(1)}% vs mes anterior
-        </p>
-      )}
-    </div>
-  );
-}
 
 export function InformesPage() {
   const [kpis, setKpis] = useState<KPIs | null>(null);
@@ -115,7 +87,7 @@ export function InformesPage() {
     try {
       await downloadFile(path, filename);
     } catch {
-      alert("Error al descargar");
+      alert("No pudimos descargar el archivo. Inténtalo de nuevo.");
     } finally {
       setDownloading(false);
     }
@@ -173,51 +145,62 @@ export function InformesPage() {
       />
 
       {kpis && (
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <KPICard
-            label="Ingresos mes"
+        <StatStrip>
+          <Stat
+            label="Ingresos del mes"
             value={fmtCurrency(kpis.ingresosMes)}
-            trend={kpis.crecimiento}
-            color="text-green-600"
+            tone="success"
+            hint={
+              <span
+                className={`flex items-center gap-1 ${kpis.crecimiento >= 0 ? "text-success" : "text-danger"}`}
+              >
+                {kpis.crecimiento >= 0 ? (
+                  <TrendingUp size={11} aria-hidden="true" />
+                ) : (
+                  <TrendingDown size={11} aria-hidden="true" />
+                )}
+                {Math.abs(kpis.crecimiento).toFixed(1)}% frente al mes anterior
+              </span>
+            }
           />
-          <KPICard label="Gastos mes" value={fmtCurrency(kpis.gastosMes)} color="text-red-600" />
-          <KPICard
-            label="Utilidad mes"
+          <Stat label="Gastos del mes" value={fmtCurrency(kpis.gastosMes)} />
+          <Stat
+            label="Utilidad del mes"
             value={fmtCurrency(kpis.utilidad)}
-            color={kpis.utilidad >= 0 ? "text-green-700" : "text-red-600"}
-            sub={`Margen: ${kpis.margenGanancia.toFixed(1)}%`}
+            tone={kpis.utilidad < 0 ? "danger" : undefined}
+            hint={`Margen: ${kpis.margenGanancia.toFixed(1)}%`}
           />
-          <KPICard label="Ticket promedio" value={fmtCurrency(kpis.ticketPromedio)} />
-          <KPICard
-            label="Reservas mes"
-            value={String(kpis.reservacionesMes)}
-            sub={`${kpis.totalClientes} clientes activos`}
+          <Stat label="Ticket promedio" value={fmtCurrency(kpis.ticketPromedio)} />
+          <Stat
+            label="Reservas del mes"
+            value={kpis.reservacionesMes}
+            hint={`${kpis.totalClientes} clientes activos`}
           />
-        </div>
+        </StatStrip>
       )}
 
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="lg:col-span-2 card p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Ingresos por mes</h2>
+          <h2 className="section-title mb-4">Ingresos por mes</h2>
           {monthlyData.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">Sin datos de ingresos</p>
+            <EmptyState title="Todavía no hay ingresos en este periodo." />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                 <Tooltip formatter={(v: number) => [fmtCurrency(v), "Ingresos"]} />
-                <Bar dataKey="total" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="total" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </div>
 
         <div className="card p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Ingresos por servicio</h2>
+          <h2 className="section-title mb-4">Ingresos por servicio</h2>
           {pieData.length === 0 ? (
-            <p className="text-center text-gray-400 py-12">Sin datos</p>
+            <EmptyState title="Todavía no hay datos en este periodo." />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -231,7 +214,7 @@ export function InformesPage() {
                   dataKey="value"
                 >
                   {pieData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(v: number) => fmtCurrency(v)} />
@@ -244,9 +227,9 @@ export function InformesPage() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         <div className="card p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Gastos por categoría</h2>
+          <h2 className="section-title mb-4">Gastos por categoría</h2>
           {categoryData.length === 0 ? (
-            <p className="text-center text-gray-400 py-8">Sin datos de gastos</p>
+            <EmptyState title="Todavía no hay gastos en este periodo." />
           ) : (
             <div className="space-y-2">
               {categoryData.map((c, i) => {
@@ -255,13 +238,16 @@ export function InformesPage() {
                 return (
                   <div key={c.name}>
                     <div className="flex justify-between text-sm mb-0.5">
-                      <span className="text-gray-700 capitalize">{c.name}</span>
-                      <span className="font-medium text-gray-900">{fmtCurrency(c.value)}</span>
+                      <span className="text-muted capitalize">{c.name}</span>
+                      <span className="font-medium text-ink">{fmtCurrency(c.value)}</span>
                     </div>
-                    <div className="h-1.5 bg-gray-100 rounded-full">
+                    <div className="h-1.5 bg-sunken rounded-full">
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: COLORS[i % COLORS.length] }}
+                        style={{
+                          width: `${pct}%`,
+                          backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+                        }}
                       />
                     </div>
                   </div>
@@ -272,46 +258,46 @@ export function InformesPage() {
         </div>
 
         <div className="card p-5">
-          <h2 className="font-semibold text-gray-800 mb-4">Resumen financiero</h2>
+          <h2 className="section-title mb-4">Resumen financiero</h2>
           {kpis && income && expense && (
             <div className="space-y-3">
               {[
                 {
                   label: "Total ingresos",
                   value: fmtCurrency(income.total),
-                  color: "text-green-600",
+                  color: "text-success",
                 },
                 {
                   label: "IVA cobrado",
                   value: fmtCurrency(income.vatTotal),
-                  color: "text-gray-600",
+                  color: "text-muted",
                 },
                 {
                   label: "Total gastos/compras",
                   value: fmtCurrency(expense.total),
-                  color: "text-red-600",
+                  color: "text-danger",
                 },
                 {
                   label: "Gastos pagados",
                   value: fmtCurrency(expense.paid),
-                  color: "text-gray-600",
+                  color: "text-muted",
                 },
                 {
                   label: "Saldo pendiente gastos",
                   value: fmtCurrency(expense.balance),
-                  color: "text-yellow-600",
+                  color: "text-warning-ink",
                 },
                 {
                   label: "Transacciones de ingreso",
                   value: String(income.count),
-                  color: "text-gray-900",
+                  color: "text-ink",
                 },
               ].map(({ label, value, color }) => (
                 <div
                   key={label}
-                  className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0"
+                  className="flex justify-between items-center py-2 border-b border-line-subtle last:border-0"
                 >
-                  <span className="text-sm text-gray-600">{label}</span>
+                  <span className="text-sm text-muted">{label}</span>
                   <span className={`font-semibold text-sm ${color}`}>{value}</span>
                 </div>
               ))}

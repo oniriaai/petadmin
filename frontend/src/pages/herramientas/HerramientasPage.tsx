@@ -16,6 +16,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { Tabs } from "../../components/ui/Tabs";
 
 type Tab = "alertas" | "contratos" | "estimador";
 interface Alert {
@@ -69,18 +70,12 @@ export function HerramientasPage() {
         subtitle={<>{canSeeCumplimiento ? "Alertas, contratos y estimaciones" : "Estimaciones"}</>}
       />
       {tabs.length > 1 && (
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-          {tabs.map(([t, label, Icon]) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === t ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-            >
-              <Icon size={15} className="inline-block mr-1.5" />
-              {label}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          label="Herramientas"
+          value={tab}
+          onChange={setTab}
+          items={tabs.map(([id, label, icon]) => ({ id: id as Tab, label, icon }))}
+        />
       )}
       {tab === "alertas" && canSeeCumplimiento && <AlertasTab />}
       {tab === "contratos" && canSeeCumplimiento && <ContratosTab />}
@@ -145,7 +140,7 @@ function AlertasTab() {
       <div className="flex items-center justify-between">
         <div className="flex gap-2 items-center">
           {openCount > 0 && (
-            <span className="badge bg-red-100 text-red-700">
+            <span className="badge bg-danger-soft text-danger-ink">
               <AlertTriangle size={13} className="inline-block mr-1" />
               {openCount} activa{openCount > 1 ? "s" : ""}
             </span>
@@ -168,8 +163,8 @@ function AlertasTab() {
       {loading ? (
         <PageLoader />
       ) : alerts.length === 0 ? (
-        <div className="card p-12 text-center text-gray-400">
-          <CheckCircle size={40} className="mx-auto mb-2 text-green-400" />
+        <div className="card p-12 text-center text-muted">
+          <CheckCircle size={40} className="mx-auto mb-2 text-success" />
           Sin alertas {resolvedFilter === "false" ? "activas" : ""}
         </div>
       ) : (
@@ -177,36 +172,36 @@ function AlertasTab() {
           {alerts.map((a) => (
             <div key={a.id} className={`card p-4 flex gap-4 ${a.isResolved ? "opacity-60" : ""}`}>
               <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.severity === "ALTA" ? "bg-red-100" : a.severity === "MEDIA" ? "bg-yellow-100" : "bg-green-100"}`}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${a.severity === "ALTA" ? "bg-danger-soft" : a.severity === "MEDIA" ? "bg-warning-soft" : "bg-success-soft"}`}
               >
                 <AlertTriangle
                   size={18}
                   className={
                     a.severity === "ALTA"
-                      ? "text-red-600"
+                      ? "text-danger"
                       : a.severity === "MEDIA"
-                        ? "text-yellow-600"
-                        : "text-green-600"
+                        ? "text-warning-ink"
+                        : "text-success"
                   }
                 />
               </div>
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold text-gray-900">{a.title}</p>
+                    <p className="font-semibold text-ink">{a.title}</p>
                     {a.pet && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted">
                         <PawPrint size={13} className="inline-block mr-1" />
-                        {a.pet.name} — {a.pet.client.firstName} {a.pet.client.lastName}
+                        {a.pet.name} · {a.pet.client.firstName} {a.pet.client.lastName}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge color={SEVERITY_COLOR[a.severity]}>{a.severity}</Badge>
-                    <Badge color="bg-gray-100 text-gray-600">{a.type}</Badge>
+                    <Badge color="bg-sunken text-muted">{a.type}</Badge>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">{a.description}</p>
+                <p className="text-sm text-muted mt-1">{a.description}</p>
               </div>
               {!a.isResolved && (
                 <button
@@ -245,10 +240,10 @@ function AlertasTab() {
               value={form.petId}
               onChange={(e) => setForm((f) => ({ ...f, petId: e.target.value }))}
             >
-              <option value="">— Sin mascota específica —</option>
+              <option value="">Sin mascota específica</option>
               {pets.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} — {p.client.firstName} {p.client.lastName}
+                  {p.name} · {p.client.firstName} {p.client.lastName}
                 </option>
               ))}
             </select>
@@ -327,7 +322,7 @@ function EstimadorTab() {
   return (
     <div className="grid lg:grid-cols-2 gap-5">
       <div className="card p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800">Estimación Planes Mensuales</h2>
+        <h2 className="section-title">Estimación Planes Mensuales</h2>
         <div className="space-y-3">
           {[
             { key: "dias2" as const, label: "Clientes 2 días/semana" },
@@ -337,7 +332,7 @@ function EstimadorTab() {
             { key: "precioDia" as const, label: "Precio por día ($)" },
           ].map(({ key, label }) => (
             <div key={key} className="flex items-center justify-between gap-4">
-              <label className="text-sm text-gray-700">{label}</label>
+              <label className="text-sm text-muted">{label}</label>
               <input
                 className="input w-24 text-right"
                 type="number"
@@ -348,13 +343,13 @@ function EstimadorTab() {
             </div>
           ))}
         </div>
-        <div className="border-t pt-4">
-          <div className="bg-indigo-50 rounded-xl p-4 text-center">
-            <p className="text-sm text-indigo-600 font-medium">Estimación de ingreso mensual</p>
-            <p className="text-3xl font-bold text-slate-900 mt-1">
+        <div className="border-t border-line-subtle pt-4">
+          <div className="bg-info-soft rounded-xl p-4 text-center">
+            <p className="text-sm text-info-ink font-medium">Estimación de ingreso mensual</p>
+            <p className="text-3xl font-semibold tabular-nums text-ink mt-1">
               ${totalPlanesIngresos.toLocaleString()}
             </p>
-            <p className="text-xs text-indigo-500 mt-1">
+            <p className="text-xs text-info-ink mt-1">
               {planes.dias2 + planes.dias3 + planes.dias4 + planes.dias5} clientes totales
             </p>
           </div>
@@ -362,7 +357,7 @@ function EstimadorTab() {
       </div>
 
       <div className="card p-5 space-y-4">
-        <h2 className="font-semibold text-gray-800">Estimación de Ventas</h2>
+        <h2 className="section-title">Estimación de Ventas</h2>
         <div className="space-y-3">
           {[
             { key: "reservasMes" as const, label: "Reservas por mes" },
@@ -371,7 +366,7 @@ function EstimadorTab() {
             { key: "precioExtra" as const, label: "Precio servicio adicional ($)" },
           ].map(({ key, label }) => (
             <div key={key} className="flex items-center justify-between gap-4">
-              <label className="text-sm text-gray-700">{label}</label>
+              <label className="text-sm text-muted">{label}</label>
               <input
                 className="input w-24 text-right"
                 type="number"
@@ -382,13 +377,13 @@ function EstimadorTab() {
             </div>
           ))}
         </div>
-        <div className="border-t pt-4">
-          <div className="bg-green-50 rounded-xl p-4 text-center">
-            <p className="text-sm text-green-600 font-medium">Estimación de ventas mensuales</p>
-            <p className="text-3xl font-bold text-green-700 mt-1">
+        <div className="border-t border-line-subtle pt-4">
+          <div className="bg-success-soft rounded-xl p-4 text-center">
+            <p className="text-sm text-success-ink font-medium">Estimación de ventas mensuales</p>
+            <p className="text-3xl font-semibold tabular-nums text-success-ink mt-1">
               ${totalVentasIngresos.toLocaleString()}
             </p>
-            <p className="text-xs text-green-500 mt-1">
+            <p className="text-xs text-success-ink mt-1">
               {ventas.reservasMes} reservas + {ventas.serviciosExtra} extras
             </p>
           </div>

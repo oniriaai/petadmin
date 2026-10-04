@@ -46,6 +46,8 @@ describe("login", () => {
     expect(screen.queryByRole("button", { name: /Plataforma/ })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Usuario")).toBeInTheDocument();
     expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
+    // The product is Argos Suite; Pethijos is a tenant's brand, not the product's.
+    expect(screen.getByRole("img", { name: "Argos Suite" })).toBeInTheDocument();
   });
 
   it("never sends a business unit, so the server decides the scope", async () => {

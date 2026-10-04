@@ -26,10 +26,10 @@ const STATUS_LABELS: Record<ContractStatus, string> = {
 };
 
 const STATUS_COLORS: Record<ContractStatus, string> = {
-  PENDIENTE_FIRMA: "bg-amber-100 text-amber-800",
-  FIRMADO: "bg-green-100 text-green-800",
-  VENCIDO: "bg-red-100 text-red-800",
-  CANCELADO: "bg-gray-100 text-gray-700",
+  PENDIENTE_FIRMA: "bg-warning-soft text-warning-ink",
+  FIRMADO: "bg-success-soft text-success-ink",
+  VENCIDO: "bg-danger-soft text-danger-ink",
+  CANCELADO: "bg-sunken text-muted",
 };
 
 interface Contract {
@@ -59,7 +59,7 @@ export function ContratosTab() {
       setError(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : "Error al cargar los contratos",
+          : "No pudimos cargar los contratos. Inténtalo de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -78,18 +78,27 @@ export function ContratosTab() {
       setError(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : "Error al cambiar el estado",
+          : "No pudimos cambiar el estado. Inténtalo de nuevo.",
       );
     }
   }
 
   async function remove(contract: Contract) {
-    if (!window.confirm(`¿Eliminar el contrato "${contract.name}"?`)) return;
+    if (
+      !window.confirm(
+        `¿Eliminamos el contrato "${contract.name}"? Esta acción no se puede deshacer.`,
+      )
+    )
+      return;
     try {
       await api.del(`/contracts/${contract.id}`);
       await load();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al eliminar");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "No pudimos eliminarlo. Inténtalo de nuevo.",
+      );
     }
   }
 
@@ -98,10 +107,7 @@ export function ContratosTab() {
   return (
     <div className="space-y-4">
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
@@ -128,7 +134,7 @@ export function ContratosTab() {
         <PageLoader />
       ) : visible.length === 0 ? (
         <div className="card p-10 text-center">
-          <FileText size={28} className="mx-auto mb-2 text-gray-300" />
+          <FileText size={28} className="mx-auto mb-2 text-faint" />
           <p className="text-sm text-muted">
             {contracts.length === 0
               ? "Todavía no hay contratos registrados."
@@ -176,7 +182,7 @@ export function ContratosTab() {
                     ))}
                   </select>
                   <button
-                    className="btn-ghost btn-sm text-red-600"
+                    className="btn-ghost btn-sm text-danger"
                     onClick={() => void remove(contract)}
                     aria-label={`Eliminar ${contract.name}`}
                   >
@@ -250,7 +256,11 @@ function ContractForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
       });
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al guardar");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -260,10 +270,7 @@ function ContractForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
     <Modal open onClose={onClose} title="Nuevo contrato">
       <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-            role="alert"
-          >
+          <div className="notice notice-danger" role="alert">
             {error}
           </div>
         )}

@@ -53,10 +53,7 @@ export function PlatformOverviewPage() {
       </div>
 
       <section className="mt-8">
-        <h2
-          className="text-sm font-semibold uppercase tracking-wider mb-3"
-          style={{ color: "var(--color-muted)" }}
-        >
+        <h2 className="text-sm font-semibold uppercase tracking-wider mb-3 text-muted">
           Guarderías
         </h2>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -64,23 +61,20 @@ export function PlatformOverviewPage() {
             <Link
               key={daycare.id}
               to={`/platform/daycares/${daycare.id}`}
-              className="card p-4 hover:border-indigo-500 transition-colors block"
-              style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
+              className="card p-4 hover:border-action transition-colors block bg-surface border-line"
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold truncate">{daycare.name}</p>
-                  <p className="text-xs font-mono truncate" style={{ color: "var(--color-muted)" }}>
-                    {daycare.slug}
-                  </p>
+                  <p className="text-xs font-mono truncate text-muted">{daycare.slug}</p>
                 </div>
                 <span
-                  className={`badge ${daycare.isActive ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300"}`}
+                  className={`badge ${daycare.isActive ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}
                 >
                   {daycare.isActive ? "Activa" : "Inactiva"}
                 </span>
               </div>
-              <div className="mt-3 flex gap-4 text-xs" style={{ color: "var(--color-muted)" }}>
+              <div className="mt-3 flex gap-4 text-xs text-muted">
                 <span>{daycare.userCount} usuario(s)</span>
                 <span>{daycare.enabledModuleCount} módulo(s)</span>
                 <span>{daycare.unitList.map(businessUnitLabel).join(" · ")}</span>
@@ -91,28 +85,16 @@ export function PlatformOverviewPage() {
       </section>
 
       <section className="mt-8">
-        <h2
-          className="text-sm font-semibold uppercase tracking-wider mb-3"
-          style={{ color: "var(--color-muted)" }}
-        >
+        <h2 className="text-sm font-semibold uppercase tracking-wider mb-3 text-muted">
           Actividad reciente
         </h2>
-        <div
-          className="card divide-y"
-          style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
-        >
+        <div className="card divide-y bg-surface border-line">
           {audit.length === 0 && (
-            <p className="p-4 text-sm" style={{ color: "var(--color-muted)" }}>
-              Todavía no hay actividad registrada.
-            </p>
+            <p className="p-4 text-sm text-muted">Todavía no hay actividad registrada.</p>
           )}
           {audit.map((entry) => (
-            <div
-              key={entry.id}
-              className="p-3 text-sm flex items-baseline gap-3"
-              style={{ borderColor: "var(--color-border)" }}
-            >
-              <span className="text-xs shrink-0 font-mono" style={{ color: "var(--color-muted)" }}>
+            <div key={entry.id} className="p-3 text-sm flex items-baseline gap-3 border-line">
+              <span className="text-xs shrink-0 font-mono text-muted">
                 {new Date(entry.createdAt).toLocaleString("es-EC", {
                   dateStyle: "short",
                   timeStyle: "short",
