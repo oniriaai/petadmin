@@ -5,6 +5,7 @@
 Consolidar la operación administrativa y diaria de dos líneas de negocio complementarias mediante una **Arquitectura Modular (Modular Monolith)**:
 - **Guardería** (`DAYCARE`): Flujo de estancias, cupos por sala, planes semanales recurrentes y transporte.
 - **Peluquería** (`GROOMING`): Flujo de citas y turnos por duración estimada, catálogo de estética, tablero kanban de atención y cobro directo.
+- **Veterinaria** (`VETERINARY`): Agenda de consultas por veterinario y sala, sala de espera con prioridad, historia clínica y cobro al cerrar.
 - **Core Compartido**: Registro unificado de clientes y mascotas, autenticación y almacenamiento.
 - **Finanzas**: Segregación contable estricta con cobros independientes por unidad.
 
@@ -64,6 +65,11 @@ núcleo y está siempre disponible.
 │   └── Disponibilidad (/disponibilidad)    [reservas]
 ├── ✂️ Módulo Peluquería (roles admin y grooming)
 │   └── Agenda de Peluquería (/peluqueria)  [peluqueria]
+├── 🩺 Módulo Veterinaria (roles admin y veterinary)
+│   ├── Agenda Veterinaria (/veterinaria)             [veterinaria + reservas]
+│   ├── Consulta (/veterinaria/consultas/:id)         [veterinaria]
+│   ├── Historias Clínicas (/veterinaria/pacientes)   [veterinaria]
+│   └── Catálogo Clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
 └── 💼 Gestión Transversal (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
     ├── Clientes (/clientes)
@@ -115,6 +121,14 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `POST /peluqueria/appointments`: Creación de cita por fecha y duración.
 - `PATCH /peluqueria/appointments/:id/status`: Transición de estados en el kanban.
 - `POST /peluqueria/appointments/:id/complete`: Cierre y cobro independiente para `GROOMING`.
+
+### Módulo Veterinaria
+- `GET, POST, PUT, DELETE /veterinaria/services`, `/veterinaria/staff`: Catálogo con precio y personal (escritura solo `admin`).
+- `GET, POST /veterinaria/visits`: Agenda y alta de consulta (reserva `VETERINARY` + registro clínico).
+- `PATCH /veterinaria/visits/:id`, `/status`: Registro clínico y estado en el flujo.
+- `POST /veterinaria/visits/:id/vitals | diagnoses | charges`: Signos vitales, diagnósticos y cargos.
+- `POST /veterinaria/visits/:id/close`, `/payments`: Cierre con cobro independiente para `VETERINARY` y abonos.
+- `GET /veterinaria/patients/:petId/history`: Historia clínica del paciente.
 
 ### Módulo Finanzas y Backoffice
 - `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.

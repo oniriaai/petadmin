@@ -104,6 +104,9 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
           <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
             <option value="daycare">Guardería</option>
             <option value="grooming">Peluquería</option>
+            <option value="consultorio">Consultorio</option>
+            <option value="quirofano">Quirófano</option>
+            <option value="hospital">Hospitalización</option>
             <option value="training">Entrenamiento</option>
             <option value="reception">Recepción</option>
             <option value="other">Otro</option>

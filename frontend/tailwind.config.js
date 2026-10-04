@@ -24,7 +24,8 @@ export default {
           muted: "var(--color-shell-muted)",
         },
 
-        // Business-unit accents. `daycare` is the amber ramp, `grooming` the violet one.
+        // Business-unit accents. `daycare` is the amber ramp, `grooming` the violet one and
+        // `veterinary` the teal one.
         // Use these instead of raw amber-*/violet-* so the unit accent lives in one place.
         daycare: {
           50: "#fffbeb",
@@ -43,6 +44,15 @@ export default {
           700: "#6d28d9",
           800: "#5b21b6",
           900: "#4c1d95",
+        },
+        veterinary: {
+          50: "#f0fdfa",
+          100: "#ccfbf1",
+          500: "#14b8a6",
+          600: "#0d9488",
+          700: "#0f766e",
+          800: "#115e59",
+          900: "#134e4a",
         },
       },
       boxShadow: {

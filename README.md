@@ -5,13 +5,16 @@ financiera de guarderías y peluquerías caninas. Cada guardería cliente es un 
 con sus propios datos, usuarios y **módulos contratados**; el proveedor los administra desde una
 consola propia.
 
-Cada inquilino opera hasta dos **unidades de negocio**: `DAYCARE` ("Guardería") y `GROOMING`
-("Peluquería").
+Cada inquilino opera hasta tres **unidades de negocio**: `DAYCARE` ("Guardería"), `GROOMING`
+("Peluquería") y `VETERINARY` ("Veterinaria").
 
 - 🐶 **Guardería**: semáforo de cupos por sala en tiempo real, estancias diarias, check-in/check-out
   con validación de aforo, planes recurrentes semanales y rutas de transporte.
 - ✂️ **Peluquería**: catálogo de servicios con duración estimada y tarifas base, agenda por franja
   horaria, tablero kanban (`Agendada` → `En Salón` → `En Baño/Corte` → `Listo` → `Entregada`) y cobro directo.
+- 🩺 **Veterinaria**: agenda de consultas por veterinario y sala, sala de espera con prioridad,
+  historia clínica (registro SOAP, signos vitales, diagnósticos), catálogo de servicios con precio
+  propio de cada clínica y cierre con cobro acreditado a `VETERINARY`.
 - 🐾 **Núcleo compartido**: tutores y perrhijos (con historial, vacunas y fotos en Backblaze B2),
   autenticación JWT y aislamiento estricto entre inquilinos.
 - 💵 **Finanzas**: cobros e ingresos contables segregados por unidad, cuentas por pagar, inventario
@@ -94,6 +97,7 @@ del backend (definidos en `backend/src/platform/product-modules.ts`):
 | `reservas` | `reservations`, `rooms`, `check-in-out`, `recurring-plans` | Primitivos compartidos: las reservas de peluquería también ocupan sala y registran entrada/salida |
 | `guarderia` | `guarderia` | Requiere `reservas` |
 | `peluqueria` | `peluqueria` | Requiere `reservas` |
+| `veterinaria` | `veterinaria` | Requiere `reservas`: cada consulta es una reserva de la unidad `VETERINARY` |
 | `finanzas` | `incomes`, `payables`, `providers` | |
 | `inventario` | `inventory` | Stock con aviso de mínimo y movimientos |
 | `informes` | `reports`, `export` | |
@@ -431,6 +435,7 @@ contratación deben evitar.
 | `admin_global` | `admin123` | `admin` | Vista consolidada con selector de unidad |
 | `kinderdog_admin` | `kinderdog123` | `daycare` | Operación y finanzas de Guardería |
 | `pethijos_admin` | `pethijos123` | `grooming` | Operación y finanzas de Peluquería |
+| `vet_admin` | `vet12345` | `veterinary` | Clínica veterinaria: agenda e historias clínicas |
 
 ### Guardería `demo` — solo `GROOMING`, con `reservas` y `peluqueria`
 

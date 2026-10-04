@@ -66,6 +66,16 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Cobro Directo e Independiente**: Registro de ingreso contable acreditado exclusivamente a `GROOMING`. Admite anticipo al agendar y cobro del saldo al entregar.
 - ✅ **Finanzas de Peluquería**: Registro de ingresos y gastos separados estrictamente de Guardería.
 
+### Veterinaria (`VETERINARY`, módulo `veterinaria`) — fase 1 de 4
+
+- ✅ **Agenda de Consultas**: Por día y veterinario, con sala. Un veterinario o una sala no se reservan dos veces; una urgencia se registra igual.
+- ✅ **Sala de Espera**: `Programadas` → `Sala de espera` (ordenada por prioridad) → `En consulta` → `Cerradas`, más cancelaciones y ausencias.
+- ✅ **Registro Clínico**: Motivo, anamnesis, examen físico, valoración, plan y próximo control; signos vitales y diagnósticos presuntivos o definitivos.
+- ✅ **Historia Clínica por Paciente**: Consultas, evolución del peso, vacunas, alergias, condiciones crónicas y fallecimiento. Imprimible.
+- ✅ **Catálogo de la Clínica**: Servicios con precio y duración propios de cada clínica, y veterinarios de planta o externos.
+- ✅ **Cobro al Cerrar**: Cargos del catálogo o libres, descuento, IVA de la unidad, cobro parcial y abonos posteriores, acreditados a `VETERINARY`.
+- ⏳ **Pendiente**: vacunación y desparasitación con lote, recetas y farmacia sobre inventario (fase 2); hospitalización, cirugía, laboratorio e imagen, consentimientos (fase 3); recordatorios e informes clínicos (fase 4).
+
 ---
 
 ## 4. Módulo de Administración y Finanzas

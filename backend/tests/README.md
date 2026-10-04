@@ -17,7 +17,7 @@ Dos clases de suite, y la diferencia importa para saber cuándo ejecutar cada un
 | `module-registry.ts` | Ids y paths únicos, rutas absolutas, y que los módulos especializados declaren sus roles y unidades |
 | `product-modules.ts` | Catálogo de módulos vendibles: ids únicos, dependencias existentes, y que cada módulo backend lo reclame exactamente un módulo de producto |
 | `module-access.ts` | Composición del montaje: `requireAuth` → gate de contratación → router, comparando por identidad de objeto |
-| `reservas-module.ts`, `operaciones-module.ts`, `platform-admin-module.ts` | Que la superficie pública de cada módulo sea la que el registro monta |
+| `reservas-module.ts`, `operaciones-module.ts`, `veterinaria-module.ts`, `platform-admin-module.ts` | Que la superficie pública de cada módulo sea la que el registro monta |
 | `storage-keys.ts` | Construcción y resolución de claves de objeto: travesías, segmentos vacíos y URLs de otro bucket |
 | `security-config.ts` | `assertSecureConfig()` rechaza arrancar en producción con `JWT_SECRET` ausente, de ejemplo o demasiado corto, y la lista blanca de CORS acepta y rechaza lo que debe |
 | `observability.ts` | El manejador de errores devuelve el `requestId`, **no** el texto del error, y no vuelve a escribir sobre una respuesta ya enviada |
@@ -40,6 +40,7 @@ control y quedaría gratis para todas las guarderías.
 | `suspension.e2e.ts` | `test:suspension` | Desactivar un usuario o suspender un inquilino invalida los tokens **en la petición siguiente**, no al caducar |
 | `rate-limit.e2e.ts` | `test:ratelimit` | Corte de intentos de login (por IP **y** usuario), lista blanca de CORS y cabeceras de `helmet` |
 | `modular-domains.e2e.ts` | `test:modular` | Peluquería (catálogo con duraciones, agenda, estados del flujo, cobro para `GROOMING`) y Guardería (ocupación en vivo, aforo en el check-in, cobro para `DAYCARE`), con el aislamiento entre ambos roles |
+| `veterinaria.e2e.ts` | `test:veterinaria` | La clínica: consulta desde la sala de espera hasta el cobro en `VETERINARY`, abonos, congelación al cerrar, doble reserva de veterinario y sala (salvo urgencias), y que los demás roles y unidades no la alcancen |
 | `financial.e2e.ts` | `test:financial` | `incomes` y `payables`: CRUD y pagos parciales y totales por unidad |
 | `check-in-out.e2e.ts` | `test:checkin` | Check-in/check-out ad-hoc y ligado a reservas, histórico y ocupación |
 | `settings.e2e.ts` | `test:settings` | Configuración por (guardería, unidad) y su efecto real en el IVA de una reserva nueva |
@@ -76,7 +77,7 @@ datos es nueva en cada ejecución.
 cd backend && npm run test:architecture
 
 # E2E en Docker (recomendado)
-for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler ratelimit; do
+for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler veterinaria ratelimit; do
   docker exec pethijos-backend npm run "test:$s" || break
 done
 
@@ -103,6 +104,7 @@ desarrollo.
 | `pethijos` | `admin_global` | `admin123` | `admin` |
 | `pethijos` | `kinderdog_admin` | `kinderdog123` | `daycare` |
 | `pethijos` | `pethijos_admin` | `pethijos123` | `grooming` |
+| `pethijos` | `vet_admin` | `vet12345` | `veterinary` |
 | `demo` | `demo_admin` | `demo123` | `admin` |
 | — | `superadmin` | `superadmin123` | `superadmin` |
 

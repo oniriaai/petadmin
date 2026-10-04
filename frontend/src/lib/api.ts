@@ -6,6 +6,8 @@ export type {
   PetSummary,
   UserRole,
 } from "../modules/shared/contracts";
+import { normalizeBusinessUnit } from "../modules/shared/contracts";
+
 let onUnauthorized: (() => void) | null = null;
 let onModuleDisabled: ((moduleId: string | undefined) => void) | null = null;
 
@@ -51,9 +53,7 @@ function getToken() {
 }
 
 function getActiveBusinessUnit() {
-  const value = localStorage.getItem("activeBusinessUnit");
-  if (value === "DAYCARE" || value === "GROOMING") return value;
-  return null;
+  return normalizeBusinessUnit(localStorage.getItem("activeBusinessUnit"));
 }
 
 /**

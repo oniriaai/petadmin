@@ -178,6 +178,37 @@ describe("navigation gating", () => {
     expect(screen.getByText("Informes y Gráficos")).toBeInTheDocument();
   });
 
+  it("hides the clinic's navigation when veterinaria is not enabled", () => {
+    renderSidebar({ modules: ["reservas"] });
+    expect(screen.queryByText("Agenda Veterinaria")).not.toBeInTheDocument();
+    expect(screen.queryByText("Historias Clínicas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
+  });
+
+  it("shows the clinic to its own role, without the admin-only catalogue", () => {
+    renderSidebar({
+      role: "veterinary",
+      businessUnit: "VETERINARY",
+      modules: ["reservas", "veterinaria"],
+    });
+    expect(screen.getByText("Agenda Veterinaria")).toBeInTheDocument();
+    expect(screen.getByText("Historias Clínicas")).toBeInTheDocument();
+    expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
+    // And nothing of the other units.
+    expect(screen.queryByText("Agenda Peluquería")).not.toBeInTheDocument();
+    expect(screen.queryByText("Control Guardería")).not.toBeInTheDocument();
+  });
+
+  it("keeps the clinic away from the other units' roles", () => {
+    renderSidebar({
+      role: "grooming",
+      businessUnit: "GROOMING",
+      modules: ["reservas", "veterinaria", "peluqueria"],
+    });
+    expect(screen.queryByText("Agenda Veterinaria")).not.toBeInTheDocument();
+    expect(screen.getByText("Agenda Peluquería")).toBeInTheDocument();
+  });
+
   it("always shows the core items, which are not sold separately", () => {
     renderSidebar({ modules: [] });
     expect(screen.getByText("Perfil del Cliente")).toBeInTheDocument();

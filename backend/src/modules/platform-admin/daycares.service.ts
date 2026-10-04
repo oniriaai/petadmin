@@ -16,13 +16,19 @@ const BCRYPT_ROUNDS = 10;
 
 /**
  * The business unit a user's row carries, derived from the role rather than accepted from the
- * request. A tenant `admin` spans both units and is stored as "GLOBAL" (which is not a unit and
- * is deliberately not in BUSINESS_UNITS); the two operational roles are pinned to their own.
+ * request. A tenant `admin` spans every unit and is stored as "GLOBAL" (which is not a unit and
+ * is deliberately not in BUSINESS_UNITS); the operational roles are pinned to their own.
  * Deriving it removes the possibility of a row whose role and unit disagree.
  */
+const UNIT_FOR_ROLE: Record<AssignableTenantRole, BusinessUnit | "GLOBAL"> = {
+  admin: "GLOBAL",
+  daycare: "DAYCARE",
+  grooming: "GROOMING",
+  veterinary: "VETERINARY",
+};
+
 export function businessUnitForRole(role: AssignableTenantRole): string {
-  if (role === "admin") return "GLOBAL";
-  return role === "daycare" ? "DAYCARE" : "GROOMING";
+  return UNIT_FOR_ROLE[role];
 }
 
 export function parseUnits(value: string): BusinessUnit[] {
@@ -231,6 +237,19 @@ export async function updateDaycare(id: string, input: UpdateDaycareInput) {
       isActive: input.isActive,
     },
   });
+
+  // A unit added after creation gets its settings row here, as `createDaycare` does for the
+  // initial ones, so the settings screen has something to show for it.
+  if (units) {
+    await prisma.businessUnitSetting.createMany({
+      data: units.map((businessUnit) => ({
+        daycareId: id,
+        businessUnit,
+        timezone: daycare.timezone,
+      })),
+      skipDuplicates: true,
+    });
+  }
 
   invalidate(id);
   // Suspending or reactivating a tenant changes the status of all its users without naming

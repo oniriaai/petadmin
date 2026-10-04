@@ -2,7 +2,7 @@
  * The product-module catalog: the sellable units the platform console toggles per daycare.
  *
  * A product module is NOT a backend module. Backend modules (see `module-registry.ts`) are
- * resource-shaped and there are 19 of them, which is too granular to put in front of whoever
+ * resource-shaped and there are over twenty of them, which is too granular to put in front of whoever
  * is selling this. Each product module grants a set of backend module ids instead.
  *
  * Every backend module id must be claimed by exactly one product module, or be part of the
@@ -57,6 +57,15 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
     label: "Peluquería",
     description: "Catálogo de servicios, agenda por franja horaria y tablero de flujo de atención.",
     backendModuleIds: ["peluqueria"],
+    requires: ["reservas"],
+  },
+  {
+    id: "veterinaria",
+    label: "Veterinaria",
+    description:
+      "Clínica veterinaria: agenda de consultas, historia clínica, signos vitales, diagnósticos y " +
+      "cobro por consulta, con contabilidad propia de la unidad Veterinaria.",
+    backendModuleIds: ["veterinaria"],
     requires: ["reservas"],
   },
   {

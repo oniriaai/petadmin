@@ -3,17 +3,17 @@ import jwt from "jsonwebtoken";
 
 import { getPrincipalStatus } from "../core/tenancy/principal";
 
-export const BUSINESS_UNITS = ["DAYCARE", "GROOMING"] as const;
+export const BUSINESS_UNITS = ["DAYCARE", "GROOMING", "VETERINARY"] as const;
 export type BusinessUnit = (typeof BUSINESS_UNITS)[number];
 /**
  * `superadmin` is the platform (vendor) role. It is not a tenant role: a superadmin has no
  * daycare, and a tenant user can never hold it. The database enforces that invariant with the
  * `users_superadmin_untenanted` CHECK constraint.
  */
-export type UserRole = "superadmin" | "admin" | "daycare" | "grooming";
+export type UserRole = "superadmin" | "admin" | "daycare" | "grooming" | "veterinary";
 
 /** Roles the console and daycare-side user management may assign. Never includes superadmin. */
-export const ASSIGNABLE_TENANT_ROLES = ["admin", "daycare", "grooming"] as const;
+export const ASSIGNABLE_TENANT_ROLES = ["admin", "daycare", "grooming", "veterinary"] as const;
 export type AssignableTenantRole = (typeof ASSIGNABLE_TENANT_ROLES)[number];
 
 /**
@@ -84,6 +84,7 @@ export function normalizeUserRole(role: string, businessUnit: string): UserRole 
   if (normalizedRole === "admin") return "admin";
   if (normalizedRole === "daycare") return "daycare";
   if (normalizedRole === "grooming") return "grooming";
+  if (normalizedRole === "veterinary") return "veterinary";
   const legacyRole = LEGACY_ROLES[normalizedRole];
   if (legacyRole) return legacyRole;
   if (normalizedRole === "owner") {
@@ -91,6 +92,7 @@ export function normalizeUserRole(role: string, businessUnit: string): UserRole 
     const unit = normalizeBusinessUnit(businessUnit);
     if (unit === "DAYCARE") return "daycare";
     if (unit === "GROOMING") return "grooming";
+    if (unit === "VETERINARY") return "veterinary";
   }
   return null;
 }

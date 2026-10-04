@@ -61,6 +61,9 @@ export function RoomsPage() {
     const types: Record<string, string> = {
       daycare: "Guardería",
       grooming: "Peluquería",
+      consultorio: "Consultorio",
+      quirofano: "Quirófano",
+      hospital: "Hospitalización",
       training: "Entrenamiento",
       reception: "Recepción",
       other: "Otro",

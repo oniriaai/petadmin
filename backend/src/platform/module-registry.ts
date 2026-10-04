@@ -19,6 +19,7 @@ import { contractsRouter } from "../routes/contracts";
 import { exportRouter } from "../routes/export";
 import { storageRouter } from "../routes/storage";
 import { peluqueriaRouter } from "../modules/peluqueria";
+import { veterinariaRouter } from "../modules/veterinaria";
 import { guarderiaRouter } from "../modules/guarderia";
 import { platformRouter } from "../modules/platform-admin";
 import { usersRouter } from "../modules/admin";
@@ -58,13 +59,18 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/reservations",
     router: reservationsRouter,
     description: "Reservation workflows",
-    access: { roles: ["admin", "daycare", "grooming"], businessUnits: ["DAYCARE", "GROOMING"] },
+    access: {
+      roles: ["admin", "daycare", "grooming", "veterinary"],
+      businessUnits: ["DAYCARE", "GROOMING", "VETERINARY"],
+    },
   },
   {
     id: "recurring-plans",
     basePath: "/recurring-plans",
     router: recurringPlansRouter,
     description: "Recurring reservation plans",
+    // Not VETERINARY: a clinic books visits one at a time. With three units this list now
+    // constrains, where naming both of two units used to constrain nothing.
     access: { roles: ["admin", "daycare", "grooming"], businessUnits: ["DAYCARE", "GROOMING"] },
   },
   {
@@ -72,7 +78,10 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/check-in-out",
     router: checkInOutRouter,
     description: "Shared attendance compatibility workflows",
-    access: { roles: ["admin", "daycare", "grooming"], businessUnits: ["DAYCARE", "GROOMING"] },
+    access: {
+      roles: ["admin", "daycare", "grooming", "veterinary"],
+      businessUnits: ["DAYCARE", "GROOMING", "VETERINARY"],
+    },
   },
   {
     id: "settings",
@@ -101,7 +110,10 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/rooms",
     router: roomsRouter,
     description: "Room and capacity records",
-    access: { roles: ["admin", "daycare", "grooming"], businessUnits: ["DAYCARE", "GROOMING"] },
+    access: {
+      roles: ["admin", "daycare", "grooming", "veterinary"],
+      businessUnits: ["DAYCARE", "GROOMING", "VETERINARY"],
+    },
   },
   {
     id: "payables",
@@ -153,6 +165,13 @@ export const backendModules: readonly BackendModule[] = [
     router: peluqueriaRouter,
     description: "Grooming operations",
     access: { roles: ["admin", "grooming"], businessUnits: ["GROOMING"] },
+  },
+  {
+    id: "veterinaria",
+    basePath: "/veterinaria",
+    router: veterinariaRouter,
+    description: "Veterinary clinic operations",
+    access: { roles: ["admin", "veterinary"], businessUnits: ["VETERINARY"] },
   },
   {
     id: "platform",

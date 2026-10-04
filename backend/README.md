@@ -162,7 +162,7 @@ caducaba su token, hasta 12 horas después.
 | Cabecera | Quién | Efecto |
 |---|---|---|
 | `Authorization: Bearer <jwt>` | Todos | Sesión. Los tokens llevan `tv` (versión); uno anterior a la tenancy recibe 401 limpio |
-| `X-Business-Unit: DAYCARE\|GROOMING` | `admin` y `superadmin` | Acota la vista a una unidad. Sin ella, consolidado |
+| `X-Business-Unit: DAYCARE\|GROOMING\|VETERINARY` | `admin` y `superadmin` | Acota la vista a una unidad. Sin ella, consolidado |
 | `X-Daycare-Id: <id>` | `superadmin` | Fija el inquilino. Un usuario de guardería solo puede enviar el suyo (403 en otro caso) |
 | `X-Request-Id: <id>` | Opcional, entrante | Se acepta el de la pasarela para que una traza abarque proxy y API; si no viene se genera. Siempre se devuelve |
 
@@ -311,6 +311,33 @@ clave ajena precisamente para que el registro de una eliminación dure más que 
 | `POST` | `/peluqueria/appointments/:id/complete` | Completa y registra el cobro para `GROOMING` |
 | `DELETE` | `/peluqueria/appointments/:id` | Cancela la cita |
 
+### Módulo de Veterinaria (`/api/v1/veterinaria`)
+*Roles `admin` y `veterinary`, unidad `VETERINARY`. Requiere el módulo de producto `veterinaria`.*
+
+Cada consulta es una reserva de la unidad `VETERINARY` (ocupa agenda y sala, y de ella cuelgan los
+cobros) más su registro clínico, uno a uno. Una consulta `CERRADA` queda congelada.
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/veterinaria/services` | Catálogo de servicios de la clínica (`?includeInactive=true`) |
+| `POST` `PUT` `DELETE` | `/veterinaria/services[/:id]` | Alta, edición y baja lógica. Solo `admin` |
+| `GET` | `/veterinaria/staff` | Veterinarios de planta y externos |
+| `POST` `PUT` `DELETE` | `/veterinaria/staff[/:id]` | Alta, edición y baja lógica, con vínculo opcional a un usuario. Solo `admin` |
+| `GET` | `/veterinaria/visits` | Agenda con filtros `date`, `from`/`to`, `veterinarianId`, `status`, `petId`, `search`; paginable |
+| `POST` | `/veterinaria/visits` | Agenda una consulta; sin `startTime` entra a sala de espera. Rechaza con 409 un veterinario o una sala ya ocupados, salvo `triage: URGENCIA` |
+| `GET` | `/veterinaria/visits/:id` | Detalle: paciente, signos vitales, diagnósticos, cargos y cobros |
+| `PATCH` | `/veterinaria/visits/:id` | Registro clínico (motivo, anamnesis, examen, valoración, plan, control) |
+| `PATCH` | `/veterinaria/visits/:id/status` | `PROGRAMADA` → `EN_ESPERA` → `EN_CONSULTA`, o `CANCELADA` / `NO_ASISTIO` (liberan el hueco) |
+| `DELETE` | `/veterinaria/visits/:id` | Elimina una consulta no cerrada |
+| `POST` `DELETE` | `/veterinaria/visits/:id/vitals[/:childId]` | Tomas de signos vitales; el peso se refleja en la ficha |
+| `POST` `DELETE` | `/veterinaria/visits/:id/diagnoses[/:childId]` | Diagnósticos presuntivos o definitivos |
+| `POST` `DELETE` | `/veterinaria/visits/:id/charges[/:childId]` | Cargos del catálogo o libres |
+| `POST` | `/veterinaria/visits/:id/documents` | Adjunta un documento del paciente a la consulta |
+| `POST` | `/veterinaria/visits/:id/close` | Cierra, calcula IVA y total, y registra el cobro para `VETERINARY` |
+| `POST` | `/veterinaria/visits/:id/payments` | Abono sobre el saldo de una consulta cerrada |
+| `GET` | `/veterinaria/patients/:petId/history` | Historia clínica: consultas, diagnósticos, signos vitales, vacunas y documentos |
+| `PATCH` | `/veterinaria/patients/:petId` | Datos clínicos del paciente: grupo sanguíneo, alergias, condiciones crónicas, fallecimiento |
+
 ---
 
 ## Protecciones de borde
@@ -438,6 +465,7 @@ hace). `prisma db push` queda como salida de emergencia en desarrollo.
 | `20260901000000_baseline` | Esquema completo previo a la tenancy |
 | `20260902000000_rename_business_units` | `KINDERDOG`→`DAYCARE`, `PETHIJOS`→`GROOMING` y sus roles |
 | `20260903000000_add_daycare_tenancy` | `daycares`, `daycare_modules`, `platform_audit_logs`, `daycareId` con backfill, FKs, índices y el CHECK `users_superadmin_untenanted` |
+| `20261004000000_veterinary_core` | Clínica veterinaria: `vet_services`, `vet_visits`, `vet_vitals`, `vet_diagnoses`, `vet_visit_charges`; matrícula, especialidad y usuario en `veterinarians`; datos clínicos en `pets`. Solo añade: la unidad `VETERINARY` y el rol `veterinary` son valores de texto y no necesitan migración |
 | `20260904000000_add_unit_vat_percent` | `business_unit_settings.vatPercent`, con el valor por defecto que ya estaba escrito a mano |
 | `20260905000000_drop_unused_backfill_tenant` | Elimina la guardería `daycare_pethijos` **solo si no posee ningún dato**. La migración de tenancy la inserta sin condiciones (correcto para adoptar una instalación de un solo inquilino), con lo que una base de datos **nueva** arrancaba con un inquilino que nadie creó, activo y con los siete módulos vendibles habilitados |
 | `20260906000000_per_tenant_usernames` | `username` pasa a ser único por `(daycareId, username)`, más un índice **parcial** sobre `username` donde `daycareId IS NULL` para las cuentas de plataforma: Postgres considera los `NULL` distintos entre sí, así que el índice compuesto no las cubriría |

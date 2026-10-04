@@ -131,7 +131,18 @@ describe("unit switcher", () => {
   it("is offered to a role that spans both units", () => {
     renderShell();
     expect(screen.getByLabelText("Unidad de negocio")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Consolidado (Ambos)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Consolidado" })).toBeInTheDocument();
+  });
+
+  it("offers and selects the clinic unit when the daycare bought it", () => {
+    const setActiveBusinessUnit = vi.fn();
+    renderShell({ units: ["DAYCARE", "GROOMING", "VETERINARY"], setActiveBusinessUnit });
+    const switcher = screen.getByLabelText("Unidad de negocio");
+    expect(screen.getByRole("option", { name: "Veterinaria" })).toBeInTheDocument();
+    // The switcher used to accept only the two original units and silently fall back to
+    // consolidated for anything else.
+    fireEvent.change(switcher, { target: { value: "VETERINARY" } });
+    expect(setActiveBusinessUnit).toHaveBeenCalledWith("VETERINARY");
   });
 
   it("is hidden from a unit-scoped role", () => {

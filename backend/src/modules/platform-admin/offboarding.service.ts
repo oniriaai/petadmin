@@ -350,6 +350,13 @@ export async function deleteDaycare(
       await tx.reservationPet.deleteMany({ where: { reservation: { daycareId } } }),
     );
 
+    // The clinical record, before the reservations, pets and veterinarians it points at.
+    count("vetVitals", await tx.vetVitals.deleteMany({ where: { daycareId } }));
+    count("vetDiagnoses", await tx.vetDiagnosis.deleteMany({ where: { daycareId } }));
+    count("vetVisitCharges", await tx.vetVisitCharge.deleteMany({ where: { daycareId } }));
+    count("vetVisits", await tx.vetVisit.deleteMany({ where: { daycareId } }));
+    count("vetServices", await tx.vetService.deleteMany({ where: { daycareId } }));
+
     // Then the rows that reference the operational core.
     count("checkInOuts", await tx.checkInOut.deleteMany({ where: { daycareId } }));
     count("incomes", await tx.income.deleteMany({ where: { daycareId } }));

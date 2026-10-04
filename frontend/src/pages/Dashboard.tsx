@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { businessUnitLabel } from "../modules/shared/contracts";
 import { fmtCurrency, fmt, fmtTime, fmtDayLabel, STATUSES } from "../lib/utils";
 import { Badge } from "../components/ui/Badge";
 import { PageLoader } from "../components/ui/Spinner";
@@ -95,14 +96,10 @@ export function Dashboard() {
 
   const dashboardLabel =
     user?.role === "admin"
-      ? activeBusinessUnit === "DAYCARE"
-        ? "Guardería"
-        : activeBusinessUnit === "GROOMING"
-          ? "Peluquería"
-          : "Consolidado"
-      : user?.businessUnit === "DAYCARE"
-        ? "Guardería"
-        : "Peluquería";
+      ? activeBusinessUnit
+        ? businessUnitLabel(activeBusinessUnit)
+        : "Consolidado"
+      : businessUnitLabel(user?.businessUnit);
 
   return (
     <div className="p-4 sm:p-6 space-y-6">

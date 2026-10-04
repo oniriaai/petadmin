@@ -28,4 +28,10 @@ assert.deepEqual(peluqueria?.access, {
   businessUnits: ["GROOMING"],
 });
 
+const veterinaria = backendModules.find((module) => module.id === "veterinaria");
+assert.deepEqual(veterinaria?.access, {
+  roles: ["admin", "veterinary"],
+  businessUnits: ["VETERINARY"],
+});
+
 console.log(`✓ backend module registry (${backendModules.length} modules)`);

@@ -4,9 +4,8 @@ import { api, ApiError, downloadFile } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import { Spinner } from "../../components/ui/Spinner";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { businessUnitLabel } from "../../modules/shared/contracts";
 import type { BusinessUnit } from "../../modules/shared/contracts";
-
-const UNIT_LABELS: Record<string, string> = { DAYCARE: "Guardería", GROOMING: "Peluquería" };
 
 interface UnitSetting {
   businessUnit: BusinessUnit;
@@ -171,7 +170,7 @@ export function ConfiguracionPage() {
               return (
                 <div key={unit.businessUnit} className="card p-5 space-y-4">
                   <h2 className="font-semibold text-ink border-b border-line-subtle pb-3 flex items-center gap-2">
-                    <Settings size={17} /> {UNIT_LABELS[unit.businessUnit] ?? unit.businessUnit}
+                    <Settings size={17} /> {businessUnitLabel(unit.businessUnit)}
                   </h2>
 
                   <div className="grid sm:grid-cols-2 gap-4">

@@ -46,6 +46,23 @@ export async function assertClientInTenant(clientId: string, daycareId: string):
 }
 
 /**
+ * Resolves a veterinarian that must belong to this daycare, or refuses with the same 404 a
+ * foreign client gets.
+ */
+export async function assertVeterinarianInTenant(
+  veterinarianId: string,
+  daycareId: string,
+): Promise<void> {
+  const veterinarian = await prisma.veterinarian.findFirst({
+    where: { id: veterinarianId, daycareId },
+    select: { id: true },
+  });
+  if (!veterinarian) {
+    throw new AuthzError(404, "Veterinario no encontrado");
+  }
+}
+
+/**
  * Validates that a room exists, belongs to THIS daycare, and serves the given business unit.
  *
  * `daycareId` is required. The room was previously looked up by id alone and checked only
