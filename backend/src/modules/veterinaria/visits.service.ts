@@ -92,6 +92,16 @@ const visitDetailInclude = {
       items: { include: { inventoryItem: { select: { id: true, name: true, unit: true } } } },
     },
   },
+  hospitalizations: {
+    orderBy: { admittedAt: "desc" },
+    include: { room: { select: { id: true, name: true } } },
+  },
+  procedures: {
+    orderBy: { createdAt: "asc" },
+    include: { veterinarian: { select: { id: true, name: true } } },
+  },
+  labOrders: { orderBy: { requestedAt: "asc" }, include: { values: true } },
+  consents: { orderBy: { createdAt: "asc" } },
 } satisfies Prisma.VetVisitInclude;
 
 export interface VisitListQuery {
@@ -174,6 +184,23 @@ export async function requireVisit(daycareId: string, id: string) {
 export function assertEditable(visit: { status: string }) {
   if (LOCKED_STATUSES.includes(visit.status as VisitStatus)) {
     throw new AuthzError(409, "La consulta está cerrada o cancelada y ya no se puede modificar");
+  }
+}
+
+/**
+ * A visit cannot be closed, cancelled or deleted from under a patient who is still on the ward
+ * or on the table: the stay is billed on this visit at discharge.
+ */
+async function assertNoOpenInpatientWork(daycareId: string, visitId: string) {
+  const [admitted, underway] = await Promise.all([
+    prisma.vetHospitalization.count({ where: { daycareId, visitId, status: "INGRESADO" } }),
+    prisma.vetProcedure.count({ where: { daycareId, visitId, status: "EN_CURSO" } }),
+  ]);
+  if (admitted > 0) {
+    throw new AuthzError(409, "El paciente sigue hospitalizado: registra el alta primero");
+  }
+  if (underway > 0) {
+    throw new AuthzError(409, "Hay un procedimiento en curso: finalízalo primero");
   }
 }
 
@@ -301,6 +328,7 @@ export async function updateVisitStatus(daycareId: string, id: string, status: V
   }
 
   const released = RELEASED_STATUSES.includes(status);
+  if (released) await assertNoOpenInpatientWork(daycareId, visit.id);
   const [updated] = await prisma.$transaction([
     prisma.vetVisit.update({
       where: { id: visit.id },
@@ -344,6 +372,7 @@ export async function deleteVisit(daycareId: string, id: string) {
   if (visit.status === "CERRADA") {
     throw new AuthzError(409, "Una consulta cerrada forma parte de la historia clínica");
   }
+  await assertNoOpenInpatientWork(daycareId, visit.id);
   // The visit, its vitals, diagnoses and charges cascade from the reservation.
   await prisma.reservation.delete({ where: { id: visit.reservationId } });
 }
@@ -462,6 +491,7 @@ export async function closeVisit(
   });
   if (!visit) throw new AuthzError(404, "Consulta no encontrada");
   assertEditable(visit);
+  await assertNoOpenInpatientWork(daycareId, visit.id);
 
   const basePrice = round2(
     visit.charges.reduce((sum, charge) => sum + charge.quantity * charge.unitPrice, 0),

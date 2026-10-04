@@ -162,10 +162,13 @@ async function createReservationFromPlan(
 
   const ownedPets = await prisma.pet.findMany({
     where: { id: { in: petIds }, clientId: plan.clientId },
-    select: { id: true },
+    select: { id: true, deceasedAt: true },
   });
   if (ownedPets.length !== petIds.length) {
     throw new Error("Plan contiene mascotas que no pertenecen al cliente");
+  }
+  if (ownedPets.some((pet) => pet.deceasedAt)) {
+    throw new Error("Plan contiene una mascota registrada como fallecida");
   }
 
   // Has a previous run already created this occurrence?

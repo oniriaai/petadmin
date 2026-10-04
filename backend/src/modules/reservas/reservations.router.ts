@@ -9,7 +9,7 @@ import {
   getRequiredDaycareId,
 } from "../../core/tenancy/scope";
 import { readPage, sendPage } from "../../utils/pagination";
-import { assertClientInTenant } from "../../utils/validation";
+import { assertClientInTenant, assertPetsAlive } from "../../utils/validation";
 
 export const reservationsRouter = Router();
 
@@ -149,6 +149,7 @@ reservationsRouter.post("/", async (req, res) => {
       res.status(400).json({ message: "Una o más mascotas no pertenecen a este cliente" });
       return;
     }
+    assertPetsAlive(pets);
 
     // Validate room capacity and conflicts if room is specified
     if (roomId && checkIn && checkOut) {

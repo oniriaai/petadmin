@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { AuthzError, type BusinessUnit } from "../../middleware/auth";
 import { getUnitVatPercent } from "../../core/tenancy/unit-settings";
-import { assertClientInTenant } from "../../utils/validation";
+import { assertClientInTenant, assertPetsAlive } from "../../utils/validation";
 import { DEFAULT_GROOMING_SERVICES } from "./services";
 
 /**
@@ -175,6 +175,7 @@ export class GroomingAppointmentsService {
     if (pets.length !== petIds.length) {
       throw new AuthzError(404, "Una o más mascotas seleccionadas no pertenecen a este cliente");
     }
+    assertPetsAlive(pets);
 
     const petNames = pets.map((p) => p.name).join(", ");
     const concept = `${serviceName} - ${petNames}`;

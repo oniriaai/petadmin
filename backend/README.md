@@ -347,6 +347,24 @@ cobros) más su registro clínico, uno a uno. Una consulta `CERRADA` queda conge
 | `GET` | `/veterinaria/pharmacy/queue` | Líneas recetadas en los últimos 30 días sin dispensar; paginable |
 | `GET` | `/veterinaria/pharmacy/controlled-log` | Libro de controlados: dispensaciones de artículos marcados `isControlled` (`from`, `to`); paginable |
 | `GET` | `/veterinaria/pharmacy/expiring` | Lotes recibidos que caducan en 90 días o ya caducaron |
+| `GET` | `/veterinaria/hospitalizations` | Ingresos (`status`: `INGRESADO` por defecto, `ALTA`, `ALL`) con sus indicaciones y la próxima dosis de cada una; paginable |
+| `GET` | `/veterinaria/hospitalizations/wards` | Salas de tipo `hospital` con su aforo y ocupación |
+| `GET` | `/veterinaria/hospitalizations/:id` | Un ingreso, también para la hoja de alta |
+| `POST` | `/veterinaria/visits/:id/hospitalizations` | Ingresa al paciente: sala de hospitalización con cupo (409 si está completa o el paciente ya está ingresado) |
+| `POST` | `/veterinaria/hospitalizations/:id/discharge` | Alta **una sola vez**: suspende las indicaciones y, con tarifa diaria, añade los días de estancia como cargo de la consulta |
+| `POST` | `/veterinaria/hospitalizations/:id/vitals` `/orders` | Signos vitales en sala; nueva indicación (`everyHours` opcional) |
+| `POST` | `/veterinaria/treatment-orders/:orderId/doses` `/stop` | Firma una dosis (administrada u omitida con motivo; 409 si ese horario ya se firmó); suspende la indicación |
+| `POST` `DELETE` | `/veterinaria/visits/:id/procedures[/:childId]` | Cirugía, procedimiento o eutanasia; solo se elimina si no se inició |
+| `PATCH` `POST` | `/veterinaria/procedures/:id` `/start` `/finish` | Edita, inicia y finaliza. Una cirugía o eutanasia **no inicia sin consentimiento firmado** del mismo tipo; finalizar una eutanasia registra el fallecimiento |
+| `POST` `DELETE` | `/veterinaria/visits/:id/lab-orders[/:childId]` | Orden de laboratorio o imagen; solo se elimina mientras está `SOLICITADO` |
+| `GET` | `/veterinaria/lab-orders` | Órdenes (`status`: `PENDIENTE`, `RESULTADO`…, `kind`, `petId`); paginable |
+| `PATCH` `POST` | `/veterinaria/lab-orders/:id/status` `/result` | Marca en proceso; registra o corrige el resultado (resumen y valores), **aunque la consulta ya esté cerrada** |
+| `POST` `DELETE` | `/veterinaria/visits/:id/consents[/:childId]` | Consentimiento del tutor; firmado no se elimina |
+| `GET` `POST` | `/veterinaria/consents/:id` `/sign` | Consentimiento para imprimir; registra la firma una sola vez |
+
+Una consulta no se cierra, cancela ni elimina mientras su paciente siga ingresado o tenga un
+procedimiento en curso. Una mascota registrada como fallecida no admite reservas, citas de
+peluquería, check-in ni nuevas ocurrencias de un plan recurrente.
 
 El stock se mueve a través de `core/inventory/stock.ts`, compartido con `/inventory`: movimiento y
 nivel se escriben en una sola transacción. `/inventory/items` acepta `isControlled`, y una entrada
@@ -481,6 +499,7 @@ hace). `prisma db push` queda como salida de emergencia en desarrollo.
 | `20260903000000_add_daycare_tenancy` | `daycares`, `daycare_modules`, `platform_audit_logs`, `daycareId` con backfill, FKs, índices y el CHECK `users_superadmin_untenanted` |
 | `20261004000000_veterinary_core` | Clínica veterinaria: `vet_services`, `vet_visits`, `vet_vitals`, `vet_diagnoses`, `vet_visit_charges`; matrícula, especialidad y usuario en `veterinarians`; datos clínicos en `pets`. Solo añade: la unidad `VETERINARY` y el rol `veterinary` son valores de texto y no necesitan migración |
 | `20261005000000_veterinary_pharmacy` | `vet_preventives`, `vet_prescriptions`, `vet_prescription_items`; lote, laboratorio, veterinario y consulta en `pet_vaccinations`; `isControlled` en `inventory_items`; lote, caducidad y línea de receta en `inventory_movements`. Solo añade |
+| `20261006000000_veterinary_inpatient` | `vet_hospitalizations`, `vet_treatment_orders`, `vet_treatment_administrations` (único por indicación y horario), `vet_procedures`, `vet_lab_orders`, `vet_lab_result_values`, `vet_consents`; `hospitalizationId` en `vet_vitals`. Solo añade |
 | `20260904000000_add_unit_vat_percent` | `business_unit_settings.vatPercent`, con el valor por defecto que ya estaba escrito a mano |
 | `20260905000000_drop_unused_backfill_tenant` | Elimina la guardería `daycare_pethijos` **solo si no posee ningún dato**. La migración de tenancy la inserta sin condiciones (correcto para adoptar una instalación de un solo inquilino), con lo que una base de datos **nueva** arrancaba con un inquilino que nadie creó, activo y con los siete módulos vendibles habilitados |
 | `20260906000000_per_tenant_usernames` | `username` pasa a ser único por `(daycareId, username)`, más un índice **parcial** sobre `username` donde `daycareId IS NULL` para las cuentas de plataforma: Postgres considera los `NULL` distintos entre sí, así que el índice compuesto no las cubriría |

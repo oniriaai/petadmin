@@ -351,6 +351,15 @@ export async function deleteDaycare(
     );
 
     // The clinical record, before the reservations, pets and veterinarians it points at.
+    count("vetConsents", await tx.vetConsent.deleteMany({ where: { daycareId } }));
+    count("vetProcedures", await tx.vetProcedure.deleteMany({ where: { daycareId } }));
+    count("vetLabResultValues", await tx.vetLabResultValue.deleteMany({ where: { daycareId } }));
+    count("vetLabOrders", await tx.vetLabOrder.deleteMany({ where: { daycareId } }));
+    count(
+      "vetTreatmentAdministrations",
+      await tx.vetTreatmentAdministration.deleteMany({ where: { daycareId } }),
+    );
+    count("vetTreatmentOrders", await tx.vetTreatmentOrder.deleteMany({ where: { daycareId } }));
     count(
       "vetPrescriptionItems",
       await tx.vetPrescriptionItem.deleteMany({ where: { daycareId } }),
@@ -358,6 +367,7 @@ export async function deleteDaycare(
     count("vetPrescriptions", await tx.vetPrescription.deleteMany({ where: { daycareId } }));
     count("vetPreventives", await tx.vetPreventive.deleteMany({ where: { daycareId } }));
     count("vetVitals", await tx.vetVitals.deleteMany({ where: { daycareId } }));
+    count("vetHospitalizations", await tx.vetHospitalization.deleteMany({ where: { daycareId } }));
     count("vetDiagnoses", await tx.vetDiagnosis.deleteMany({ where: { daycareId } }));
     count("vetVisitCharges", await tx.vetVisitCharge.deleteMany({ where: { daycareId } }));
     count("vetVisits", await tx.vetVisit.deleteMany({ where: { daycareId } }));

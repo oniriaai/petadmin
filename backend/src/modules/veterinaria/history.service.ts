@@ -33,7 +33,17 @@ export async function getPatientHistory(daycareId: string, petId: string) {
   });
   if (!pet) throw new AuthzError(404, "Paciente no encontrado");
 
-  const [visits, vitals, chronicDiagnoses, preventives, prescriptions] = await Promise.all([
+  const [
+    visits,
+    vitals,
+    chronicDiagnoses,
+    preventives,
+    prescriptions,
+    hospitalizations,
+    procedures,
+    labOrders,
+    consents,
+  ] = await Promise.all([
     prisma.vetVisit.findMany({
       where: { petId: pet.id, daycareId },
       include: {
@@ -64,9 +74,43 @@ export async function getPatientHistory(daycareId: string, petId: string) {
       orderBy: { issuedAt: "desc" },
       take: HISTORY_VISIT_LIMIT,
     }),
+    prisma.vetHospitalization.findMany({
+      where: { petId: pet.id, daycareId },
+      include: { room: { select: { id: true, name: true } } },
+      orderBy: { admittedAt: "desc" },
+      take: HISTORY_VISIT_LIMIT,
+    }),
+    prisma.vetProcedure.findMany({
+      where: { petId: pet.id, daycareId },
+      include: { veterinarian: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: HISTORY_VISIT_LIMIT,
+    }),
+    prisma.vetLabOrder.findMany({
+      where: { petId: pet.id, daycareId },
+      include: { values: true },
+      orderBy: { requestedAt: "desc" },
+      take: HISTORY_VISIT_LIMIT,
+    }),
+    prisma.vetConsent.findMany({
+      where: { petId: pet.id, daycareId },
+      orderBy: { createdAt: "desc" },
+      take: HISTORY_VISIT_LIMIT,
+    }),
   ]);
 
-  return { pet, visits, vitals, chronicDiagnoses, preventives, prescriptions };
+  return {
+    pet,
+    visits,
+    vitals,
+    chronicDiagnoses,
+    preventives,
+    prescriptions,
+    hospitalizations,
+    procedures,
+    labOrders,
+    consents,
+  };
 }
 
 /** The clinical fields of a pet's profile. The rest of the profile belongs to Core's `/pets`. */

@@ -77,7 +77,12 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Vacunas y Preventivos**: Vacunas con lote, laboratorio y refuerzo; desparasitaciones con próxima dosis, aplicadas en consulta o transcritas.
 - ✅ **Recetas**: Varios medicamentos con dosis, frecuencia, duración e indicaciones. Imprimible con paciente, tutor y matrícula del prescriptor.
 - ✅ **Farmacia**: Cola de recetas por dispensar, entrega que descuenta el inventario de la unidad (y puede cobrarse en la consulta abierta), libro de medicamentos controlados imprimible y lotes por caducar.
-- ⏳ **Pendiente**: hospitalización, cirugía, laboratorio e imagen, consentimientos (fase 3); recordatorios e informes clínicos (fase 4).
+- ✅ **Hospitalización**: Ingreso desde la consulta a una sala con aforo, hoja de tratamiento con dosis por administrar (cada una se firma una sola vez, administrada u omitida con motivo), signos vitales en sala y alta con hoja imprimible. La estancia se cobra en la consulta al dar el alta.
+- ✅ **Cirugías y Procedimientos**: Riesgo ASA, inicio, fin y hallazgos. Una cirugía o eutanasia no inicia sin el consentimiento firmado del tutor; la eutanasia registra el fallecimiento.
+- ✅ **Laboratorio e Imagen**: Órdenes desde la consulta, mostrador de pendientes y resultados con valores, referencia e interpretación, registrables aunque la consulta ya esté cerrada.
+- ✅ **Consentimientos**: Textos por tipo editables, imprimibles y con registro de firma.
+- ✅ **Paciente Fallecido**: No admite nuevas consultas, reservas, citas ni check-in en ninguna unidad.
+- ⏳ **Pendiente**: recordatorios e informes clínicos (fase 4); adjuntar archivos a resultados y consentimientos.
 
 ---
 

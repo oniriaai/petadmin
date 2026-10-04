@@ -71,6 +71,10 @@ núcleo y está siempre disponible.
 │   ├── Historias Clínicas (/veterinaria/pacientes)   [veterinaria]
 │   ├── Farmacia (/veterinaria/farmacia)              [veterinaria]
 │   ├── Receta imprimible (/veterinaria/recetas/:id)  [veterinaria]
+│   ├── Hospitalización (/veterinaria/hospitalizacion) [veterinaria]
+│   ├── Hoja de alta (/veterinaria/hospitalizacion/:id) [veterinaria]
+│   ├── Laboratorio (/veterinaria/laboratorio)        [veterinaria]
+│   ├── Consentimiento (/veterinaria/consentimientos/:id) [veterinaria]
 │   └── Catálogo Clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
 └── 💼 Gestión Transversal (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
@@ -134,6 +138,10 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `POST /veterinaria/visits/:id/vaccinations | preventives | prescriptions`: Vacunas, preventivos y recetas.
 - `POST /veterinaria/prescription-items/:itemId/dispense`: Dispensación con descuento de stock.
 - `GET /veterinaria/pharmacy/queue | controlled-log | expiring | items`: Mostrador de farmacia.
+- `POST /veterinaria/visits/:id/hospitalizations`, `/hospitalizations/:id/discharge`: Ingreso y alta con cobro de la estancia.
+- `POST /veterinaria/hospitalizations/:id/orders | vitals`, `/treatment-orders/:orderId/doses`: Hoja de tratamiento.
+- `POST /veterinaria/visits/:id/procedures | lab-orders | consents`: Procedimientos, exámenes y consentimientos.
+- `POST /veterinaria/procedures/:id/start | finish`, `/lab-orders/:id/result`, `/consents/:id/sign`: Su ciclo de vida.
 
 ### Módulo Finanzas y Backoffice
 - `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.

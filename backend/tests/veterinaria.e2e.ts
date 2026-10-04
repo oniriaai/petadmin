@@ -496,6 +496,288 @@ async function run() {
     }
   });
 
+  await test("Hospitalización: ingreso, hoja de tratamiento, alta y cobro de la estancia", async () => {
+    const wards = await vet.get("/veterinaria/hospitalizations/wards");
+    expectStatus(wards.status, 200, "salas de hospitalización");
+    const ward = wards.data[0];
+    if (!ward) throw new Error("no hay sala de hospitalización sembrada");
+
+    const visit = await vet.post("/veterinaria/visits", {
+      clientId,
+      petId,
+      type: "HOSPITALIZACION",
+      triage: "URGENCIA",
+      reason: "Deshidratación",
+    });
+    expectStatus(visit.status, 201, "consulta de ingreso");
+    const path = `/veterinaria/visits/${visit.data.id}`;
+
+    expectStatus(
+      (await vet.post(`${path}/hospitalizations`, { roomId, reason: "X" })).status,
+      400,
+      "un consultorio no es sala de hospitalización",
+    );
+    const admittedAt = new Date(Date.now() - 36 * 3_600_000).toISOString();
+    const stay = await vet.post(`${path}/hospitalizations`, {
+      roomId: ward.id,
+      reason: "Fluidoterapia y observación",
+      dailyRate: 20,
+      admittedAt,
+    });
+    expectStatus(stay.status, 201, "ingreso");
+    expectEqual(stay.data.status, "INGRESADO", "estado del ingreso");
+    const stayPath = `/veterinaria/hospitalizations/${stay.data.id}`;
+
+    expectStatus(
+      (await vet.post(`${path}/hospitalizations`, { roomId: ward.id, reason: "Otra vez" })).status,
+      409,
+      "un paciente no se ingresa dos veces",
+    );
+    const after = (await vet.get("/veterinaria/hospitalizations/wards")).data.find(
+      (w: { id: string }) => w.id === ward.id,
+    );
+    expectEqual(after.occupied, ward.occupied + 1, "ocupación de la sala");
+
+    // The visit carries the stay's bill, so it cannot be closed or cancelled under the patient.
+    expectStatus(
+      (await vet.post(`${path}/close`, {})).status,
+      409,
+      "cerrar con paciente ingresado",
+    );
+    expectStatus(
+      (await vet.patch(`${path}/status`, { status: "CANCELADA" })).status,
+      409,
+      "cancelar con paciente ingresado",
+    );
+
+    const startAt = new Date(Date.now() - 3_600_000).toISOString();
+    const order = await vet.post(`${stayPath}/orders`, {
+      description: "Ringer lactato IV",
+      everyHours: 8,
+      startAt,
+    });
+    expectStatus(order.status, 201, "indicación");
+    const dosePath = `/veterinaria/treatment-orders/${order.data.id}/doses`;
+
+    const board = await vet.get("/veterinaria/hospitalizations");
+    expectStatus(board.status, 200, "tablero de hospitalización");
+    const onBoard = board.data.find((h: { id: string }) => h.id === stay.data.id);
+    if (!onBoard) throw new Error("el ingreso no aparece en el tablero");
+    expectEqual(onBoard.orders[0].nextDueAt, startAt, "la primera dosis vence al inicio");
+
+    const dose = await vet.post(dosePath, {});
+    expectStatus(dose.status, 201, "dosis administrada");
+    if (!dose.data.administeredAt) throw new Error("la dosis no quedó firmada");
+    expectStatus(
+      (await vet.post(dosePath, { scheduledAt: startAt })).status,
+      409,
+      "la misma dosis no se firma dos veces",
+    );
+    const next = (await vet.get(stayPath)).data.orders[0].nextDueAt;
+    expectEqual(
+      new Date(next).getTime(),
+      new Date(startAt).getTime() + 8 * 3_600_000,
+      "la siguiente dosis vence ocho horas después",
+    );
+    const skipped = await vet.post(dosePath, { skippedReason: "Paciente en ayunas" });
+    expectStatus(skipped.status, 201, "dosis omitida");
+    expectEqual(skipped.data.administeredAt, null, "una dosis omitida no figura como dada");
+
+    const vitals = await vet.post(`${stayPath}/vitals`, { temperatureC: 38.6 });
+    expectStatus(vitals.status, 201, "signos vitales en sala");
+    expectEqual(vitals.data.hospitalizationId, stay.data.id, "signos ligados al ingreso");
+
+    expectStatus((await vet.post(`${stayPath}/discharge`, {})).status, 400, "alta sin resumen");
+    const discharged = await vet.post(`${stayPath}/discharge`, {
+      dischargeSummary: "Evolución favorable",
+      homeCareInstructions: "Dieta blanda tres días",
+    });
+    expectStatus(discharged.status, 200, "alta");
+    expectEqual(discharged.data.status, "ALTA", "estado tras el alta");
+    expectStatus(
+      (await vet.post(`${stayPath}/discharge`, { dischargeSummary: "Otra" })).status,
+      409,
+      "el alta no se registra dos veces",
+    );
+    expectStatus((await vet.post(dosePath, {})).status, 409, "dosis tras el alta");
+
+    // 36 hours is two started days.
+    const detail = await vet.get(path);
+    const charge = detail.data.charges.find((c: { description: string }) =>
+      c.description.startsWith("Hospitalización"),
+    );
+    if (!charge) throw new Error("el alta no generó el cargo de la estancia");
+    expectEqual(charge.quantity, 2, "días de estancia");
+    expectEqual(charge.unitPrice, 20, "tarifa diaria");
+
+    expectStatus((await vet.post(`${path}/close`, {})).status, 200, "cerrar tras el alta");
+  });
+
+  await test("Una cirugía exige consentimiento firmado; el laboratorio registra resultados", async () => {
+    const visit = await vet.post("/veterinaria/visits", {
+      clientId,
+      petId,
+      type: "CIRUGIA",
+      triage: "URGENCIA",
+    });
+    expectStatus(visit.status, 201, "consulta quirúrgica");
+    cleanupVisitIds.push(visit.data.id);
+    const path = `/veterinaria/visits/${visit.data.id}`;
+
+    const procedure = await vet.post(`${path}/procedures`, {
+      name: "Ovariohisterectomía",
+      kind: "CIRUGIA",
+      asaRisk: 2,
+    });
+    expectStatus(procedure.status, 201, "procedimiento");
+    expectEqual(procedure.data.status, "PROGRAMADO", "estado inicial");
+    const procedurePath = `/veterinaria/procedures/${procedure.data.id}`;
+
+    expectStatus((await vet.post(`${procedurePath}/start`)).status, 409, "sin consentimiento");
+    const consent = await vet.post(`${path}/consents`, {
+      type: "CIRUGIA",
+      text: "Autorizo la cirugía y la anestesia.",
+    });
+    expectStatus(consent.status, 201, "consentimiento");
+    expectEqual(consent.data.signedAt, null, "queda pendiente de firma");
+    expectStatus(
+      (await vet.post(`${procedurePath}/start`)).status,
+      409,
+      "consentimiento sin firmar",
+    );
+
+    const consentPath = `/veterinaria/consents/${consent.data.id}`;
+    expectStatus(
+      (await vet.post(`${consentPath}/sign`, { signedByName: "Clínica Tester" })).status,
+      200,
+      "firma",
+    );
+    expectStatus(
+      (await vet.post(`${consentPath}/sign`, { signedByName: "Otro" })).status,
+      404,
+      "un consentimiento no se firma dos veces",
+    );
+    expectStatus(
+      (await vet.delete(`${path}/consents/${consent.data.id}`)).status,
+      404,
+      "un consentimiento firmado no se elimina",
+    );
+    expectEqual((await vet.get(consentPath)).data.pet.id, petId, "consentimiento imprimible");
+
+    const started = await vet.post(`${procedurePath}/start`);
+    expectStatus(started.status, 200, "inicio");
+    expectEqual(started.data.status, "EN_CURSO", "estado en curso");
+    expectStatus((await vet.post(`${procedurePath}/start`)).status, 409, "iniciar dos veces");
+    expectStatus((await vet.post(`${path}/close`, {})).status, 409, "cerrar a media cirugía");
+
+    const finished = await vet.post(`${procedurePath}/finish`, { findings: "Sin hallazgos" });
+    expectStatus(finished.status, 200, "fin");
+    expectEqual(finished.data.status, "FINALIZADO", "estado final");
+    expectStatus(
+      (await vet.delete(`${path}/procedures/${procedure.data.id}`)).status,
+      404,
+      "un procedimiento realizado no se elimina",
+    );
+
+    const lab = await vet.post(`${path}/lab-orders`, { kind: "LABORATORIO", test: "Hemograma" });
+    expectStatus(lab.status, 201, "orden de laboratorio");
+    const labPath = `/veterinaria/lab-orders/${lab.data.id}`;
+    const pendingQuery = `/veterinaria/lab-orders?status=PENDIENTE&petId=${petId}`;
+    if (!(await vet.get(pendingQuery)).data.some((o: { id: string }) => o.id === lab.data.id)) {
+      throw new Error("la orden no aparece como pendiente");
+    }
+    expectStatus((await vet.post(`${labPath}/result`, {})).status, 400, "resultado vacío");
+    const result = await vet.post(`${labPath}/result`, {
+      resultSummary: "Leve anemia",
+      values: [
+        { analyte: "Hematocrito", value: "32", unit: "%", referenceRange: "37-55", flag: "BAJO" },
+        { analyte: "Leucocitos", value: "9.1", unit: "x10³/µL" },
+      ],
+    });
+    expectStatus(result.status, 200, "resultado");
+    expectEqual(result.data.status, "RESULTADO", "estado con resultado");
+    expectEqual(result.data.values.length, 2, "valores registrados");
+    expectStatus(
+      (await vet.patch(`${labPath}/status`, { status: "EN_PROCESO" })).status,
+      404,
+      "una orden con resultado no vuelve atrás",
+    );
+    if ((await vet.get(pendingQuery)).data.some((o: { id: string }) => o.id === lab.data.id)) {
+      throw new Error("la orden con resultado sigue como pendiente");
+    }
+
+    const history = await vet.get(`/veterinaria/patients/${petId}/history`);
+    for (const key of ["hospitalizations", "procedures", "labOrders", "consents"]) {
+      if (!history.data[key]?.length) throw new Error(`la historia clínica no incluye ${key}`);
+    }
+  });
+
+  await test("Una eutanasia registra el fallecimiento y el paciente ya no admite reservas", async () => {
+    const pet = await vet.post("/pets", {
+      clientId,
+      name: "Paciente Final E2E",
+      species: "dog",
+      sex: "F",
+    });
+    expectStatus(pet.status, 201, "alta de paciente");
+    const visit = await vet.post("/veterinaria/visits", {
+      clientId,
+      petId: pet.data.id,
+      triage: "URGENCIA",
+    });
+    expectStatus(visit.status, 201, "consulta");
+    cleanupVisitIds.push(visit.data.id);
+    const path = `/veterinaria/visits/${visit.data.id}`;
+
+    const procedure = await vet.post(`${path}/procedures`, {
+      name: "Eutanasia",
+      kind: "EUTANASIA",
+    });
+    expectStatus(procedure.status, 201, "procedimiento");
+    const procedurePath = `/veterinaria/procedures/${procedure.data.id}`;
+    // A surgery consent does not authorise a euthanasia.
+    await vet.post(`${path}/consents`, { type: "CIRUGIA", text: "X", signedByName: "Tutor" });
+    expectStatus(
+      (await vet.post(`${procedurePath}/start`)).status,
+      409,
+      "consentimiento de otro tipo",
+    );
+    const consent = await vet.post(`${path}/consents`, {
+      type: "EUTANASIA",
+      text: "Autorizo la eutanasia humanitaria.",
+      signedByName: "Clínica Tester",
+    });
+    expectStatus(consent.status, 201, "consentimiento firmado al crearlo");
+    if (!consent.data.signedAt) throw new Error("el consentimiento no quedó firmado");
+
+    expectStatus((await vet.post(`${procedurePath}/start`)).status, 200, "inicio");
+    expectStatus((await vet.post(`${procedurePath}/finish`, {})).status, 200, "fin");
+
+    const history = await vet.get(`/veterinaria/patients/${pet.data.id}/history`);
+    if (!history.data.pet.deceasedAt) throw new Error("no se registró el fallecimiento");
+    expectEqual(history.data.pet.deathCause, "Eutanasia", "causa");
+
+    expectStatus(
+      (await vet.post("/veterinaria/visits", { clientId, petId: pet.data.id })).status,
+      409,
+      "nueva consulta de un paciente fallecido",
+    );
+    const start = new Date(Date.now() + 5 * 86_400_000);
+    expectStatus(
+      (
+        await vet.post("/reservations", {
+          clientId,
+          petIds: [pet.data.id],
+          service: "Consulta",
+          checkIn: start.toISOString(),
+          checkOut: new Date(start.getTime() + 1_800_000).toISOString(),
+        })
+      ).status,
+      409,
+      "reserva de un paciente fallecido",
+    );
+  });
+
   await test("Un veterinario o una sala no se reservan dos veces, salvo una urgencia", async () => {
     // Far enough ahead, and offset per run, that it cannot collide with other data.
     const start = new Date(Date.now() + (40 + Math.floor(Math.random() * 300)) * 86_400_000);

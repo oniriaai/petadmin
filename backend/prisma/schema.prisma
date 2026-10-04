@@ -45,6 +45,13 @@ model Daycare {
   vetPreventives       VetPreventive[]
   vetPrescriptions     VetPrescription[]
   vetPrescriptionItems VetPrescriptionItem[]
+  vetHospitalizations  VetHospitalization[]
+  vetTreatmentOrders   VetTreatmentOrder[]
+  vetTreatmentDoses    VetTreatmentAdministration[]
+  vetProcedures        VetProcedure[]
+  vetLabOrders         VetLabOrder[]
+  vetLabResultValues   VetLabResultValue[]
+  vetConsents          VetConsent[]
 
   @@map("daycares")
 }
@@ -82,19 +89,20 @@ model PlatformAuditLog {
 }
 
 model User {
-  id           String        @id @default(cuid())
-  daycareId    String?
+  id            String                       @id @default(cuid())
+  daycareId     String?
   /// Unique per daycare, not globally -- see @@unique below and
   /// 20260906000000_per_tenant_usernames for the partial index covering platform accounts.
-  username     String
-  passwordHash String
-  name         String
-  role         String        @default("owner")
-  businessUnit String
-  isActive     Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  checkInOuts  CheckInOut[]
-  veterinarian Veterinarian?
+  username      String
+  passwordHash  String
+  name          String
+  role          String                       @default("owner")
+  businessUnit  String
+  isActive      Boolean                      @default(true)
+  createdAt     DateTime                     @default(now())
+  checkInOuts   CheckInOut[]
+  veterinarian  Veterinarian?
+  vetDosesGiven VetTreatmentAdministration[]
 
   daycare Daycare? @relation(fields: [daycareId], references: [id], onDelete: Restrict)
 
@@ -128,6 +136,7 @@ model Client {
   recurringPlans   RecurringPlan[]
   reservations     Reservation[]
   vetVisits        VetVisit[]
+  vetConsents      VetConsent[]
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
@@ -136,43 +145,47 @@ model Client {
 }
 
 model Pet {
-  id                String            @id @default(cuid())
-  daycareId         String
-  clientId          String
-  name              String
-  species           String            @default("dog")
-  breed             String?
-  variety           String?
-  color             String?
-  sex               String
-  birthdate         DateTime?
-  weight            Float?
-  height            Float?
-  microchip         String?
-  isNeutered        Boolean           @default(false)
-  allergies         String?
-  notes             String?
-  isActive          Boolean           @default(true)
-  bannerId          String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  photoUrl          String?
-  bloodType         String?
-  chronicConditions String?
-  deceasedAt        DateTime?
-  deathCause        String?
-  vetVisits         VetVisit[]
-  vetVitals         VetVitals[]
-  vetDiagnoses      VetDiagnosis[]
-  vetPreventives    VetPreventive[]
-  vetPrescriptions  VetPrescription[]
-  alerts            Alert[]
-  checkInOuts       CheckInOut[]
-  contracts         Contract[]
-  documents         PetDocument[]
-  vaccinations      PetVaccination[]
-  client            Client            @relation(fields: [clientId], references: [id])
-  reservationPets   ReservationPet[]
+  id                  String               @id @default(cuid())
+  daycareId           String
+  clientId            String
+  name                String
+  species             String               @default("dog")
+  breed               String?
+  variety             String?
+  color               String?
+  sex                 String
+  birthdate           DateTime?
+  weight              Float?
+  height              Float?
+  microchip           String?
+  isNeutered          Boolean              @default(false)
+  allergies           String?
+  notes               String?
+  isActive            Boolean              @default(true)
+  bannerId            String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  photoUrl            String?
+  bloodType           String?
+  chronicConditions   String?
+  deceasedAt          DateTime?
+  deathCause          String?
+  vetVisits           VetVisit[]
+  vetVitals           VetVitals[]
+  vetDiagnoses        VetDiagnosis[]
+  vetPreventives      VetPreventive[]
+  vetPrescriptions    VetPrescription[]
+  vetHospitalizations VetHospitalization[]
+  vetProcedures       VetProcedure[]
+  vetLabOrders        VetLabOrder[]
+  vetConsents         VetConsent[]
+  alerts              Alert[]
+  checkInOuts         CheckInOut[]
+  contracts           Contract[]
+  documents           PetDocument[]
+  vaccinations        PetVaccination[]
+  client              Client               @relation(fields: [clientId], references: [id])
+  reservationPets     ReservationPet[]
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
@@ -261,6 +274,7 @@ model Veterinarian {
   visits        VetVisit[]
   vaccinations  PetVaccination[]
   prescriptions VetPrescription[]
+  procedures    VetProcedure[]
 
   @@index([daycareId])
   @@map("veterinarians")
@@ -308,18 +322,22 @@ model VetVisit {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  daycare       Daycare           @relation(fields: [daycareId], references: [id])
-  reservation   Reservation       @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  pet           Pet               @relation(fields: [petId], references: [id])
-  client        Client            @relation(fields: [clientId], references: [id])
-  veterinarian  Veterinarian?     @relation(fields: [veterinarianId], references: [id])
-  vitals        VetVitals[]
-  diagnoses     VetDiagnosis[]
-  charges       VetVisitCharge[]
-  documents     PetDocument[]
-  vaccinations  PetVaccination[]
-  preventives   VetPreventive[]
-  prescriptions VetPrescription[]
+  daycare          Daycare              @relation(fields: [daycareId], references: [id])
+  reservation      Reservation          @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  pet              Pet                  @relation(fields: [petId], references: [id])
+  client           Client               @relation(fields: [clientId], references: [id])
+  veterinarian     Veterinarian?        @relation(fields: [veterinarianId], references: [id])
+  vitals           VetVitals[]
+  diagnoses        VetDiagnosis[]
+  charges          VetVisitCharge[]
+  documents        PetDocument[]
+  vaccinations     PetVaccination[]
+  preventives      VetPreventive[]
+  prescriptions    VetPrescription[]
+  hospitalizations VetHospitalization[]
+  procedures       VetProcedure[]
+  labOrders        VetLabOrder[]
+  consents         VetConsent[]
 
   @@index([daycareId])
   @@index([daycareId, status])
@@ -328,30 +346,34 @@ model VetVisit {
 }
 
 model VetVitals {
-  id              String   @id @default(cuid())
-  daycareId       String
-  petId           String
-  visitId         String?
-  takenAt         DateTime @default(now())
-  weightKg        Float?
-  temperatureC    Float?
-  heartRate       Int?
-  respiratoryRate Int?
-  mucousMembranes String?
-  capillaryRefill String?
+  id                String   @id @default(cuid())
+  daycareId         String
+  petId             String
+  visitId           String?
+  /// Set when the reading was taken on the ward rather than in the consulting room.
+  hospitalizationId String?
+  takenAt           DateTime @default(now())
+  weightKg          Float?
+  temperatureC      Float?
+  heartRate         Int?
+  respiratoryRate   Int?
+  mucousMembranes   String?
+  capillaryRefill   String?
   /// Body condition score, 1-9.
-  bodyCondition   Int?
+  bodyCondition     Int?
   /// Pain score, 0-10.
-  painScore       Int?
-  notes           String?
+  painScore         Int?
+  notes             String?
 
-  daycare Daycare   @relation(fields: [daycareId], references: [id])
-  pet     Pet       @relation(fields: [petId], references: [id])
-  visit   VetVisit? @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  daycare         Daycare             @relation(fields: [daycareId], references: [id])
+  pet             Pet                 @relation(fields: [petId], references: [id])
+  visit           VetVisit?           @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  hospitalization VetHospitalization? @relation(fields: [hospitalizationId], references: [id], onDelete: Cascade)
 
   @@index([daycareId])
   @@index([petId])
   @@index([visitId])
+  @@index([hospitalizationId])
   @@map("vet_vitals")
 }
 
@@ -399,16 +421,17 @@ model VetVisitCharge {
 }
 
 model Room {
-  id             String          @id @default(cuid())
-  daycareId      String
-  name           String
-  businessUnit   String
-  capacity       Int             @default(1)
-  type           String          @default("daycare")
-  isActive       Boolean         @default(true)
-  checkInOuts    CheckInOut[]
-  recurringPlans RecurringPlan[]
-  reservations   Reservation[]
+  id               String               @id @default(cuid())
+  daycareId        String
+  name             String
+  businessUnit     String
+  capacity         Int                  @default(1)
+  type             String               @default("daycare")
+  isActive         Boolean              @default(true)
+  checkInOuts      CheckInOut[]
+  recurringPlans   RecurringPlan[]
+  reservations     Reservation[]
+  hospitalizations VetHospitalization[]
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
@@ -776,4 +799,186 @@ model VetPrescriptionItem {
   @@index([prescriptionId])
   @@index([daycareId, dispensedAt])
   @@map("vet_prescription_items")
+}
+
+/// An inpatient stay. Opened from a visit, which stays open and carries the bill until discharge.
+model VetHospitalization {
+  id                   String    @id @default(cuid())
+  daycareId            String
+  visitId              String
+  petId                String
+  roomId               String
+  status               String    @default("INGRESADO")
+  reason               String
+  dailyRate            Float     @default(0)
+  admittedAt           DateTime  @default(now())
+  dischargedAt         DateTime?
+  dischargeSummary     String?
+  homeCareInstructions String?
+  createdAt            DateTime  @default(now())
+
+  daycare Daycare                      @relation(fields: [daycareId], references: [id])
+  visit   VetVisit                     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  pet     Pet                          @relation(fields: [petId], references: [id])
+  room    Room                         @relation(fields: [roomId], references: [id])
+  orders  VetTreatmentOrder[]
+  doses   VetTreatmentAdministration[]
+  vitals  VetVitals[]
+
+  @@index([daycareId])
+  @@index([daycareId, status])
+  @@index([petId])
+  @@index([visitId])
+  @@map("vet_hospitalizations")
+}
+
+/// A standing instruction for an inpatient: what to give or do, and how often.
+model VetTreatmentOrder {
+  id                String    @id @default(cuid())
+  daycareId         String
+  hospitalizationId String
+  description       String
+  drug              String?
+  dose              String?
+  route             String?
+  /// Hours between doses. Null for something done once.
+  everyHours        Int?
+  startAt           DateTime  @default(now())
+  endAt             DateTime?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+
+  daycare         Daycare                      @relation(fields: [daycareId], references: [id])
+  hospitalization VetHospitalization           @relation(fields: [hospitalizationId], references: [id], onDelete: Cascade)
+  administrations VetTreatmentAdministration[]
+
+  @@index([daycareId])
+  @@index([hospitalizationId])
+  @@map("vet_treatment_orders")
+}
+
+/// One scheduled dose of an order, given or skipped. Together they are the administration record.
+model VetTreatmentAdministration {
+  id                   String    @id @default(cuid())
+  daycareId            String
+  orderId              String
+  hospitalizationId    String
+  scheduledAt          DateTime
+  administeredAt       DateTime?
+  administeredByUserId String?
+  skippedReason        String?
+  notes                String?
+  createdAt            DateTime  @default(now())
+
+  daycare         Daycare            @relation(fields: [daycareId], references: [id])
+  order           VetTreatmentOrder  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  hospitalization VetHospitalization @relation(fields: [hospitalizationId], references: [id], onDelete: Cascade)
+  administeredBy  User?              @relation(fields: [administeredByUserId], references: [id], onDelete: SetNull)
+
+  /// A dose slot is recorded once: two people cannot both sign for the same one.
+  @@unique([orderId, scheduledAt])
+  @@index([daycareId])
+  @@index([hospitalizationId])
+  @@map("vet_treatment_administrations")
+}
+
+/// A surgery, a minor procedure or a euthanasia performed within a visit.
+model VetProcedure {
+  id                 String    @id @default(cuid())
+  daycareId          String
+  visitId            String
+  petId              String
+  veterinarianId     String?
+  name               String
+  kind               String    @default("PROCEDIMIENTO")
+  status             String    @default("PROGRAMADO")
+  /// ASA physical status, 1-5.
+  asaRisk            Int?
+  anesthesiaProtocol String?
+  startAt            DateTime?
+  endAt              DateTime?
+  findings           String?
+  complications      String?
+  createdAt          DateTime  @default(now())
+
+  daycare      Daycare       @relation(fields: [daycareId], references: [id])
+  visit        VetVisit      @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  pet          Pet           @relation(fields: [petId], references: [id])
+  veterinarian Veterinarian? @relation(fields: [veterinarianId], references: [id], onDelete: SetNull)
+
+  @@index([daycareId])
+  @@index([petId])
+  @@index([visitId])
+  @@map("vet_procedures")
+}
+
+/// A laboratory test or an imaging study requested in a visit, and its result.
+model VetLabOrder {
+  id             String    @id @default(cuid())
+  daycareId      String
+  visitId        String
+  petId          String
+  kind           String    @default("LABORATORIO")
+  test           String
+  externalLab    String?
+  status         String    @default("SOLICITADO")
+  notes          String?
+  requestedAt    DateTime  @default(now())
+  resultSummary  String?
+  resultFilePath String?
+  resultAt       DateTime?
+
+  daycare Daycare             @relation(fields: [daycareId], references: [id])
+  visit   VetVisit            @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  pet     Pet                 @relation(fields: [petId], references: [id])
+  values  VetLabResultValue[]
+
+  @@index([daycareId])
+  @@index([daycareId, status])
+  @@index([petId])
+  @@index([visitId])
+  @@map("vet_lab_orders")
+}
+
+model VetLabResultValue {
+  id             String  @id @default(cuid())
+  daycareId      String
+  orderId        String
+  analyte        String
+  value          String
+  unit           String?
+  referenceRange String?
+  flag           String?
+
+  daycare Daycare     @relation(fields: [daycareId], references: [id])
+  order   VetLabOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([daycareId])
+  @@index([orderId])
+  @@map("vet_lab_result_values")
+}
+
+/// The tutor's informed consent for a surgery, anaesthesia, admission or euthanasia.
+model VetConsent {
+  id           String    @id @default(cuid())
+  daycareId    String
+  petId        String
+  clientId     String
+  visitId      String?
+  type         String
+  text         String
+  signedByName String?
+  signedAt     DateTime?
+  filePath     String?
+  createdAt    DateTime  @default(now())
+
+  daycare Daycare   @relation(fields: [daycareId], references: [id])
+  pet     Pet       @relation(fields: [petId], references: [id])
+  client  Client    @relation(fields: [clientId], references: [id])
+  visit   VetVisit? @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@index([daycareId])
+  @@index([petId])
+  @@index([visitId])
+  @@map("vet_consents")
 }

@@ -7,7 +7,11 @@ import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { fmt, fmtDateTime } from "../../lib/utils";
 import {
+  CONSENT_TYPES,
+  LAB_FLAGS,
   PREVENTIVE_KINDS,
+  PROCEDURE_KINDS,
+  PROCEDURE_STATUS,
   VISIT_STATUS,
   VISIT_TYPES,
   errorMessage,
@@ -80,7 +84,18 @@ export function HistoriaClinicaPage() {
     );
   }
 
-  const { pet, visits, vitals, chronicDiagnoses, preventives, prescriptions } = history;
+  const {
+    pet,
+    visits,
+    vitals,
+    chronicDiagnoses,
+    preventives,
+    prescriptions,
+    hospitalizations,
+    procedures,
+    labOrders,
+    consents,
+  } = history;
   const weights = vitals.filter((v) => v.weightKg != null).slice(0, 8);
   const today = new Date();
 
@@ -328,6 +343,100 @@ export function HistoriaClinicaPage() {
                     </Link>
                     <p className="text-muted">
                       {prescription.items.map((item) => item.drug).join(", ")}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {labOrders.length > 0 && (
+            <section className="card p-4 space-y-2 text-sm" aria-label="Laboratorio e imagen">
+              <h2 className="font-semibold text-gray-900">Laboratorio e imagen</h2>
+              <ul className="divide-y divide-gray-100">
+                {labOrders.map((order) => (
+                  <li key={order.id} className="py-1.5">
+                    <p className="font-medium text-gray-900">
+                      {order.test}{" "}
+                      <span className="font-normal text-muted">{fmt(order.requestedAt)}</span>
+                    </p>
+                    <p className="text-muted">
+                      {order.resultSummary ??
+                        (order.status === "RESULTADO" ? "Con resultado" : "Pendiente de resultado")}
+                    </p>
+                    {order.values.map((value) => (
+                      <p key={value.id} className="text-xs text-gray-700">
+                        {value.analyte}: {value.value} {value.unit}
+                        {value.flag && value.flag !== "NORMAL"
+                          ? ` · ${LAB_FLAGS[value.flag]?.label ?? value.flag}`
+                          : ""}
+                      </p>
+                    ))}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {procedures.length > 0 && (
+            <section className="card p-4 space-y-2 text-sm" aria-label="Cirugías y procedimientos">
+              <h2 className="font-semibold text-gray-900">Cirugías y procedimientos</h2>
+              <ul className="divide-y divide-gray-100">
+                {procedures.map((procedure) => (
+                  <li key={procedure.id} className="py-1.5">
+                    <p className="font-medium text-gray-900">
+                      {procedure.name}{" "}
+                      <span className="font-normal text-muted">
+                        {fmt(procedure.startAt ?? procedure.createdAt)}
+                      </span>
+                    </p>
+                    <p className="text-muted">
+                      {PROCEDURE_KINDS[procedure.kind] ?? procedure.kind} ·{" "}
+                      {PROCEDURE_STATUS[procedure.status]?.label ?? procedure.status}
+                    </p>
+                    {procedure.findings && <p className="text-gray-700">{procedure.findings}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {hospitalizations.length > 0 && (
+            <section className="card p-4 space-y-2 text-sm" aria-label="Hospitalizaciones">
+              <h2 className="font-semibold text-gray-900">Hospitalizaciones</h2>
+              <ul className="divide-y divide-gray-100">
+                {hospitalizations.map((stay) => (
+                  <li key={stay.id} className="py-1.5">
+                    <Link
+                      to={`/veterinaria/hospitalizacion/${stay.id}`}
+                      className="font-medium text-gray-900 hover:underline"
+                    >
+                      {fmt(stay.admittedAt)}
+                      {stay.dischargedAt ? ` – ${fmt(stay.dischargedAt)}` : " · ingresado"}
+                    </Link>
+                    <p className="text-muted">{stay.reason}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {consents.length > 0 && (
+            <section className="card p-4 space-y-2 text-sm" aria-label="Consentimientos">
+              <h2 className="font-semibold text-gray-900">Consentimientos</h2>
+              <ul className="divide-y divide-gray-100">
+                {consents.map((consent) => (
+                  <li key={consent.id} className="py-1.5">
+                    <Link
+                      to={`/veterinaria/consentimientos/${consent.id}`}
+                      className="font-medium text-gray-900 hover:underline"
+                    >
+                      {CONSENT_TYPES[consent.type] ?? consent.type}
+                    </Link>
+                    <p className="text-muted">
+                      {consent.signedAt
+                        ? `Firmado por ${consent.signedByName} el ${fmt(consent.signedAt)}`
+                        : "Sin firmar"}
                     </p>
                   </li>
                 ))}

@@ -4,10 +4,12 @@ import { isProductModuleId } from "./shared/contracts";
 import type { BusinessUnit, ProductModuleId, TenantRole } from "./shared/contracts";
 import {
   BarChart3,
+  BedDouble,
   BookOpen,
   CalendarDays,
   ClipboardList,
   DollarSign,
+  FlaskConical,
   Grid3X3,
   Home,
   Package,
@@ -44,6 +46,10 @@ import { HistoriaClinicaPage } from "../pages/veterinaria/HistoriaClinicaPage";
 import { CatalogoVeterinariaPage } from "../pages/veterinaria/CatalogoVeterinariaPage";
 import { FarmaciaPage } from "../pages/veterinaria/FarmaciaPage";
 import { RecetaPage } from "../pages/veterinaria/RecetaPage";
+import { HospitalizacionPage } from "../pages/veterinaria/HospitalizacionPage";
+import { AltaPage } from "../pages/veterinaria/AltaPage";
+import { LaboratorioPage } from "../pages/veterinaria/LaboratorioPage";
+import { ConsentimientoPage } from "../pages/veterinaria/ConsentimientoPage";
 
 export type FrontendRole = TenantRole;
 export type FrontendUnit = BusinessUnit;
@@ -252,6 +258,34 @@ export const frontendModules: readonly FrontendModule[] = [
         unit: "VETERINARY",
       },
       {
+        path: "/veterinaria/hospitalizacion",
+        component: HospitalizacionPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/hospitalizacion/:id",
+        component: AltaPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/laboratorio",
+        component: LaboratorioPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
+        path: "/veterinaria/consentimientos/:id",
+        component: ConsentimientoPage,
+        roles: ["admin", "veterinary"],
+        requires: ["veterinaria"],
+        unit: "VETERINARY",
+      },
+      {
         path: "/veterinaria/catalogo",
         component: CatalogoVeterinariaPage,
         roles: ["admin"],
@@ -275,6 +309,22 @@ export const frontendModules: readonly FrontendModule[] = [
           to: "/veterinaria/pacientes",
           label: "Historias Clínicas",
           icon: ClipboardList,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        {
+          to: "/veterinaria/hospitalizacion",
+          label: "Hospitalización",
+          icon: BedDouble,
+          roles: ["admin", "veterinary"],
+          unit: "VETERINARY",
+          requires: ["veterinaria"],
+        },
+        {
+          to: "/veterinaria/laboratorio",
+          label: "Laboratorio",
+          icon: FlaskConical,
           roles: ["admin", "veterinary"],
           unit: "VETERINARY",
           requires: ["veterinaria"],

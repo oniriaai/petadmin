@@ -232,6 +232,177 @@ export interface ExpiringLot {
   item: StockItem;
 }
 
+export const PROCEDURE_KINDS: Record<string, string> = {
+  CIRUGIA: "Cirugía",
+  PROCEDIMIENTO: "Procedimiento",
+  EUTANASIA: "Eutanasia",
+};
+
+export const PROCEDURE_STATUS: Record<string, { label: string; color: string }> = {
+  PROGRAMADO: { label: "Programado", color: "bg-blue-100 text-blue-800" },
+  EN_CURSO: { label: "En curso", color: "bg-amber-100 text-amber-800" },
+  FINALIZADO: { label: "Finalizado", color: "bg-emerald-100 text-emerald-800" },
+  CANCELADO: { label: "Cancelado", color: "bg-gray-100 text-gray-700" },
+};
+
+export interface Procedure {
+  id: string;
+  visitId: string;
+  name: string;
+  kind: string;
+  status: string;
+  asaRisk?: number | null;
+  anesthesiaProtocol?: string | null;
+  startAt?: string | null;
+  endAt?: string | null;
+  findings?: string | null;
+  complications?: string | null;
+  createdAt: string;
+  veterinarian?: { id: string; name: string } | null;
+}
+
+export const LAB_KINDS: Record<string, string> = {
+  LABORATORIO: "Laboratorio",
+  IMAGEN: "Imagen",
+};
+
+export const LAB_STATUS: Record<string, { label: string; color: string }> = {
+  SOLICITADO: { label: "Solicitado", color: "bg-blue-100 text-blue-800" },
+  EN_PROCESO: { label: "En proceso", color: "bg-amber-100 text-amber-800" },
+  RESULTADO: { label: "Con resultado", color: "bg-emerald-100 text-emerald-800" },
+};
+
+export const LAB_FLAGS: Record<string, { label: string; color: string }> = {
+  NORMAL: { label: "Normal", color: "bg-gray-100 text-gray-700" },
+  ALTO: { label: "Alto", color: "bg-amber-100 text-amber-800" },
+  BAJO: { label: "Bajo", color: "bg-amber-100 text-amber-800" },
+  CRITICO: { label: "Crítico", color: "bg-red-100 text-red-800" },
+};
+
+export interface LabResultValue {
+  id: string;
+  analyte: string;
+  value: string;
+  unit?: string | null;
+  referenceRange?: string | null;
+  flag?: string | null;
+}
+
+export interface LabOrder {
+  id: string;
+  visitId: string;
+  kind: string;
+  test: string;
+  externalLab?: string | null;
+  status: string;
+  notes?: string | null;
+  requestedAt: string;
+  resultSummary?: string | null;
+  resultAt?: string | null;
+  values: LabResultValue[];
+}
+
+/** A lab order with the patient and tutor it belongs to, as the laboratory desk sees it. */
+export interface LabDeskOrder extends LabOrder {
+  pet: VisitPet;
+  visit: {
+    id: string;
+    client: { id: string; firstName: string; lastName: string; phone?: string | null };
+    veterinarian?: { id: string; name: string } | null;
+  };
+}
+
+export const CONSENT_TYPES: Record<string, string> = {
+  CIRUGIA: "Cirugía",
+  ANESTESIA: "Anestesia",
+  HOSPITALIZACION: "Hospitalización",
+  EUTANASIA: "Eutanasia",
+};
+
+export interface Consent {
+  id: string;
+  type: string;
+  text: string;
+  signedByName?: string | null;
+  signedAt?: string | null;
+  createdAt: string;
+}
+
+export interface PrintableConsent extends Consent {
+  pet: VisitPet & { birthdate?: string | null };
+  client: {
+    firstName: string;
+    lastName: string;
+    idNumber?: string | null;
+    phone?: string | null;
+  };
+  visit?: { veterinarian?: { name: string; licenseNumber?: string | null } | null } | null;
+}
+
+/** An inpatient stay as a visit or the history lists it. */
+export interface StaySummary {
+  id: string;
+  visitId: string;
+  status: "INGRESADO" | "ALTA";
+  reason: string;
+  dailyRate: number;
+  admittedAt: string;
+  dischargedAt?: string | null;
+  dischargeSummary?: string | null;
+  homeCareInstructions?: string | null;
+  room: { id: string; name: string };
+}
+
+export interface TreatmentDose {
+  id: string;
+  scheduledAt: string;
+  administeredAt?: string | null;
+  skippedReason?: string | null;
+  notes?: string | null;
+  administeredBy?: { id: string; name: string } | null;
+}
+
+export interface TreatmentOrder {
+  id: string;
+  description: string;
+  drug?: string | null;
+  dose?: string | null;
+  route?: string | null;
+  everyHours?: number | null;
+  startAt: string;
+  endAt?: string | null;
+  isActive: boolean;
+  /** When the next dose falls; null when nothing more is due. */
+  nextDueAt: string | null;
+  /** Newest first. */
+  administrations: TreatmentDose[];
+}
+
+/** A stay with everything the ward works from. */
+export interface Stay extends StaySummary {
+  pet: VisitPet & {
+    sex?: string;
+    birthdate?: string | null;
+    weight?: number | null;
+    allergies?: string | null;
+  };
+  visit: {
+    id: string;
+    status: VisitStatus;
+    client: VisitClient;
+    veterinarian?: { id: string; name: string; licenseNumber?: string | null } | null;
+  };
+  orders: TreatmentOrder[];
+  vitals: Vitals[];
+}
+
+export interface Ward {
+  id: string;
+  name: string;
+  capacity: number;
+  occupied: number;
+}
+
 export interface PatientProfile extends VisitPet {
   sex?: string;
   birthdate?: string | null;
@@ -269,6 +440,10 @@ export interface VisitDetail extends Omit<VisitSummary, "pet" | "reservation" | 
   vaccinations: Vaccination[];
   preventives: Preventive[];
   prescriptions: Prescription[];
+  hospitalizations: StaySummary[];
+  procedures: Procedure[];
+  labOrders: LabOrder[];
+  consents: Consent[];
 }
 
 export interface PatientHistory {
@@ -292,6 +467,10 @@ export interface PatientHistory {
   chronicDiagnoses: Diagnosis[];
   preventives: Preventive[];
   prescriptions: Prescription[];
+  hospitalizations: StaySummary[];
+  procedures: Procedure[];
+  labOrders: LabOrder[];
+  consents: Consent[];
 }
 
 export interface ClinicRoom {
@@ -354,7 +533,15 @@ export const veterinariaApi = {
     api.post<VisitCharge>(`/veterinaria/visits/${id}/charges`, body),
   removeChild: (
     id: string,
-    kind: "vitals" | "diagnoses" | "charges" | "vaccinations" | "prescriptions",
+    kind:
+      | "vitals"
+      | "diagnoses"
+      | "charges"
+      | "vaccinations"
+      | "prescriptions"
+      | "procedures"
+      | "lab-orders"
+      | "consents",
     childId: string,
   ) => api.del(`/veterinaria/visits/${id}/${kind}/${childId}`),
 
@@ -380,6 +567,44 @@ export const veterinariaApi = {
   controlledLog: (params: { from?: string; to?: string }) =>
     api.get<PharmacyLine[]>(`/veterinaria/pharmacy/controlled-log${query(params)}`),
   expiringLots: () => api.get<ExpiringLot[]>("/veterinaria/pharmacy/expiring"),
+
+  wards: () => api.get<Ward[]>("/veterinaria/hospitalizations/wards"),
+  stays: (status?: "INGRESADO" | "ALTA") =>
+    api.get<Stay[]>(`/veterinaria/hospitalizations${query({ status })}`),
+  stay: (id: string) => api.get<Stay>(`/veterinaria/hospitalizations/${id}`),
+  admit: (visitId: string, body: Record<string, unknown>) =>
+    api.post<Stay>(`/veterinaria/visits/${visitId}/hospitalizations`, body),
+  discharge: (id: string, body: Record<string, unknown>) =>
+    api.post<Stay>(`/veterinaria/hospitalizations/${id}/discharge`, body),
+  addWardVitals: (id: string, body: Record<string, unknown>) =>
+    api.post<Vitals>(`/veterinaria/hospitalizations/${id}/vitals`, body),
+  addTreatmentOrder: (id: string, body: Record<string, unknown>) =>
+    api.post<TreatmentOrder>(`/veterinaria/hospitalizations/${id}/orders`, body),
+  stopTreatmentOrder: (orderId: string) =>
+    api.post(`/veterinaria/treatment-orders/${orderId}/stop`, {}),
+  recordDose: (orderId: string, body: Record<string, unknown>) =>
+    api.post<TreatmentDose>(`/veterinaria/treatment-orders/${orderId}/doses`, body),
+
+  addProcedure: (visitId: string, body: Record<string, unknown>) =>
+    api.post<Procedure>(`/veterinaria/visits/${visitId}/procedures`, body),
+  startProcedure: (id: string) => api.post<Procedure>(`/veterinaria/procedures/${id}/start`, {}),
+  finishProcedure: (id: string, body: Record<string, unknown>) =>
+    api.post<Procedure>(`/veterinaria/procedures/${id}/finish`, body),
+
+  addLabOrder: (visitId: string, body: Record<string, unknown>) =>
+    api.post<LabOrder>(`/veterinaria/visits/${visitId}/lab-orders`, body),
+  labOrders: (status: "PENDIENTE" | "RESULTADO") =>
+    api.get<LabDeskOrder[]>(`/veterinaria/lab-orders${query({ status })}`),
+  setLabStatus: (id: string, status: "SOLICITADO" | "EN_PROCESO") =>
+    api.patch<LabDeskOrder>(`/veterinaria/lab-orders/${id}/status`, { status }),
+  recordLabResult: (id: string, body: Record<string, unknown>) =>
+    api.post<LabDeskOrder>(`/veterinaria/lab-orders/${id}/result`, body),
+
+  addConsent: (visitId: string, body: Record<string, unknown>) =>
+    api.post<Consent>(`/veterinaria/visits/${visitId}/consents`, body),
+  consent: (id: string) => api.get<PrintableConsent>(`/veterinaria/consents/${id}`),
+  signConsent: (id: string, signedByName: string) =>
+    api.post<Consent>(`/veterinaria/consents/${id}/sign`, { signedByName }),
 
   history: (petId: string) => api.get<PatientHistory>(`/veterinaria/patients/${petId}/history`),
   updatePatient: (petId: string, body: Record<string, unknown>) =>

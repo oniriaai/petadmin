@@ -1,7 +1,7 @@
-import { Router, type Request, type Response } from "express";
-import { z, type ZodTypeAny } from "zod";
+import { Router, type Request } from "express";
+import { z } from "zod";
 
-import { AuthzError, handleAuthzError } from "../../middleware/auth";
+import { AuthzError } from "../../middleware/auth";
 import { getRequiredDaycareId } from "../../core/tenancy/scope";
 import { readPage, sendPage } from "../../utils/pagination";
 import {
@@ -15,6 +15,8 @@ import {
   updateStaff,
 } from "./catalog.service";
 import { getPatientHistory, updatePatient } from "./history.service";
+import { fail, parseBody } from "./http";
+import { inpatientRouter } from "./inpatient.router";
 import {
   addPatientPreventive,
   addVaccination,
@@ -69,26 +71,6 @@ import {
  * authentication, role or module.
  */
 export const veterinariaRouter = Router();
-
-function fail(res: Response, error: unknown): void {
-  if (handleAuthzError(res, error)) return;
-  console.error(error);
-  res.status(500).json({ message: "Error interno del servidor" });
-}
-
-/** Parses the body, or answers 400 and returns null. */
-function parseBody<S extends ZodTypeAny>(
-  schema: S,
-  req: Request,
-  res: Response,
-): z.infer<S> | null {
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ message: "Datos inválidos", errors: parsed.error.flatten() });
-    return null;
-  }
-  return parsed.data;
-}
 
 /** The catalogue and the staff list set prices and who may attend: an admin's decision. */
 function assertAdmin(req: Request): void {
@@ -501,3 +483,7 @@ veterinariaRouter.get("/pharmacy/expiring", async (req, res) => {
     fail(res, error);
   }
 });
+
+// --- Hospitalization, procedures, laboratory and consents ------------------------------------
+
+veterinariaRouter.use(inpatientRouter);

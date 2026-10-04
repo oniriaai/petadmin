@@ -209,3 +209,110 @@ export const dispenseSchema = z.object({
   /** Bill the dispensed quantity on the visit at this unit price. Only while the visit is open. */
   unitPrice: z.number().min(0).optional(),
 });
+
+export const HOSPITALIZATION_STATUSES = ["INGRESADO", "ALTA"] as const;
+
+export const admissionSchema = z.object({
+  roomId: z.string().min(1, "Sala requerida"),
+  reason: z.string().trim().min(1, "Motivo requerido").max(1000),
+  dailyRate: z.number().min(0).default(0),
+  admittedAt: z.string().min(1).optional(),
+});
+
+export const dischargeSchema = z.object({
+  dischargeSummary: z.string().trim().min(1, "Resumen del alta requerido").max(8000),
+  homeCareInstructions: optionalText(8000),
+  dischargedAt: z.string().min(1).optional(),
+});
+
+export const treatmentOrderSchema = z.object({
+  description: z.string().trim().min(1, "Indicación requerida").max(300),
+  drug: optionalText(160),
+  dose: optionalText(120),
+  route: optionalText(60),
+  /** Hours between doses. Omitted for something done once. */
+  everyHours: z.number().int().min(1).max(168).optional(),
+  startAt: z.string().min(1).optional(),
+  endAt: z.string().min(1).optional(),
+});
+
+export const treatmentDoseSchema = z.object({
+  /** The slot being signed for. Defaults to the order's next due dose. */
+  scheduledAt: z.string().min(1).optional(),
+  /** Present when the dose was not given. */
+  skippedReason: optionalText(300),
+  notes: optionalText(500),
+});
+
+export const PROCEDURE_KINDS = ["CIRUGIA", "PROCEDIMIENTO", "EUTANASIA"] as const;
+export type ProcedureKind = (typeof PROCEDURE_KINDS)[number];
+
+export const procedureSchema = z.object({
+  name: z.string().trim().min(1, "Nombre requerido").max(200),
+  kind: z.enum(PROCEDURE_KINDS).default("PROCEDIMIENTO"),
+  veterinarianId: z.string().min(1).optional(),
+  asaRisk: z.number().int().min(1).max(5).optional(),
+  anesthesiaProtocol: optionalText(2000),
+});
+
+export const procedureUpdateSchema = z.object({
+  name: z.string().trim().min(1).max(200).optional(),
+  veterinarianId: z.string().min(1).nullable().optional(),
+  asaRisk: z.number().int().min(1).max(5).nullable().optional(),
+  anesthesiaProtocol: optionalText(2000),
+  findings: optionalText(8000),
+  complications: optionalText(4000),
+});
+
+export const procedureFinishSchema = z.object({
+  findings: optionalText(8000),
+  complications: optionalText(4000),
+});
+
+export const LAB_ORDER_KINDS = ["LABORATORIO", "IMAGEN"] as const;
+export const LAB_RESULT_FLAGS = ["NORMAL", "ALTO", "BAJO", "CRITICO"] as const;
+
+export const labOrderSchema = z.object({
+  kind: z.enum(LAB_ORDER_KINDS).default("LABORATORIO"),
+  test: z.string().trim().min(1, "Examen requerido").max(200),
+  externalLab: optionalText(160),
+  notes: optionalText(1000),
+});
+
+/** `RESULTADO` is only reached by recording a result. */
+export const labStatusSchema = z.object({
+  status: z.enum(["SOLICITADO", "EN_PROCESO"]),
+});
+
+export const labResultSchema = z
+  .object({
+    resultSummary: optionalText(8000),
+    values: z
+      .array(
+        z.object({
+          analyte: z.string().trim().min(1, "Analito requerido").max(120),
+          value: z.string().trim().min(1, "Valor requerido").max(120),
+          unit: optionalText(40),
+          referenceRange: optionalText(80),
+          flag: z.enum(LAB_RESULT_FLAGS).optional(),
+        }),
+      )
+      .max(100)
+      .default([]),
+  })
+  .refine((result) => Boolean(result.resultSummary) || result.values.length > 0, {
+    message: "Registra un resumen o al menos un valor",
+  });
+
+export const CONSENT_TYPES = ["CIRUGIA", "ANESTESIA", "HOSPITALIZACION", "EUTANASIA"] as const;
+
+export const consentSchema = z.object({
+  type: z.enum(CONSENT_TYPES),
+  text: z.string().trim().min(1, "Texto requerido").max(8000),
+  /** Present when the tutor signs on the spot; otherwise the consent is left to be signed. */
+  signedByName: optionalText(160),
+});
+
+export const consentSignSchema = z.object({
+  signedByName: z.string().trim().min(1, "Nombre de quien firma requerido").max(160),
+});

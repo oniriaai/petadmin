@@ -26,7 +26,26 @@ export async function validatePetOwnership(
     };
   }
 
+  const deceased = pets.find((pet) => pet.deceasedAt);
+  if (deceased) {
+    return { valid: false, message: deceasedPetMessage(deceased.name) };
+  }
+
   return { valid: true };
+}
+
+function deceasedPetMessage(name: string): string {
+  return `${name} figura como fallecida en la historia clínica`;
+}
+
+/**
+ * Refuses to book a pet the clinic has recorded as deceased.
+ *
+ * Takes the rows the caller already resolved against the tenant, so it adds no query.
+ */
+export function assertPetsAlive(pets: { name: string; deceasedAt: Date | null }[]): void {
+  const deceased = pets.find((pet) => pet.deceasedAt);
+  if (deceased) throw new AuthzError(409, deceasedPetMessage(deceased.name));
 }
 
 /**
