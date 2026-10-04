@@ -92,7 +92,12 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
       onSaved();
       onClose();
     } catch (err) {
-      setError((err instanceof Error ? err.message : "Error al guardar").substring(0, 200));
+      setError(
+        (err instanceof Error
+          ? err.message
+          : "No pudimos guardar los cambios. Inténtalo de nuevo."
+        ).substring(0, 200),
+      );
       setSaving(false);
     }
   }
@@ -115,74 +120,68 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
       }
     >
       <div className="space-y-4">
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+        {error && <div className="notice notice-danger">{error}</div>}
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Concepto</label>
+          <label className="block text-sm font-medium text-muted mb-1">Concepto</label>
           <input
             type="text"
             value={concept}
             onChange={(e) => setConcept(e.target.value)}
             placeholder="Ej: Guardería - Cliente"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Monto Base</label>
+            <label className="block text-sm font-medium text-muted mb-1">Monto Base</label>
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
               placeholder="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">IVA (%)</label>
+            <label className="block text-sm font-medium text-muted mb-1">IVA (%)</label>
             <input
               type="number"
               value={vatPercent}
               onChange={(e) => setVatPercent(Math.max(0, parseFloat(e.target.value) || 0))}
               min="0"
               max="100"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
             />
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <div className="bg-info-soft border border-info-line rounded-lg p-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
             <div>
-              <div className="text-gray-600">IVA ({vatPercent}%)</div>
-              <div className="text-lg font-semibold text-blue-600">
-                ${vatAmount.toLocaleString()}
-              </div>
+              <div className="text-muted">IVA ({vatPercent}%)</div>
+              <div className="text-lg font-semibold text-action">${vatAmount.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-gray-600">Monto Base</div>
-              <div className="text-lg font-semibold text-gray-700">${amount.toLocaleString()}</div>
+              <div className="text-muted">Monto Base</div>
+              <div className="text-lg font-semibold text-muted">${amount.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-gray-600">Total</div>
-              <div className="text-lg font-semibold text-blue-700">${total.toLocaleString()}</div>
+              <div className="text-muted">Total</div>
+              <div className="text-lg font-semibold text-info-ink">${total.toLocaleString()}</div>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+            <label className="block text-sm font-medium text-muted mb-1">Método de Pago</label>
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
             >
               <option value="EFECTIVO">Efectivo</option>
               <option value="TARJETA">Tarjeta de Crédito</option>
@@ -192,11 +191,11 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <label className="block text-sm font-medium text-muted mb-1">Estado</label>
             <select
               value={invoiceStatus}
               onChange={(e) => setInvoiceStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
             >
               <option value="PENDIENTE">Pendiente</option>
               <option value="PAGADO">Pagado</option>
@@ -206,23 +205,23 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
+          <label className="block text-sm font-medium text-muted mb-1">Fecha</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notas (Opcional)</label>
+          <label className="block text-sm font-medium text-muted mb-1">Notas (Opcional)</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Información adicional..."
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
           />
         </div>
 

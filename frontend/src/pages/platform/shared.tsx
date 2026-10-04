@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { ApiError } from "../../lib/api";
 import type { AuditEntry } from "../../lib/platform-api";
+import { ListSkeleton } from "../../components/ui/Spinner";
 
 /**
  * Runs an async console action, keeping its loading and error state.
@@ -20,7 +21,11 @@ export function useAsync() {
     try {
       return await fn();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error inesperado");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Algo salió mal. Inténtalo de nuevo.",
+      );
       return undefined;
     } finally {
       setIsLoading(false);
@@ -49,32 +54,22 @@ export function PlatformPage({
     <div className="p-6 sm:p-8 max-w-6xl">
       <header className="flex flex-wrap items-start justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold">{title}</h1>
-          {subtitle && (
-            <p className="text-sm mt-1" style={{ color: "var(--color-muted)" }}>
-              {subtitle}
-            </p>
-          )}
+          <h1 className="page-title">{title}</h1>
+          {subtitle && <p className="text-sm mt-1 text-muted">{subtitle}</p>}
         </div>
         {actions}
       </header>
 
       {error && (
         <div
-          className="mb-5 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          className="mb-5 rounded-lg border border-danger-line bg-danger-soft px-4 py-3 text-sm text-danger"
           role="alert"
         >
           {error}
         </div>
       )}
 
-      {isLoading ? (
-        <p className="text-sm" style={{ color: "var(--color-muted)" }}>
-          Cargando...
-        </p>
-      ) : (
-        children
-      )}
+      {isLoading ? <ListSkeleton rows={4} /> : children}
     </div>
   );
 }
@@ -91,23 +86,13 @@ export function StatCard({
   hint?: string;
 }) {
   return (
-    <div
-      className="card p-4"
-      style={{ background: "var(--color-surface)", borderColor: "var(--color-border)" }}
-    >
-      <div
-        className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider"
-        style={{ color: "var(--color-muted)" }}
-      >
+    <div className="card p-4 bg-surface border-line">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted">
         <Icon size={14} />
         {label}
       </div>
-      <p className="text-3xl font-bold mt-2">{value}</p>
-      {hint && (
-        <p className="text-xs mt-1" style={{ color: "var(--color-muted)" }}>
-          {hint}
-        </p>
-      )}
+      <p className="text-3xl font-semibold tabular-nums mt-2">{value}</p>
+      {hint && <p className="text-xs mt-1 text-muted">{hint}</p>}
     </div>
   );
 }
@@ -124,7 +109,7 @@ const ACTION_LABELS: Record<string, string> = {
 export function auditLine(entry: AuditEntry): string {
   const what = ACTION_LABELS[entry.action] ?? entry.action;
   const detail = summarizeDetail(entry);
-  return `${entry.actorUsername} ${what}${detail ? ` — ${detail}` : ""}`;
+  return `${entry.actorUsername} ${what}${detail ? `: ${detail}` : ""}`;
 }
 
 function summarizeDetail(entry: AuditEntry): string {

@@ -29,8 +29,8 @@ export function ClinicRemindersCard() {
 
   return (
     <section className="card" aria-label="Recordatorios de la clínica">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <h2 className="font-semibold text-gray-800">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle">
+        <h2 className="section-title">
           Recordatorios de la clínica
           <span className="ml-2 text-sm font-normal text-muted">
             {reminders.length} esta semana{overdue > 0 ? ` · ${overdue} vencidos` : ""}
@@ -38,19 +38,19 @@ export function ClinicRemindersCard() {
         </h2>
         <Link
           to="/veterinaria/recordatorios"
-          className="text-sm text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+          className="text-sm text-action hover:text-action-hover flex items-center gap-1"
         >
           Ver todos <ArrowRight size={14} />
         </Link>
       </div>
-      <ul className="divide-y divide-gray-100 text-sm">
+      <ul className="divide-y divide-line-subtle text-sm">
         {reminders.slice(0, SHOWN).map((reminder) => (
           <li key={reminder.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
             <span>
-              <span className="font-medium text-gray-900">{reminder.pet.name}</span>{" "}
-              <span className="text-gray-700">· {reminder.label}</span>
+              <span className="font-medium text-ink">{reminder.pet.name}</span>{" "}
+              <span className="text-muted">· {reminder.label}</span>
             </span>
-            <span className={reminder.overdue ? "text-red-700" : "text-muted"}>
+            <span className={reminder.overdue ? "text-danger-ink" : "text-muted"}>
               {fmt(reminder.dueAt)}
             </span>
           </li>

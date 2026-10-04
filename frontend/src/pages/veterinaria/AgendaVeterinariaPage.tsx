@@ -134,10 +134,7 @@ export function AgendaVeterinariaPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
@@ -192,8 +189,10 @@ export function AgendaVeterinariaPage() {
         <PageLoader />
       ) : visits.length === 0 ? (
         <div className="card p-10 text-center">
-          <Stethoscope size={28} className="mx-auto mb-2 text-gray-300" />
-          <p className="text-sm text-muted">No hay consultas para este día.</p>
+          <Stethoscope size={28} className="mx-auto mb-2 text-faint" />
+          <p className="text-sm text-muted">
+            Este día todavía no tiene consultas. ¿Agendamos la primera?
+          </p>
         </div>
       ) : (
         <>
@@ -202,12 +201,12 @@ export function AgendaVeterinariaPage() {
               const items = byStatus.get(column.status) ?? [];
               return (
                 <section key={column.status} aria-label={column.title} className="space-y-2">
-                  <h2 className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-500 px-1">
+                  <h2 className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-muted px-1">
                     {column.title}
-                    <span className="text-gray-400">{items.length}</span>
+                    <span className="text-muted">{items.length}</span>
                   </h2>
                   {items.length === 0 && (
-                    <p className="rounded-lg border border-dashed border-gray-200 px-3 py-6 text-center text-xs text-muted">
+                    <p className="rounded-lg border border-dashed border-line-subtle px-3 py-6 text-center text-xs text-muted">
                       Nadie aquí
                     </p>
                   )}
@@ -227,14 +226,14 @@ export function AgendaVeterinariaPage() {
 
           {released.length > 0 && (
             <div className="card p-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted mb-2">
                 Canceladas y ausencias ({released.length})
               </h2>
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line-subtle">
                 {released.map((visit) => (
                   <li key={visit.id} className="py-2 flex flex-wrap items-center gap-2 text-sm">
                     <span className="text-muted w-12">{fmtTime(visit.reservation.checkIn)}</span>
-                    <span className="font-medium text-gray-800">{visit.pet.name}</span>
+                    <span className="font-medium text-ink">{visit.pet.name}</span>
                     <span className="text-muted">
                       {visit.client.firstName} {visit.client.lastName}
                     </span>
@@ -281,18 +280,18 @@ function VisitCard({
     <article
       className={cls(
         "card p-3 space-y-2",
-        visit.triage === "URGENCIA" && "border-red-300",
-        visit.triage === "PRIORITARIA" && "border-amber-300",
+        visit.triage === "URGENCIA" && "border-danger-line",
+        visit.triage === "PRIORITARIA" && "border-warning-line",
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold text-gray-900 truncate">{visit.pet.name}</p>
+          <p className="font-semibold text-ink truncate">{visit.pet.name}</p>
           <p className="text-xs text-muted truncate">
             {visit.client.firstName} {visit.client.lastName}
           </p>
         </div>
-        <span className="text-sm font-semibold text-gray-700 tabular-nums">
+        <span className="text-sm font-semibold text-muted tabular-nums">
           {fmtTime(visit.reservation.checkIn)}
         </span>
       </div>
@@ -300,7 +299,7 @@ function VisitCard({
         <Badge>{VISIT_TYPES[visit.type] ?? visit.type}</Badge>
         {visit.triage !== "NORMAL" && triage && <Badge color={triage.color}>{triage.label}</Badge>}
       </div>
-      {visit.reason && <p className="text-xs text-gray-600 line-clamp-2">{visit.reason}</p>}
+      {visit.reason && <p className="text-xs text-muted line-clamp-2">{visit.reason}</p>}
       <p className="text-xs text-muted">
         {visit.veterinarian?.name ?? "Sin veterinario"}
         {visit.reservation.room ? ` · ${visit.reservation.room.name}` : ""}

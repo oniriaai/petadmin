@@ -5,7 +5,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
-import { cls, fmt, fmtDateTime } from "../../lib/utils";
+import { fmt, fmtDateTime } from "../../lib/utils";
 import {
   errorMessage,
   veterinariaApi,
@@ -13,6 +13,8 @@ import {
   type PharmacyLine,
   type StockItem,
 } from "./api";
+import { Tabs } from "../../components/ui/Tabs";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 type Tab = "queue" | "controlled" | "expiring";
 
@@ -79,27 +81,18 @@ export function FarmaciaPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2 print:hidden" role="tablist" aria-label="Farmacia">
-        {TABS.map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            className={cls("btn-sm", tab === key ? "btn-primary" : "btn-secondary")}
-            onClick={() => setTab(key)}
-          >
-            {label} ({counts[key]})
-          </button>
-        ))}
-      </div>
+      <Tabs
+        className="print:hidden"
+        label="Farmacia"
+        value={tab}
+        onChange={setTab}
+        items={TABS.map(([key, label]) => ({ id: key, label, count: counts[key] }))}
+      />
 
       {loading ? (
         <PageLoader />
@@ -116,7 +109,7 @@ export function FarmaciaPage() {
                 <td className="table-td">
                   <Link
                     to={`/veterinaria/consultas/${line.prescription.visitId}`}
-                    className="font-medium text-gray-900 hover:underline"
+                    className="font-medium text-ink hover:underline"
                   >
                     {line.prescription.pet.name}
                   </Link>
@@ -197,11 +190,11 @@ export function FarmaciaPage() {
               const expired = new Date(lot.expiresAt) < today;
               return (
                 <tr key={lot.id} className="table-tr">
-                  <td className="table-td font-medium text-gray-900">{lot.item.name}</td>
+                  <td className="table-td font-medium text-ink">{lot.item.name}</td>
                   <td className="table-td">{lot.lotNumber || "—"}</td>
                   <td className="table-td">
                     {fmt(lot.expiresAt)}{" "}
-                    {expired && <Badge color="bg-red-100 text-red-800">Caducado</Badge>}
+                    {expired && <Badge color="bg-danger-soft text-danger-ink">Caducado</Badge>}
                   </td>
                   <td className="table-td tabular-nums">
                     {lot.quantity} {lot.item.unit}
@@ -231,9 +224,8 @@ export function FarmaciaPage() {
 
 function Empty({ text }: { text: string }) {
   return (
-    <div className="card p-10 text-center">
-      <Pill size={28} className="mx-auto mb-2 text-gray-300" />
-      <p className="text-sm text-muted">{text}</p>
+    <div className="card">
+      <EmptyState icon={Pill} title={text} />
     </div>
   );
 }
@@ -338,15 +330,12 @@ function DispenseModal({
       {line && (
         <div className="space-y-4 text-sm">
           {error && (
-            <div
-              className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700"
-              role="alert"
-            >
+            <div className="notice notice-danger" role="alert">
               {error}
             </div>
           )}
           <p>
-            <span className="font-medium text-gray-900">{line.drug}</span> para{" "}
+            <span className="font-medium text-ink">{line.drug}</span> para{" "}
             {line.prescription.pet.name}: {line.dose}, {line.frequency}
             {line.durationDays ? `, ${line.durationDays} días` : ""}.
           </p>
@@ -405,16 +394,16 @@ function DispenseModal({
                 </div>
               </div>
               {short && (
-                <p className="text-red-600">
+                <p className="text-danger">
                   Solo hay {item?.currentStock} {item?.unit} en stock.
                 </p>
               )}
               {item?.isControlled && (
-                <p className="text-amber-800">
+                <p className="text-warning-ink">
                   Medicamento controlado: esta entrega quedará en el libro de controlados.
                 </p>
               )}
-              <label className="flex items-center gap-2 text-gray-700">
+              <label className="flex items-center gap-2 text-muted">
                 <input type="checkbox" checked={bill} onChange={(e) => setBill(e.target.checked)} />
                 Añadir el cargo a la consulta (solo si sigue abierta)
               </label>

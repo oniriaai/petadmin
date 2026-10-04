@@ -60,7 +60,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
         });
       } catch (uploadErr: any) {
         console.error("Direct B2 upload failed:", uploadErr.response?.data || uploadErr.message);
-        throw new Error("Error al subir el archivo directamente al servidor de almacenamiento.");
+        throw new Error("No pudimos subir el archivo al almacenamiento. Inténtalo de nuevo.");
       }
 
       // 3. Update with final public URL
@@ -68,7 +68,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
       setPreview(publicUrl);
     } catch (error: any) {
       console.error("Upload process failed", error);
-      alert(error.message || "Error al subir la imagen. Por favor intente de nuevo.");
+      alert(error.message || "No pudimos subir la imagen. Inténtalo de nuevo.");
       setPreview(value || null);
     } finally {
       setUploading(false);
@@ -91,7 +91,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (error: any) {
       console.error("Error deleting image:", error);
-      alert("Error al eliminar la imagen. Por favor intente de nuevo.");
+      alert("No pudimos eliminar la imagen. Inténtalo de nuevo.");
     } finally {
       setDeleting(false);
     }
@@ -103,7 +103,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
       <div
         onClick={() => fileInputRef.current?.click()}
         className={`relative w-40 h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden
-          ${preview ? "border-transparent" : "border-gray-300 hover:border-violet-500 hover:bg-violet-50"}`}
+          ${preview ? "border-transparent" : "border-line hover:border-grooming-500 hover:bg-grooming-50"}`}
       >
         {preview ? (
           <>
@@ -115,14 +115,14 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
             {!uploading && !deleting && (
               <button
                 onClick={removeImage}
-                className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                className="absolute top-2 right-2 p-1 bg-danger text-white rounded-full hover:bg-danger transition-colors"
               >
                 <X size={14} />
               </button>
             )}
           </>
         ) : (
-          <div className="text-gray-400 flex flex-col items-center gap-2">
+          <div className="text-muted flex flex-col items-center gap-2">
             <UploadCloud size={32} />
             <span className="text-xs font-medium">Subir foto</span>
           </div>
@@ -134,9 +134,9 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
               <Spinner size={24} />
             </div>
             <span className="text-xs font-bold">{progress}%</span>
-            <div className="w-24 h-1.5 bg-gray-700 rounded-full mt-2 overflow-hidden">
+            <div className="w-24 h-1.5 bg-shell rounded-full mt-2 overflow-hidden">
               <div
-                className="h-full bg-violet-500 transition-all duration-300"
+                className="h-full bg-grooming-500 transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>

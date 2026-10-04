@@ -3,6 +3,7 @@ import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import { Building2, LayoutDashboard, LogOut, ScrollText, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";
+import { Wordmark } from "../../components/brand/Wordmark";
 import { PlatformOverviewPage } from "./PlatformOverviewPage";
 import { DaycaresPage } from "./DaycaresPage";
 import { DaycareDetailPage } from "./DaycareDetailPage";
@@ -32,28 +33,16 @@ export default function PlatformApp() {
   ];
 
   return (
-    <div
-      data-theme="platform"
-      className="min-h-screen flex"
-      style={{ background: "var(--color-canvas)", color: "var(--color-ink)" }}
-    >
-      <aside
-        className="w-60 shrink-0 border-r flex flex-col"
-        style={{ borderColor: "var(--color-border)", background: "var(--color-surface)" }}
-      >
-        <div className="px-4 py-5 border-b" style={{ borderColor: "var(--color-border)" }}>
+    <div data-theme="platform" className="min-h-[100dvh] flex bg-canvas text-ink">
+      <aside className="w-60 shrink-0 border-r flex flex-col border-line bg-surface">
+        <div className="px-4 py-5 border-b border-line">
+          <Wordmark className="mb-4" />
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-9 h-9 rounded-xl grid place-items-center"
-              style={{ background: "var(--color-action)" }}
-            >
+            <div className="w-9 h-9 rounded-xl grid place-items-center bg-action">
               <ShieldCheck size={18} className="text-white" />
             </div>
             <div className="min-w-0">
-              <p
-                className="text-[11px] uppercase tracking-wider font-semibold"
-                style={{ color: "var(--color-muted)" }}
-              >
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-muted">
                 Plataforma
               </p>
               <p className="text-sm font-bold truncate">{user?.name ?? user?.username}</p>
@@ -83,13 +72,13 @@ export default function PlatformApp() {
           ))}
         </nav>
 
-        <div className="p-2 border-t" style={{ borderColor: "var(--color-border)" }}>
+        <div className="p-2 border-t border-line">
           <button
             onClick={() => {
               logout();
               navigate("/login", { replace: true });
             }}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full text-red-400 hover:bg-red-500/10 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full text-danger hover:bg-danger-soft transition-colors"
           >
             <LogOut size={16} />
             <span>Cerrar sesión</span>

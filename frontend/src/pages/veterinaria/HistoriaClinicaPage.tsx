@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Pencil, Plus, Printer } from "lucide-react";
+import { PatientBand } from "./PatientBand";
+import { EmptyState } from "../../components/ui/EmptyState";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
@@ -74,7 +76,7 @@ export function HistoriaClinicaPage() {
   if (!history) {
     return (
       <div className="p-6">
-        <p className="text-red-600 text-sm" role="alert">
+        <p className="text-danger text-sm" role="alert">
           {error || "Paciente no encontrado"}
         </p>
         <Link to="/veterinaria/pacientes" className="btn-secondary mt-4 inline-flex">
@@ -105,14 +107,14 @@ export function HistoriaClinicaPage() {
         title={
           <span className="flex flex-wrap items-center gap-2">
             <button
-              className="icon-button -ml-2 text-gray-500 hover:text-gray-800 print:hidden"
+              className="icon-button -ml-2 text-muted hover:text-ink print:hidden"
               onClick={() => navigate("/veterinaria/pacientes")}
               aria-label="Volver a pacientes"
             >
               <ArrowLeft size={20} />
             </button>
             {pet.name}
-            {pet.deceasedAt && <Badge color="bg-gray-800 text-white">Fallecido</Badge>}
+            {pet.deceasedAt && <Badge color="bg-shell text-white">Fallecido</Badge>}
           </span>
         }
         subtitle={`Tutor: ${pet.client.firstName} ${pet.client.lastName}${
@@ -136,42 +138,31 @@ export function HistoriaClinicaPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
-      <div className="card p-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">
-        <div>
-          <p className="text-xs text-muted">Especie y raza</p>
-          <p className="font-medium text-gray-900">
-            {pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}
-            {pet.breed ? ` · ${pet.breed}` : ""}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Sexo y edad</p>
-          <p className="font-medium text-gray-900">
-            {pet.sex === "F" ? "Hembra" : "Macho"}
-            {pet.isNeutered ? " esterilizado" : ""} · {petAge(pet.birthdate)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Peso y grupo sanguíneo</p>
-          <p className="font-medium text-gray-900">
-            {pet.weight ? `${pet.weight} kg` : "Sin peso"} · {pet.bloodType || "sin grupo"}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-muted">Microchip</p>
-          <p className="font-medium text-gray-900">{pet.microchip || "—"}</p>
-        </div>
+      <PatientBand
+        facts={[
+          {
+            label: "Especie y raza",
+            value: `${pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}${pet.breed ? ` · ${pet.breed}` : ""}`,
+          },
+          {
+            label: "Sexo y edad",
+            value: `${pet.sex === "F" ? "Hembra" : "Macho"}${pet.isNeutered ? " esterilizado" : ""} · ${petAge(pet.birthdate)}`,
+          },
+          {
+            label: "Peso y grupo sanguíneo",
+            value: `${pet.weight ? `${pet.weight} kg` : "Sin peso"} · ${pet.bloodType || "sin grupo"}`,
+          },
+          { label: "Microchip", value: pet.microchip || "—" },
+        ]}
+      >
         {(pet.allergies || pet.chronicConditions || chronicDiagnoses.length > 0) && (
-          <div className="sm:col-span-2 lg:col-span-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 flex gap-2">
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+          <div className="notice notice-warning">
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
             <div>
               {pet.allergies && (
                 <p>
@@ -193,25 +184,25 @@ export function HistoriaClinicaPage() {
           </div>
         )}
         {pet.deceasedAt && (
-          <p className="sm:col-span-2 lg:col-span-4 text-gray-700">
+          <p className="text-muted">
             Fallecido el {fmt(pet.deceasedAt)}
             {pet.deathCause ? `: ${pet.deathCause}` : ""}
           </p>
         )}
-      </div>
+      </PatientBand>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <section className="lg:col-span-2 space-y-3" aria-label="Consultas">
-          <h2 className="font-semibold text-gray-900">Consultas ({visits.length})</h2>
+          <h2 className="section-title">Consultas ({visits.length})</h2>
           {visits.length === 0 && (
-            <p className="card p-6 text-sm text-muted text-center">
-              Este paciente todavía no tiene consultas en la clínica.
-            </p>
+            <div className="card">
+              <EmptyState title="Este paciente todavía no tiene consultas en la clínica." />
+            </div>
           )}
           {visits.map((visit) => (
             <article key={visit.id} className="card p-4 space-y-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-semibold text-gray-900">
+                <p className="font-semibold text-ink">
                   {fmtDateTime(visit.reservation.checkIn)} · {VISIT_TYPES[visit.type] ?? visit.type}
                 </p>
                 <span className="flex items-center gap-2">
@@ -256,11 +247,11 @@ export function HistoriaClinicaPage() {
 
         <div className="space-y-5">
           <section className="card p-4 space-y-2 text-sm" aria-label="Evolución del peso">
-            <h2 className="font-semibold text-gray-900">Peso</h2>
+            <h2 className="section-title">Peso</h2>
             {weights.length === 0 ? (
               <p className="text-muted">Sin tomas de peso.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line-subtle">
                 {weights.map((v) => (
                   <li key={v.id} className="flex justify-between py-1.5">
                     <span className="text-muted">{fmt(v.takenAt)}</span>
@@ -272,21 +263,21 @@ export function HistoriaClinicaPage() {
           </section>
 
           <section className="card p-4 space-y-2 text-sm" aria-label="Vacunas">
-            <h2 className="font-semibold text-gray-900">Vacunas</h2>
+            <h2 className="section-title">Vacunas</h2>
             {pet.vaccinations.length === 0 ? (
               <p className="text-muted">Sin vacunas registradas.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line-subtle">
                 {pet.vaccinations.map((vaccination) => {
                   const overdue = vaccination.nextDue && new Date(vaccination.nextDue) < today;
                   return (
                     <li key={vaccination.id} className="py-1.5">
-                      <p className="font-medium text-gray-900">{vaccination.name}</p>
+                      <p className="font-medium text-ink">{vaccination.name}</p>
                       <p className="text-muted">
                         {fmt(vaccination.date)}
                         {vaccination.lotNumber ? ` · lote ${vaccination.lotNumber}` : ""}
                         {vaccination.nextDue && (
-                          <span className={overdue ? "text-red-600 font-medium" : ""}>
+                          <span className={overdue ? "text-danger font-medium" : ""}>
                             {" "}
                             · refuerzo {fmt(vaccination.nextDue)}
                             {overdue ? " (vencido)" : ""}
@@ -301,21 +292,21 @@ export function HistoriaClinicaPage() {
           </section>
 
           <section className="card p-4 space-y-2 text-sm" aria-label="Desparasitaciones">
-            <h2 className="font-semibold text-gray-900">Desparasitaciones y preventivos</h2>
+            <h2 className="section-title">Desparasitaciones y preventivos</h2>
             {preventives.length === 0 ? (
               <p className="text-muted">Sin preventivos registrados.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-line-subtle">
                 {preventives.map((preventive) => {
                   const overdue = preventive.nextDue && new Date(preventive.nextDue) < today;
                   return (
                     <li key={preventive.id} className="py-1.5">
-                      <p className="font-medium text-gray-900">{preventive.product}</p>
+                      <p className="font-medium text-ink">{preventive.product}</p>
                       <p className="text-muted">
                         {PREVENTIVE_KINDS[preventive.kind] ?? preventive.kind} ·{" "}
                         {fmt(preventive.date)}
                         {preventive.nextDue && (
-                          <span className={overdue ? "text-red-600 font-medium" : ""}>
+                          <span className={overdue ? "text-danger font-medium" : ""}>
                             {" "}
                             · próxima {fmt(preventive.nextDue)}
                             {overdue ? " (vencida)" : ""}
@@ -331,13 +322,13 @@ export function HistoriaClinicaPage() {
 
           {prescriptions.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Recetas">
-              <h2 className="font-semibold text-gray-900">Recetas</h2>
-              <ul className="divide-y divide-gray-100">
+              <h2 className="section-title">Recetas</h2>
+              <ul className="divide-y divide-line-subtle">
                 {prescriptions.map((prescription) => (
                   <li key={prescription.id} className="py-1.5">
                     <Link
                       to={`/veterinaria/recetas/${prescription.id}`}
-                      className="font-medium text-gray-900 hover:underline"
+                      className="font-medium text-ink hover:underline"
                     >
                       {fmt(prescription.issuedAt)}
                     </Link>
@@ -352,11 +343,11 @@ export function HistoriaClinicaPage() {
 
           {labOrders.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Laboratorio e imagen">
-              <h2 className="font-semibold text-gray-900">Laboratorio e imagen</h2>
-              <ul className="divide-y divide-gray-100">
+              <h2 className="section-title">Laboratorio e imagen</h2>
+              <ul className="divide-y divide-line-subtle">
                 {labOrders.map((order) => (
                   <li key={order.id} className="py-1.5">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-ink">
                       {order.test}{" "}
                       <span className="font-normal text-muted">{fmt(order.requestedAt)}</span>
                     </p>
@@ -365,7 +356,7 @@ export function HistoriaClinicaPage() {
                         (order.status === "RESULTADO" ? "Con resultado" : "Pendiente de resultado")}
                     </p>
                     {order.values.map((value) => (
-                      <p key={value.id} className="text-xs text-gray-700">
+                      <p key={value.id} className="text-xs text-muted">
                         {value.analyte}: {value.value} {value.unit}
                         {value.flag && value.flag !== "NORMAL"
                           ? ` · ${LAB_FLAGS[value.flag]?.label ?? value.flag}`
@@ -380,11 +371,11 @@ export function HistoriaClinicaPage() {
 
           {procedures.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Cirugías y procedimientos">
-              <h2 className="font-semibold text-gray-900">Cirugías y procedimientos</h2>
-              <ul className="divide-y divide-gray-100">
+              <h2 className="section-title">Cirugías y procedimientos</h2>
+              <ul className="divide-y divide-line-subtle">
                 {procedures.map((procedure) => (
                   <li key={procedure.id} className="py-1.5">
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-ink">
                       {procedure.name}{" "}
                       <span className="font-normal text-muted">
                         {fmt(procedure.startAt ?? procedure.createdAt)}
@@ -394,7 +385,7 @@ export function HistoriaClinicaPage() {
                       {PROCEDURE_KINDS[procedure.kind] ?? procedure.kind} ·{" "}
                       {PROCEDURE_STATUS[procedure.status]?.label ?? procedure.status}
                     </p>
-                    {procedure.findings && <p className="text-gray-700">{procedure.findings}</p>}
+                    {procedure.findings && <p className="text-muted">{procedure.findings}</p>}
                   </li>
                 ))}
               </ul>
@@ -403,13 +394,13 @@ export function HistoriaClinicaPage() {
 
           {hospitalizations.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Hospitalizaciones">
-              <h2 className="font-semibold text-gray-900">Hospitalizaciones</h2>
-              <ul className="divide-y divide-gray-100">
+              <h2 className="section-title">Hospitalizaciones</h2>
+              <ul className="divide-y divide-line-subtle">
                 {hospitalizations.map((stay) => (
                   <li key={stay.id} className="py-1.5">
                     <Link
                       to={`/veterinaria/hospitalizacion/${stay.id}`}
-                      className="font-medium text-gray-900 hover:underline"
+                      className="font-medium text-ink hover:underline"
                     >
                       {fmt(stay.admittedAt)}
                       {stay.dischargedAt ? ` – ${fmt(stay.dischargedAt)}` : " · ingresado"}
@@ -423,13 +414,13 @@ export function HistoriaClinicaPage() {
 
           {consents.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Consentimientos">
-              <h2 className="font-semibold text-gray-900">Consentimientos</h2>
-              <ul className="divide-y divide-gray-100">
+              <h2 className="section-title">Consentimientos</h2>
+              <ul className="divide-y divide-line-subtle">
                 {consents.map((consent) => (
                   <li key={consent.id} className="py-1.5">
                     <Link
                       to={`/veterinaria/consentimientos/${consent.id}`}
-                      className="font-medium text-gray-900 hover:underline"
+                      className="font-medium text-ink hover:underline"
                     >
                       {CONSENT_TYPES[consent.type] ?? consent.type}
                     </Link>
@@ -446,8 +437,8 @@ export function HistoriaClinicaPage() {
 
           {pet.documents.length > 0 && (
             <section className="card p-4 space-y-2 text-sm" aria-label="Documentos">
-              <h2 className="font-semibold text-gray-900">Documentos</h2>
-              <ul className="divide-y divide-gray-100">
+              <h2 className="section-title">Documentos</h2>
+              <ul className="divide-y divide-line-subtle">
                 {pet.documents.map((document) => (
                   <li key={document.id} className="flex justify-between py-1.5">
                     <span>{document.name}</span>
@@ -554,10 +545,7 @@ function PatientModal({
     >
       <div className="space-y-4">
         {error && (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            role="alert"
-          >
+          <div className="notice notice-danger" role="alert">
             {error}
           </div>
         )}
@@ -597,7 +585,7 @@ function PatientModal({
             onChange={(e) => setChronicConditions(e.target.value)}
           />
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={deceased}

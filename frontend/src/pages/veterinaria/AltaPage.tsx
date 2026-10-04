@@ -23,7 +23,7 @@ export function AltaPage() {
 
   if (error) {
     return (
-      <p className="p-6 text-sm text-red-600" role="alert">
+      <p className="p-6 text-sm text-danger" role="alert">
         {error}
       </p>
     );
@@ -43,9 +43,11 @@ export function AltaPage() {
         </button>
       </div>
 
-      <article className="card p-6 sm:p-8 space-y-6 text-sm text-gray-800 print:border-0 print:shadow-none print:p-0">
-        <header className="border-b border-gray-200 pb-4">
-          <h1 className="text-xl font-bold text-gray-900">{daycare?.name ?? "Clínica"}</h1>
+      <article className="card p-6 sm:p-8 space-y-6 text-sm text-ink print:border-0 print:shadow-none print:p-0">
+        <header className="border-b border-line-subtle pb-4">
+          <h1 className="font-display text-2xl leading-tight text-ink">
+            {daycare?.name ?? "Clínica"}
+          </h1>
           <p className="text-muted">
             {stay.status === "ALTA" ? "Hoja de alta hospitalaria" : "Resumen de hospitalización"}
           </p>
@@ -54,7 +56,7 @@ export function AltaPage() {
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-xs text-muted">Paciente</dt>
-            <dd className="font-medium text-gray-900">{pet.name}</dd>
+            <dd className="font-medium text-ink">{pet.name}</dd>
             <dd>
               {pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}
               {pet.breed ? ` · ${pet.breed}` : ""} · {petAge(pet.birthdate)}
@@ -63,7 +65,7 @@ export function AltaPage() {
           </div>
           <div>
             <dt className="text-xs text-muted">Tutor</dt>
-            <dd className="font-medium text-gray-900">
+            <dd className="font-medium text-ink">
               {visit.client.firstName} {visit.client.lastName}
             </dd>
             <dd>{visit.client.phone || "—"}</dd>
@@ -103,8 +105,8 @@ export function AltaPage() {
         )}
 
         <footer className="pt-12">
-          <div className="w-64 border-t border-gray-400 pt-2">
-            <p className="font-medium text-gray-900">
+          <div className="w-64 border-t border-line pt-2">
+            <p className="font-medium text-ink">
               {visit.veterinarian?.name ?? "Médico veterinario"}
             </p>
             {visit.veterinarian?.licenseNumber && (

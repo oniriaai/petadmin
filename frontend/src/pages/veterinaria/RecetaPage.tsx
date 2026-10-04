@@ -23,7 +23,7 @@ export function RecetaPage() {
 
   if (error) {
     return (
-      <p className="p-6 text-sm text-red-600" role="alert">
+      <p className="p-6 text-sm text-danger" role="alert">
         {error}
       </p>
     );
@@ -43,10 +43,12 @@ export function RecetaPage() {
         </button>
       </div>
 
-      <article className="card p-6 sm:p-8 space-y-6 text-sm text-gray-800 print:border-0 print:shadow-none print:p-0">
-        <header className="flex flex-wrap justify-between gap-4 border-b border-gray-200 pb-4">
+      <article className="card p-6 sm:p-8 space-y-6 text-sm text-ink print:border-0 print:shadow-none print:p-0">
+        <header className="flex flex-wrap justify-between gap-4 border-b border-line-subtle pb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{daycare?.name ?? "Clínica"}</h1>
+            <h1 className="font-display text-2xl leading-tight text-ink">
+              {daycare?.name ?? "Clínica"}
+            </h1>
             <p className="text-muted">Receta veterinaria</p>
           </div>
           <p className="text-right">
@@ -58,7 +60,7 @@ export function RecetaPage() {
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-xs text-muted">Paciente</dt>
-            <dd className="font-medium text-gray-900">{pet.name}</dd>
+            <dd className="font-medium text-ink">{pet.name}</dd>
             <dd>
               {pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}
               {pet.breed ? ` · ${pet.breed}` : ""} · {petAge(pet.birthdate)}
@@ -67,7 +69,7 @@ export function RecetaPage() {
           </div>
           <div>
             <dt className="text-xs text-muted">Tutor</dt>
-            <dd className="font-medium text-gray-900">
+            <dd className="font-medium text-ink">
               {pet.client.firstName} {pet.client.lastName}
             </dd>
             <dd>{[pet.client.idNumber, pet.client.phone].filter(Boolean).join(" · ") || "—"}</dd>
@@ -77,7 +79,7 @@ export function RecetaPage() {
         <ol className="space-y-4 list-decimal pl-5">
           {prescription.items.map((item) => (
             <li key={item.id}>
-              <p className="font-semibold text-gray-900">
+              <p className="font-semibold text-ink">
                 {item.drug}
                 {item.presentation ? ` (${item.presentation})` : ""}
               </p>
@@ -86,7 +88,7 @@ export function RecetaPage() {
                 {item.durationDays ? `, durante ${item.durationDays} días` : ""}
                 {item.route ? `. Vía ${item.route}` : ""}
               </p>
-              {item.instructions && <p className="text-gray-600">{item.instructions}</p>}
+              {item.instructions && <p className="text-muted">{item.instructions}</p>}
             </li>
           ))}
         </ol>
@@ -99,10 +101,8 @@ export function RecetaPage() {
         )}
 
         <footer className="pt-12">
-          <div className="w-64 border-t border-gray-400 pt-2">
-            <p className="font-medium text-gray-900">
-              {veterinarian?.name ?? "Médico veterinario"}
-            </p>
+          <div className="w-64 border-t border-line pt-2">
+            <p className="font-medium text-ink">{veterinarian?.name ?? "Médico veterinario"}</p>
             {veterinarian?.licenseNumber && <p>Matrícula {veterinarian.licenseNumber}</p>}
           </div>
         </footer>

@@ -3,6 +3,8 @@ import { ChevronUp, ChevronDown, Search, CheckCircle, LogOut, Calendar, Plus } f
 import { fmt, fmtTime } from "../../lib/utils";
 import { Badge } from "../ui/Badge";
 import type { OperationalEvent, OperationalEventStatus } from "./useOperacionesData";
+import { EmptyState } from "../ui/EmptyState";
+import { ListSkeleton } from "../ui/Spinner";
 
 interface UnifiedListViewProps {
   events: OperationalEvent[];
@@ -17,9 +19,9 @@ type SortOrder = "asc" | "desc";
 
 function getStatusColor(status: OperationalEventStatus) {
   const colors = {
-    PENDING: "bg-gray-100 text-gray-700",
-    CHECKED_IN: "bg-green-100 text-green-700",
-    CHECKED_OUT: "bg-blue-100 text-blue-700",
+    PENDING: "bg-sunken text-muted",
+    CHECKED_IN: "bg-success-soft text-success-ink",
+    CHECKED_OUT: "bg-info-soft text-info-ink",
   };
   return colors[status];
 }
@@ -128,7 +130,7 @@ export function UnifiedListView({
   const SortHeader = ({ label, field }: { label: string; field: SortField }) => (
     <button
       onClick={() => handleSort(field)}
-      className="flex items-center gap-1 font-medium hover:text-blue-600 transition"
+      className="flex items-center gap-1 font-medium hover:text-action transition"
     >
       {label}
       {sortField === field &&
@@ -137,14 +139,7 @@ export function UnifiedListView({
   );
 
   if (loading) {
-    return (
-      <div className="card p-8 text-center">
-        <div className="inline-block animate-spin">
-          <div className="h-8 w-8 border-4 border-gray-300 border-t-blue-600 rounded-full" />
-        </div>
-        <p className="text-gray-500 mt-3">Cargando operaciones...</p>
-      </div>
-    );
+    return <ListSkeleton />;
   }
 
   return (
@@ -152,7 +147,7 @@ export function UnifiedListView({
       {/* Filters */}
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar por cliente, mascota o sala…"
@@ -181,7 +176,7 @@ export function UnifiedListView({
       {/* Table */}
       <div className="card overflow-hidden">
         {filteredEvents.length === 0 ? (
-          <p className="text-center text-gray-400 py-16">Sin operaciones que mostrar</p>
+          <EmptyState title="Aquí todavía no hay operaciones. ¿Agendamos la primera?" />
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -218,14 +213,11 @@ export function UnifiedListView({
                     return (
                       <tr
                         key={event.id}
-                        className="table-tr cursor-pointer hover:bg-gray-50 transition"
+                        className="table-tr cursor-pointer hover:bg-sunken transition"
                       >
                         <td className="table-td" onClick={() => onViewDetail?.(event)}>
                           {event.type === "RESERVATION" ? (
-                            <div
-                              className="flex items-center gap-1.5 text-blue-600"
-                              title="Reserva"
-                            >
+                            <div className="flex items-center gap-1.5 text-action" title="Reserva">
                               <Calendar size={16} />
                               <span className="text-[10px] font-bold uppercase tracking-wider">
                                 Res
@@ -233,7 +225,7 @@ export function UnifiedListView({
                             </div>
                           ) : (
                             <div
-                              className="flex items-center gap-1.5 text-purple-600"
+                              className="flex items-center gap-1.5 text-grooming-600"
                               title="Ad-hoc"
                             >
                               <Plus size={16} />
@@ -245,15 +237,15 @@ export function UnifiedListView({
                         </td>
                         <td className="table-td text-sm" onClick={() => onViewDetail?.(event)}>
                           <div>{fmt(event.scheduledCheckIn)}</div>
-                          <div className="text-gray-400 text-xs">
+                          <div className="text-muted text-xs">
                             {fmtTime(event.scheduledCheckIn)}
                           </div>
                         </td>
                         <td className="table-td" onClick={() => onViewDetail?.(event)}>
-                          <p className="font-medium text-gray-900">{event.clientName}</p>
+                          <p className="font-medium text-ink">{event.clientName}</p>
                         </td>
                         <td
-                          className="table-td text-sm text-gray-600"
+                          className="table-td text-sm text-muted"
                           onClick={() => onViewDetail?.(event)}
                         >
                           {event.petNames}
@@ -268,7 +260,7 @@ export function UnifiedListView({
                           {event.actualCheckIn ? (
                             <>
                               <div>{fmt(event.actualCheckIn)}</div>
-                              <div className="text-gray-400 text-xs">
+                              <div className="text-muted text-xs">
                                 {fmtTime(event.actualCheckIn)}
                               </div>
                             </>
@@ -280,7 +272,7 @@ export function UnifiedListView({
                           {event.actualCheckOut ? (
                             <>
                               <div>{fmt(event.actualCheckOut)}</div>
-                              <div className="text-gray-400 text-xs">
+                              <div className="text-muted text-xs">
                                 {fmtTime(event.actualCheckOut)}
                               </div>
                             </>
@@ -326,9 +318,9 @@ export function UnifiedListView({
             </div>
 
             {/* Pagination */}
-            <div className="border-t border-gray-200 p-4 flex items-center justify-between text-sm">
+            <div className="border-t border-line-subtle p-4 flex items-center justify-between text-sm">
               <div className="flex items-center gap-3">
-                <span className="text-gray-600">
+                <span className="text-muted">
                   Mostrando {paginatedEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} a{" "}
                   {Math.min(currentPage * pageSize, sortedEvents.length)} de {sortedEvents.length}{" "}
                   operaciones
@@ -370,8 +362,8 @@ export function UnifiedListView({
                           onClick={() => setCurrentPage(page)}
                           className={`px-3 py-1 rounded text-sm font-medium transition ${
                             page === currentPage
-                              ? "bg-blue-600 text-white"
-                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                              ? "bg-action text-white"
+                              : "bg-sunken text-muted hover:bg-line-subtle"
                           }`}
                         >
                           {page}
@@ -379,7 +371,7 @@ export function UnifiedListView({
                       );
                     } else if (page === currentPage - 2 || page === currentPage + 2) {
                       return (
-                        <span key={page} className="px-2 text-gray-400">
+                        <span key={page} className="px-2 text-muted">
                           …
                         </span>
                       );

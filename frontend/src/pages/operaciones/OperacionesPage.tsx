@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Calendar, List, Plus, Search, RefreshCw } from "lucide-react";
+import { Tabs } from "../../components/ui/Tabs";
 import { api, reservationsApi, checkInOutApi } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
 import {
@@ -140,7 +141,7 @@ export function OperacionesPage() {
       {/* Controls */}
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar por cliente, mascota o sala…"
@@ -162,7 +163,9 @@ export function OperacionesPage() {
 
       {/* Error Display */}
       {error && (
-        <div className="card p-4 bg-red-50 border border-red-200 text-red-700 rounded">{error}</div>
+        <div className="notice notice-danger" role="alert">
+          {error}
+        </div>
       )}
 
       {/* Loading */}
@@ -171,28 +174,15 @@ export function OperacionesPage() {
       {/* Tab Navigation */}
       {!loading && (
         <>
-          <div className="card flex gap-2 p-2 border-b">
-            <button
-              onClick={() => setSelectedTab("calendar")}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition rounded-t-lg ${
-                selectedTab === "calendar"
-                  ? "bg-blue-100 text-blue-700 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <Calendar size={18} /> Calendario
-            </button>
-            <button
-              onClick={() => setSelectedTab("list")}
-              className={`flex items-center gap-2 px-4 py-2 font-medium transition rounded-t-lg ${
-                selectedTab === "list"
-                  ? "bg-blue-100 text-blue-700 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              <List size={18} /> Lista
-            </button>
-          </div>
+          <Tabs
+            label="Vista de operaciones"
+            value={selectedTab}
+            onChange={setSelectedTab}
+            items={[
+              { id: "calendar", label: "Calendario", icon: Calendar },
+              { id: "list", label: "Lista", icon: List },
+            ]}
+          />
 
           {/* Tab Content */}
           {selectedTab === "calendar" && (

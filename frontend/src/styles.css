@@ -7,23 +7,49 @@
     box-sizing: border-box;
   }
   :root {
-    --color-canvas: #f8fafc;
+    /* Argos Suite: warm marble and black-figure ink (BRAND.md). */
+    --color-canvas: #faf8f5;
     --color-surface: #ffffff;
     /* Raised surface: the shell's chrome, so a topbar reads above the page it scrolls. */
     --color-raised: #ffffff;
+    /* One step below the surface: hovers, table headers, Kanban lanes. */
+    --color-sunken: #f5f5f4;
     /* The application shell, dark in both themes. */
-    --color-shell: #111827;
-    --color-shell-ink: #f9fafb;
-    --color-shell-muted: #9ca3af;
-    --color-ink: #0f172a;
-    --color-muted: #475569;
-    --color-border: #cbd5e1;
-    --color-border-subtle: #e2e8f0;
+    --color-shell: #1c1917;
+    --color-shell-ink: #fafaf9;
+    --color-shell-muted: #a8a29e;
+    --color-ink: #1c1917;
+    --color-muted: #57534e;
+    --color-faint: #a8a29e;
+    --color-border: #d6d3d1;
+    --color-border-subtle: #e7e5e4;
     --color-action: #1d4ed8;
-    --color-action-hover: #1e40af;
+    --color-action-hover: #1e3a8a;
     --color-focus: #2563eb;
-    --shadow-raised: 0 1px 2px 0 rgb(15 23 42 / 0.06), 0 1px 3px 0 rgb(15 23 42 / 0.08);
-    --shadow-overlay: 0 20px 25px -5px rgb(15 23 42 / 0.2), 0 8px 10px -6px rgb(15 23 42 / 0.2);
+
+    /*
+     * Status tones. Warning sits on a yellow-leaning ramp so a state never reads as Terracota,
+     * and success stays apart from Verde Olivo: those two mark a unit, never a status.
+     */
+    --color-danger: #b91c1c;
+    --color-danger-soft: #fef2f2;
+    --color-danger-ink: #991b1b;
+    --color-danger-line: #fecaca;
+    --color-success: #15803d;
+    --color-success-soft: #f0fdf4;
+    --color-success-ink: #166534;
+    --color-success-line: #bbf7d0;
+    --color-warning: #ca8a04;
+    --color-warning-soft: #fefce8;
+    --color-warning-ink: #854d0e;
+    --color-warning-line: #fde68a;
+    --color-info: #1d4ed8;
+    --color-info-soft: #eff6ff;
+    --color-info-ink: #1e40af;
+    --color-info-line: #bfdbfe;
+
+    --shadow-raised: 0 1px 2px 0 rgb(28 25 23 / 0.05), 0 1px 3px 0 rgb(28 25 23 / 0.07);
+    --shadow-overlay: 0 20px 25px -5px rgb(28 25 23 / 0.2), 0 8px 10px -6px rgb(28 25 23 / 0.2);
     --shell-sidebar-width: 16rem;
     --shell-sidebar-collapsed: 4.5rem;
   }
@@ -36,22 +62,44 @@
     --color-canvas: #0f172a;
     --color-surface: #1e293b;
     --color-raised: #1e293b;
+    --color-sunken: #273449;
     --color-shell: #1e293b;
     --color-shell-ink: #e2e8f0;
     --color-shell-muted: #94a3b8;
     --color-border-subtle: #334155;
     --color-ink: #e2e8f0;
     --color-muted: #94a3b8;
+    --color-faint: #64748b;
     --color-border: #334155;
     --color-action: #6366f1;
     --color-action-hover: #4f46e5;
     --color-focus: #818cf8;
+
+    --color-danger: #f87171;
+    --color-danger-soft: #3b1d24;
+    --color-danger-ink: #fca5a5;
+    --color-danger-line: #7f1d1d;
+    --color-success: #4ade80;
+    --color-success-soft: #173528;
+    --color-success-ink: #86efac;
+    --color-success-line: #166534;
+    --color-warning: #facc15;
+    --color-warning-soft: #3a3116;
+    --color-warning-ink: #fde047;
+    --color-warning-line: #854d0e;
+    --color-info: #818cf8;
+    --color-info-soft: #262c52;
+    --color-info-ink: #c7d2fe;
+    --color-info-line: #3730a3;
   }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    @apply font-sans;
     margin: 0;
     background: var(--color-canvas);
     color: var(--color-ink);
+    /* The Tabular Rule: money, times and capacity line up everywhere. */
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
   }
   :focus-visible {
     outline: 3px solid var(--color-focus);
@@ -73,16 +121,25 @@
 
 @layer components {
   .sidebar-link {
-    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer;
+    @apply relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer;
   }
   .sidebar-link.active {
-    @apply bg-white/10 text-white;
+    @apply bg-white/10 text-shell-ink;
+  }
+  /* The active item carries the unit's colour (Oro in the consolidated view). */
+  .sidebar-link.active::before {
+    content: "";
+    @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
+    background: var(--unit-accent, #ca8a04);
   }
   .sidebar-link:not(.active) {
-    @apply text-gray-400 hover:bg-white/5 hover:text-white;
+    @apply text-shell-muted hover:bg-white/5 hover:text-shell-ink;
   }
   .btn {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-0;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
   }
   .btn-primary {
     @apply btn text-white;
@@ -98,7 +155,7 @@
     border-color: var(--color-border);
   }
   .btn-secondary:hover {
-    background: #f1f5f9;
+    background: var(--color-sunken);
   }
   .btn-danger {
     @apply btn text-white;
@@ -112,62 +169,104 @@
     color: var(--color-muted);
   }
   .btn-ghost:hover {
-    background: #f1f5f9;
+    background: var(--color-sunken);
   }
   .btn-success {
-    @apply btn bg-green-600 text-white hover:bg-green-700;
+    @apply btn text-white;
+    background: #15803d;
   }
+  .btn-success:hover {
+    background: #166534;
+  }
+  /* Dark text: white on Oro is only 3 : 1. */
   .btn-warning {
-    @apply btn bg-amber-500 text-white hover:bg-amber-600;
+    @apply btn border;
+    color: var(--color-warning-ink);
+    background: var(--color-warning-soft);
+    border-color: var(--color-warning-line);
+  }
+  .btn-warning:hover {
+    border-color: var(--color-warning);
   }
   .btn-sm {
     @apply px-3 py-1.5 text-xs;
   }
   .input {
-    @apply w-full px-3 py-2 rounded-lg text-sm bg-white;
+    @apply w-full px-3 py-2 rounded-lg text-sm;
+    color: var(--color-ink);
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
+  }
+  .input::placeholder {
+    color: var(--color-faint);
   }
   .input:focus {
     outline: none;
     border-color: var(--color-focus);
-    box-shadow: 0 0 0 2px rgb(37 99 235 / 0.2);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-focus) 20%, transparent);
   }
   /* `aria-invalid` was announced to screen readers but drawn nowhere. */
   .input[aria-invalid="true"] {
-    border-color: #dc2626;
+    border-color: var(--color-danger);
   }
   .input[aria-invalid="true"]:focus {
-    border-color: #dc2626;
-    box-shadow: 0 0 0 2px rgb(220 38 38 / 0.2);
+    border-color: var(--color-danger);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger) 20%, transparent);
   }
   .input:disabled {
-    @apply bg-gray-50 text-gray-500 cursor-not-allowed;
+    @apply cursor-not-allowed;
+    color: var(--color-muted);
+    background: var(--color-sunken);
   }
   .label {
-    @apply block text-sm font-medium text-gray-700 mb-1;
+    @apply block text-sm font-medium text-ink mb-1;
   }
   .card {
-    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+    @apply bg-surface rounded-xl border border-line-subtle shadow-raised;
   }
+  /* Marcellus, per the brand's headline step. It has one weight, so no `font-bold`. */
   .page-title {
-    @apply text-2xl font-bold text-gray-900;
+    @apply font-display text-2xl font-normal leading-tight text-ink;
+  }
+  .section-title {
+    @apply text-sm font-semibold text-ink;
   }
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap;
   }
   .table-th {
-    @apply px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50;
+    @apply px-4 py-2.5 text-left text-xs font-semibold text-muted uppercase tracking-wider bg-sunken;
   }
   .table-td {
-    @apply px-4 py-3 text-sm text-gray-700;
+    @apply px-4 py-3 text-sm text-ink;
   }
   .table-tr {
-    @apply border-t border-gray-100 hover:bg-gray-50 transition-colors;
+    @apply border-t border-line-subtle hover:bg-sunken transition-colors;
   }
   .icon-button {
     @apply inline-flex items-center justify-center;
     min-width: 44px;
     min-height: 44px;
+  }
+  /* A notice block: `notice notice-warning`, and so on. */
+  .notice {
+    @apply flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm;
+  }
+  .notice-danger {
+    @apply border-danger-line bg-danger-soft text-danger-ink;
+  }
+  .notice-warning {
+    @apply border-warning-line bg-warning-soft text-warning-ink;
+  }
+  .notice-success {
+    @apply border-success-line bg-success-soft text-success-ink;
+  }
+  .notice-info {
+    @apply border-info-line bg-info-soft text-info-ink;
+  }
+  /* Placeholder block shaped like the content it stands in for. */
+  .skeleton {
+    @apply rounded-md bg-sunken animate-pulse;
   }
 }
 
@@ -187,11 +286,29 @@
   animation: login-error-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Sign-in entrance: the lockup, the headline and the form arrive in reading order. */
+.rise-in {
+  animation: rise-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;

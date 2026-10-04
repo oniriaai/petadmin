@@ -28,11 +28,14 @@ function Shell({
   return (
     <div className="p-6 sm:p-10 max-w-xl">
       <div className="card p-6 sm:p-8">
-        <div className="w-12 h-12 rounded-xl bg-gray-100 text-gray-500 grid place-items-center mb-4">
+        <div
+          className="w-12 h-12 rounded-xl bg-sunken text-muted grid place-items-center mb-4"
+          aria-hidden="true"
+        >
           {icon}
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">{title}</h1>
-        <div className="text-sm text-gray-600 space-y-3">{children}</div>
+        <h1 className="font-display text-2xl leading-tight text-ink mb-2">{title}</h1>
+        <div className="text-sm text-muted space-y-3">{children}</div>
         <Link to="/" className="btn btn-secondary mt-6 inline-flex">
           Volver al inicio
         </Link>
@@ -61,10 +64,10 @@ export function ModuleUnavailable({
 
   if (reason === "role") {
     return (
-      <Shell icon={<Lock size={22} />} title="No tienes acceso a esta sección">
+      <Shell icon={<Lock size={22} />} title="Esta sección no está en tu rol">
         <p>
-          Tu rol no permite entrar aquí. Si necesitas acceso, pídeselo a un administrador de tu
-          guardería.
+          Tu cuenta no tiene permiso para entrar aquí. Si lo necesitas, pídeselo a un administrador
+          de tu negocio y te lo activa.
         </p>
       </Shell>
     );
@@ -72,13 +75,13 @@ export function ModuleUnavailable({
 
   const missing = (modules ?? []).map((id) => MODULE_LABELS[id] ?? id);
   return (
-    <Shell icon={<PackageX size={22} />} title="Módulo no disponible">
+    <Shell icon={<PackageX size={22} />} title="Este módulo aún no está en tu plan">
       <p>
         {missing.length > 0
-          ? `Esta sección necesita ${missing.length > 1 ? "los módulos" : "el módulo"} ${missing.join(" y ")}, que no está${missing.length > 1 ? "n" : ""} habilitado${missing.length > 1 ? "s" : ""} para tu guardería.`
-          : "Esta sección no está habilitada para tu guardería."}
+          ? `Esta sección necesita ${missing.length > 1 ? "los módulos" : "el módulo"} ${missing.join(" y ")}, que todavía no está${missing.length > 1 ? "n" : ""} activo${missing.length > 1 ? "s" : ""} en tu plan.`
+          : "Esta sección todavía no está activa en tu plan."}
       </p>
-      <p className="text-gray-500">Contacta con el proveedor del sistema para activarlo.</p>
+      <p className="text-muted">Escríbenos y te ayudamos a activarlo.</p>
     </Shell>
   );
 }
@@ -107,8 +110,11 @@ function WrongUnit({ unit }: { unit?: BusinessUnit }) {
 
 export function NotFound() {
   return (
-    <Shell icon={<SearchX size={22} />} title="Página no encontrada">
-      <p>La dirección que abriste no corresponde a ninguna sección del sistema.</p>
+    <Shell icon={<SearchX size={22} />} title="No encontramos esta página">
+      <p>
+        La dirección que abriste no corresponde a ninguna sección. Vuelve al inicio y sigue desde
+        ahí.
+      </p>
     </Shell>
   );
 }

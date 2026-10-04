@@ -5,7 +5,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
-import { cls, fmtDateTime } from "../../lib/utils";
+import { fmtDateTime } from "../../lib/utils";
 import {
   LAB_FLAGS,
   LAB_KINDS,
@@ -14,6 +14,7 @@ import {
   veterinariaApi,
   type LabDeskOrder,
 } from "./api";
+import { Tabs } from "../../components/ui/Tabs";
 
 type Tab = "pending" | "done";
 
@@ -65,38 +66,26 @@ export function LaboratorioPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Laboratorio">
-        {(
-          [
-            ["pending", `Pendientes (${pending.length})`],
-            ["done", `Con resultado (${done.length})`],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            className={cls("btn-sm", tab === key ? "btn-primary" : "btn-secondary")}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Laboratorio"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "pending", label: "Pendientes", count: pending.length },
+          { id: "done", label: "Con resultado", count: done.length },
+        ]}
+      />
 
       {loading ? (
         <PageLoader />
       ) : orders.length === 0 ? (
         <div className="card p-10 text-center">
-          <FlaskConical size={28} className="mx-auto mb-2 text-gray-300" />
+          <FlaskConical size={28} className="mx-auto mb-2 text-faint" />
           <p className="text-sm text-muted">
             {tab === "pending"
               ? "No hay exámenes pendientes. Se solicitan desde la consulta."
@@ -127,7 +116,7 @@ export function LaboratorioPage() {
                       <td className="table-td">
                         <Link
                           to={`/veterinaria/consultas/${order.visit.id}`}
-                          className="font-medium text-gray-900 hover:underline"
+                          className="font-medium text-ink hover:underline"
                         >
                           {order.pet.name}
                         </Link>
@@ -142,10 +131,10 @@ export function LaboratorioPage() {
                           {order.externalLab ? ` · ${order.externalLab}` : ""}
                         </span>
                         {order.resultSummary && (
-                          <span className="block text-gray-700 mt-1">{order.resultSummary}</span>
+                          <span className="block text-muted mt-1">{order.resultSummary}</span>
                         )}
                         {order.values.map((value) => (
-                          <span key={value.id} className="block text-xs text-gray-700">
+                          <span key={value.id} className="block text-xs text-muted">
                             {value.analyte}: {value.value} {value.unit}
                             {value.flag && value.flag !== "NORMAL"
                               ? ` · ${LAB_FLAGS[value.flag]?.label ?? value.flag}`
@@ -285,7 +274,7 @@ function ResultModal({
       {order && (
         <div className="space-y-3 text-sm">
           {error && (
-            <p className="text-red-600" role="alert">
+            <p className="text-danger" role="alert">
               {error}
             </p>
           )}
@@ -348,7 +337,7 @@ function ResultModal({
                 ))}
               </select>
               <button
-                className="text-gray-400 hover:text-red-600 p-2 sm:col-span-1 justify-self-end"
+                className="text-muted hover:text-danger p-2 sm:col-span-1 justify-self-end"
                 aria-label={`Quitar valor ${index + 1}`}
                 onClick={() => setValues((current) => current.filter((_, i) => i !== index))}
               >

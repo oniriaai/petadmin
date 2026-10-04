@@ -158,10 +158,7 @@ export function NuevaConsultaModal({
     >
       <div className="space-y-4">
         {error && (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-            role="alert"
-          >
+          <div className="notice notice-danger" role="alert">
             {error}
           </div>
         )}
@@ -312,7 +309,7 @@ export function NuevaConsultaModal({
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input type="checkbox" checked={walkIn} onChange={(e) => setWalkIn(e.target.checked)} />
           El paciente ya está en la clínica (sin cita)
         </label>

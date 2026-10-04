@@ -5,7 +5,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { PageLoader } from "../../components/ui/Spinner";
 import { useAuth } from "../../lib/auth-context";
-import { cls, fmt } from "../../lib/utils";
+import { fmt } from "../../lib/utils";
 import {
   REMINDER_KINDS,
   errorMessage,
@@ -14,6 +14,7 @@ import {
   type Reminder,
   type ReminderKind,
 } from "./api";
+import { Tabs } from "../../components/ui/Tabs";
 
 const WINDOWS = [
   ["7", "7 días"],
@@ -88,41 +89,30 @@ export function RecordatoriosPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tipo de recordatorio">
-        <button
-          role="tab"
-          aria-selected={kind === ""}
-          className={cls("btn-sm", kind === "" ? "btn-primary" : "btn-secondary")}
-          onClick={() => setKind("")}
-        >
-          Todos ({reminders.length})
-        </button>
-        {(Object.keys(REMINDER_KINDS) as ReminderKind[]).map((key) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={kind === key}
-            className={cls("btn-sm", kind === key ? "btn-primary" : "btn-secondary")}
-            onClick={() => setKind(key)}
-          >
-            {REMINDER_KINDS[key]} ({count(key)})
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Tipo de recordatorio"
+        value={kind}
+        onChange={setKind}
+        items={[
+          { id: "" as ReminderKind | "", label: "Todos", count: reminders.length },
+          ...(Object.keys(REMINDER_KINDS) as ReminderKind[]).map((key) => ({
+            id: key as ReminderKind | "",
+            label: REMINDER_KINDS[key],
+            count: count(key),
+          })),
+        ]}
+      />
 
       {loading ? (
         <PageLoader />
       ) : shown.length === 0 ? (
         <div className="card p-10 text-center">
-          <BellRing size={28} className="mx-auto mb-2 text-gray-300" />
+          <BellRing size={28} className="mx-auto mb-2 text-faint" />
           <p className="text-sm text-muted">Nada pendiente en este periodo.</p>
         </div>
       ) : (
@@ -146,7 +136,7 @@ export function RecordatoriosPage() {
                       <td className="table-td whitespace-nowrap">
                         {fmt(reminder.dueAt)}
                         {reminder.overdue && (
-                          <Badge color="bg-red-100 text-red-800" className="ml-2">
+                          <Badge color="bg-danger-soft text-danger-ink" className="ml-2">
                             {reminder.kind === "LABORATORIO" ? "En espera" : "Vencido"}
                           </Badge>
                         )}
@@ -154,7 +144,7 @@ export function RecordatoriosPage() {
                       <td className="table-td">
                         <Link
                           to={`/veterinaria/pacientes/${reminder.pet.id}`}
-                          className="font-medium text-gray-900 hover:underline"
+                          className="font-medium text-ink hover:underline"
                         >
                           {reminder.pet.name}
                         </Link>

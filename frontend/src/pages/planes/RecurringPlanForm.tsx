@@ -144,7 +144,9 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
+      setError(
+        e instanceof Error ? e.message : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -196,7 +198,9 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
         </div>
       ) : (
         <div className="space-y-4">
-          {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+          {error && (
+            <p className="text-sm text-danger bg-danger-soft rounded-lg px-3 py-2">{error}</p>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -209,7 +213,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                   setSelectedPets([]);
                 }}
               >
-                <option value="">— Seleccionar cliente —</option>
+                <option value="">Seleccionar cliente</option>
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.lastName}, {c.firstName}
@@ -276,7 +280,7 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
             <div className="col-span-2">
               <label className="label">Sala (opcional)</label>
               <select className="input" value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-                <option value="">— Sin sala asignada —</option>
+                <option value="">Sin sala asignada</option>
                 {rooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name} (cap. {r.capacity})
@@ -296,8 +300,8 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                   onClick={() => toggleDay(day.num)}
                   className={`px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
                     daysOfWeek.includes(day.num)
-                      ? "bg-indigo-600 text-white border-indigo-600"
-                      : "border-gray-300 text-gray-700 hover:border-indigo-400"
+                      ? "bg-action text-white border-action"
+                      : "border-line text-muted hover:border-action"
                   }`}
                   title={day.label}
                 >
@@ -318,8 +322,8 @@ export function RecurringPlanForm({ open, onClose, plan, onSaved }: Props) {
                     onClick={() => togglePet(pet.id)}
                     className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
                       selectedPets.includes(pet.id)
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "border-gray-300 text-gray-700 hover:border-indigo-400"
+                        ? "bg-action text-white border-action"
+                        : "border-line text-muted hover:border-action"
                     }`}
                   >
                     {pet.name}

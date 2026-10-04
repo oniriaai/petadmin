@@ -86,7 +86,7 @@ describe("entitlement gating", () => {
     expect(screen.queryByText("contenido")).not.toBeInTheDocument();
     // The person must be told which module is missing, by its Spanish label, rather than being
     // silently bounced to the dashboard.
-    expect(screen.getByText("Módulo no disponible")).toBeInTheDocument();
+    expect(screen.getByText("Este módulo aún no está en tu plan")).toBeInTheDocument();
     expect(screen.getByText(/Gestión Financiera/)).toBeInTheDocument();
   });
 
@@ -101,8 +101,8 @@ describe("entitlement gating", () => {
   it("separates a role refusal from a disabled module", () => {
     mockUseAuth.mockReturnValue(session({ role: "grooming", modules: ["guarderia"] }));
     renderGuarded({ path: "/guarderia", roles: ["admin", "daycare"], requires: ["guarderia"] });
-    expect(screen.getByText("No tienes acceso a esta sección")).toBeInTheDocument();
-    expect(screen.queryByText("Módulo no disponible")).not.toBeInTheDocument();
+    expect(screen.getByText("Esta sección no está en tu rol")).toBeInTheDocument();
+    expect(screen.queryByText("Este módulo aún no está en tu plan")).not.toBeInTheDocument();
   });
 
   it("explains a unit mismatch and offers the way out", () => {
@@ -150,7 +150,7 @@ describe("entitlement gating", () => {
     renderGuarded({ path: "/transacciones", requires: ["finanzas"] });
     // enabledModules is empty until /auth/me answers; showing "not available" then would be a
     // false negative on every page load.
-    expect(screen.queryByText("Módulo no disponible")).not.toBeInTheDocument();
+    expect(screen.queryByText("Este módulo aún no está en tu plan")).not.toBeInTheDocument();
     expect(screen.getByText("Comprobando permisos...")).toBeInTheDocument();
   });
 });

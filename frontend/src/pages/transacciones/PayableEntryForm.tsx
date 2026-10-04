@@ -167,7 +167,7 @@ export function PayableEntryForm({ open, onClose, payable, providers, onSaved }:
             value={form.providerId}
             onChange={(e) => setForm({ ...form, providerId: e.target.value })}
           >
-            <option value="">— Sin proveedor —</option>
+            <option value="">Sin proveedor</option>
             {providers.map((p: any) => (
               <option key={p.id} value={p.id}>
                 {p.name}

@@ -66,7 +66,9 @@ export function CheckOutModal({
       setPerformedByUserId("");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al registrar salida");
+      setError(
+        err instanceof Error ? err.message : "No pudimos registrar la salida. Inténtalo de nuevo.",
+      );
     } finally {
       setLoading(false);
     }
@@ -77,24 +79,24 @@ export function CheckOutModal({
   return (
     <Modal open={open} onClose={onClose} title="Registrar Salida">
       <div className="space-y-4">
-        <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+        <div className="bg-sunken p-4 rounded-lg space-y-2">
           <div>
-            <p className="text-sm text-gray-600">Mascota</p>
+            <p className="text-sm text-muted">Mascota</p>
             <p className="font-medium">{record.petName}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Cliente</p>
+            <p className="text-sm text-muted">Cliente</p>
             <p className="font-medium">{record.clientName}</p>
           </div>
           {record.roomName && (
             <div>
-              <p className="text-sm text-gray-600">Sala</p>
+              <p className="text-sm text-muted">Sala</p>
               <p className="font-medium">{record.roomName}</p>
             </div>
           )}
           {record.checkInTime && (
             <div>
-              <p className="text-sm text-gray-600">Entrada</p>
+              <p className="text-sm text-muted">Entrada</p>
               <p className="font-medium">
                 {fmt(record.checkInTime)} {fmtTime(record.checkInTime)}
               </p>
@@ -162,7 +164,7 @@ export function CheckOutModal({
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
 
         <div className="flex gap-2 pt-4">
           <button onClick={onClose} className="btn-ghost flex-1" disabled={loading}>

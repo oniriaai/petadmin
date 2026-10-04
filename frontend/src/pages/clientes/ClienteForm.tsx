@@ -96,7 +96,9 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
+      setError(
+        e instanceof Error ? e.message : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -120,7 +122,9 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
       }
     >
       <div className="space-y-4">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && (
+          <p className="text-sm text-danger bg-danger-soft rounded-lg px-3 py-2">{error}</p>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Nombre *</label>

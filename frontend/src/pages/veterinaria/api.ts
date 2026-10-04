@@ -4,12 +4,12 @@ export type VisitStatus =
   "PROGRAMADA" | "EN_ESPERA" | "EN_CONSULTA" | "CERRADA" | "CANCELADA" | "NO_ASISTIO";
 
 export const VISIT_STATUS: Record<VisitStatus, { label: string; color: string }> = {
-  PROGRAMADA: { label: "Programada", color: "bg-blue-100 text-blue-800" },
-  EN_ESPERA: { label: "En espera", color: "bg-amber-100 text-amber-800" },
+  PROGRAMADA: { label: "Programada", color: "bg-info-soft text-info-ink" },
+  EN_ESPERA: { label: "En espera", color: "bg-warning-soft text-warning-ink" },
   EN_CONSULTA: { label: "En consulta", color: "bg-veterinary-100 text-veterinary-800" },
-  CERRADA: { label: "Cerrada", color: "bg-gray-100 text-gray-700" },
-  CANCELADA: { label: "Cancelada", color: "bg-red-100 text-red-700" },
-  NO_ASISTIO: { label: "No asistió", color: "bg-red-100 text-red-700" },
+  CERRADA: { label: "Cerrada", color: "bg-sunken text-muted" },
+  CANCELADA: { label: "Cancelada", color: "bg-danger-soft text-danger-ink" },
+  NO_ASISTIO: { label: "No asistió", color: "bg-danger-soft text-danger-ink" },
 };
 
 export const VISIT_TYPES: Record<string, string> = {
@@ -22,9 +22,9 @@ export const VISIT_TYPES: Record<string, string> = {
 };
 
 export const TRIAGE: Record<string, { label: string; color: string }> = {
-  NORMAL: { label: "Normal", color: "bg-gray-100 text-gray-700" },
-  PRIORITARIA: { label: "Prioritaria", color: "bg-amber-100 text-amber-800" },
-  URGENCIA: { label: "Urgencia", color: "bg-red-100 text-red-800" },
+  NORMAL: { label: "Normal", color: "bg-sunken text-muted" },
+  PRIORITARIA: { label: "Prioritaria", color: "bg-warning-soft text-warning-ink" },
+  URGENCIA: { label: "Urgencia", color: "bg-danger-soft text-danger-ink" },
 };
 
 export const SERVICE_CATEGORIES: Record<string, string> = {
@@ -239,10 +239,10 @@ export const PROCEDURE_KINDS: Record<string, string> = {
 };
 
 export const PROCEDURE_STATUS: Record<string, { label: string; color: string }> = {
-  PROGRAMADO: { label: "Programado", color: "bg-blue-100 text-blue-800" },
-  EN_CURSO: { label: "En curso", color: "bg-amber-100 text-amber-800" },
-  FINALIZADO: { label: "Finalizado", color: "bg-emerald-100 text-emerald-800" },
-  CANCELADO: { label: "Cancelado", color: "bg-gray-100 text-gray-700" },
+  PROGRAMADO: { label: "Programado", color: "bg-info-soft text-info-ink" },
+  EN_CURSO: { label: "En curso", color: "bg-warning-soft text-warning-ink" },
+  FINALIZADO: { label: "Finalizado", color: "bg-success-soft text-success-ink" },
+  CANCELADO: { label: "Cancelado", color: "bg-sunken text-muted" },
 };
 
 export interface Procedure {
@@ -267,16 +267,16 @@ export const LAB_KINDS: Record<string, string> = {
 };
 
 export const LAB_STATUS: Record<string, { label: string; color: string }> = {
-  SOLICITADO: { label: "Solicitado", color: "bg-blue-100 text-blue-800" },
-  EN_PROCESO: { label: "En proceso", color: "bg-amber-100 text-amber-800" },
-  RESULTADO: { label: "Con resultado", color: "bg-emerald-100 text-emerald-800" },
+  SOLICITADO: { label: "Solicitado", color: "bg-info-soft text-info-ink" },
+  EN_PROCESO: { label: "En proceso", color: "bg-warning-soft text-warning-ink" },
+  RESULTADO: { label: "Con resultado", color: "bg-success-soft text-success-ink" },
 };
 
 export const LAB_FLAGS: Record<string, { label: string; color: string }> = {
-  NORMAL: { label: "Normal", color: "bg-gray-100 text-gray-700" },
-  ALTO: { label: "Alto", color: "bg-amber-100 text-amber-800" },
-  BAJO: { label: "Bajo", color: "bg-amber-100 text-amber-800" },
-  CRITICO: { label: "Crítico", color: "bg-red-100 text-red-800" },
+  NORMAL: { label: "Normal", color: "bg-sunken text-muted" },
+  ALTO: { label: "Alto", color: "bg-warning-soft text-warning-ink" },
+  BAJO: { label: "Bajo", color: "bg-warning-soft text-warning-ink" },
+  CRITICO: { label: "Crítico", color: "bg-danger-soft text-danger-ink" },
 };
 
 export interface LabResultValue {

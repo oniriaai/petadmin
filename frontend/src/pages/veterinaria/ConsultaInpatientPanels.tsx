@@ -71,7 +71,7 @@ export function ProceduresPanel({ visit, locked, run }: PanelProps) {
 
   return (
     <section className="card p-4 space-y-3" aria-label="Procedimientos">
-      <h2 className="font-semibold text-gray-900">Cirugías y procedimientos</h2>
+      <h2 className="section-title">Cirugías y procedimientos</h2>
       {visit.procedures.length === 0 ? (
         <p className="text-sm text-muted">Sin procedimientos en esta consulta.</p>
       ) : (
@@ -79,10 +79,10 @@ export function ProceduresPanel({ visit, locked, run }: PanelProps) {
           {visit.procedures.map((procedure) => {
             const status = PROCEDURE_STATUS[procedure.status];
             return (
-              <li key={procedure.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
+              <li key={procedure.id} className="rounded-lg border border-line-subtle p-3 space-y-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-gray-900">{procedure.name}</p>
+                    <p className="font-medium text-ink">{procedure.name}</p>
                     <p className="text-xs text-muted">
                       {PROCEDURE_KINDS[procedure.kind] ?? procedure.kind}
                       {procedure.asaRisk ? ` · ASA ${procedure.asaRisk}` : ""}
@@ -92,7 +92,7 @@ export function ProceduresPanel({ visit, locked, run }: PanelProps) {
                   </div>
                   <Badge color={status?.color}>{status?.label ?? procedure.status}</Badge>
                 </div>
-                {procedure.findings && <p className="text-gray-700">{procedure.findings}</p>}
+                {procedure.findings && <p className="text-muted">{procedure.findings}</p>}
                 {!locked && procedure.status === "PROGRAMADO" && (
                   <div className="flex gap-2">
                     <button
@@ -107,7 +107,7 @@ export function ProceduresPanel({ visit, locked, run }: PanelProps) {
                       Iniciar
                     </button>
                     <button
-                      className="text-gray-400 hover:text-red-600 p-1"
+                      className="text-muted hover:text-danger p-1"
                       aria-label={`Quitar ${procedure.name}`}
                       onClick={() =>
                         run(
@@ -132,7 +132,7 @@ export function ProceduresPanel({ visit, locked, run }: PanelProps) {
                         onChange={(e) => setFindings(e.target.value)}
                       />
                       {procedure.kind === "EUTANASIA" && (
-                        <p className="text-xs text-red-700">
+                        <p className="text-xs text-danger-ink">
                           Al finalizar, el paciente quedará registrado como fallecido.
                         </p>
                       )}
@@ -225,7 +225,7 @@ export function LabOrdersPanel({ visit, locked, run }: PanelProps) {
   return (
     <section className="card p-4 space-y-3" aria-label="Laboratorio e imagen">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Laboratorio e imagen</h2>
+        <h2 className="section-title">Laboratorio e imagen</h2>
         {visit.labOrders.length > 0 && (
           <Link to="/veterinaria/laboratorio" className="btn-ghost btn-sm">
             Registrar resultados
@@ -239,10 +239,10 @@ export function LabOrdersPanel({ visit, locked, run }: PanelProps) {
           {visit.labOrders.map((order) => {
             const status = LAB_STATUS[order.status];
             return (
-              <li key={order.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
+              <li key={order.id} className="rounded-lg border border-line-subtle p-3 space-y-2">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="font-medium text-gray-900">{order.test}</p>
+                    <p className="font-medium text-ink">{order.test}</p>
                     <p className="text-xs text-muted">
                       {LAB_KINDS[order.kind] ?? order.kind}
                       {order.externalLab ? ` · ${order.externalLab}` : ""}
@@ -252,7 +252,7 @@ export function LabOrdersPanel({ visit, locked, run }: PanelProps) {
                     <Badge color={status?.color}>{status?.label ?? order.status}</Badge>
                     {!locked && order.status === "SOLICITADO" && (
                       <button
-                        className="text-gray-400 hover:text-red-600 p-1"
+                        className="text-muted hover:text-danger p-1"
                         aria-label={`Quitar ${order.test}`}
                         onClick={() =>
                           run(
@@ -266,9 +266,9 @@ export function LabOrdersPanel({ visit, locked, run }: PanelProps) {
                     )}
                   </span>
                 </div>
-                {order.resultSummary && <p className="text-gray-700">{order.resultSummary}</p>}
+                {order.resultSummary && <p className="text-muted">{order.resultSummary}</p>}
                 {order.values.length > 0 && (
-                  <ul className="text-xs text-gray-700 space-y-0.5">
+                  <ul className="text-xs text-muted space-y-0.5">
                     {order.values.map((value) => (
                       <li key={value.id}>
                         {value.analyte}: <span className="font-medium">{value.value}</span>{" "}
@@ -360,7 +360,7 @@ export function ConsentsPanel({ visit, locked, run }: PanelProps) {
   return (
     <section className="card p-4 space-y-3" aria-label="Consentimientos">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Consentimientos</h2>
+        <h2 className="section-title">Consentimientos</h2>
         {!locked && !drafting && (
           <button className="btn-secondary btn-sm" onClick={() => setDrafting(true)}>
             <Plus size={15} /> Nuevo
@@ -372,16 +372,14 @@ export function ConsentsPanel({ visit, locked, run }: PanelProps) {
       )}
       <ul className="space-y-2 text-sm">
         {visit.consents.map((consent) => (
-          <li key={consent.id} className="rounded-lg border border-gray-200 p-3 space-y-2">
+          <li key={consent.id} className="rounded-lg border border-line-subtle p-3 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="font-medium text-gray-900">
-                {CONSENT_TYPES[consent.type] ?? consent.type}
-              </p>
+              <p className="font-medium text-ink">{CONSENT_TYPES[consent.type] ?? consent.type}</p>
               <span className="flex items-center gap-1">
                 {consent.signedAt ? (
-                  <Badge color="bg-emerald-100 text-emerald-800">Firmado</Badge>
+                  <Badge color="bg-success-soft text-success-ink">Firmado</Badge>
                 ) : (
-                  <Badge color="bg-amber-100 text-amber-800">Sin firmar</Badge>
+                  <Badge color="bg-warning-soft text-warning-ink">Sin firmar</Badge>
                 )}
                 <Link
                   to={`/veterinaria/consentimientos/${consent.id}`}
@@ -391,7 +389,7 @@ export function ConsentsPanel({ visit, locked, run }: PanelProps) {
                 </Link>
                 {!locked && !consent.signedAt && (
                   <button
-                    className="text-gray-400 hover:text-red-600 p-1"
+                    className="text-muted hover:text-danger p-1"
                     aria-label={`Eliminar consentimiento de ${CONSENT_TYPES[consent.type]}`}
                     onClick={() =>
                       run(
@@ -511,7 +509,7 @@ export function AdmissionPanel({ visit, locked, run }: PanelProps) {
   return (
     <section className="card p-4 space-y-3" aria-label="Hospitalización">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Hospitalización</h2>
+        <h2 className="section-title">Hospitalización</h2>
         {!locked && !active && !open && (
           <button className="btn-secondary btn-sm" onClick={() => setOpen(true)}>
             <BedDouble size={15} /> Ingresar
@@ -519,16 +517,16 @@ export function AdmissionPanel({ visit, locked, run }: PanelProps) {
         )}
       </div>
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       )}
       {active && (
         <div className="rounded-lg border border-veterinary-200 bg-veterinary-50 p-3 text-sm">
-          <p className="font-medium text-gray-900">
+          <p className="font-medium text-ink">
             Ingresado en {active.room.name} desde {fmtDateTime(active.admittedAt)}
           </p>
-          <p className="text-gray-700">{active.reason}</p>
+          <p className="text-muted">{active.reason}</p>
           <p className="text-xs text-muted mt-1">
             La consulta se cierra y se cobra después del alta, que añade los días de estancia.
           </p>
@@ -538,7 +536,7 @@ export function AdmissionPanel({ visit, locked, run }: PanelProps) {
         </div>
       )}
       {past.map((stay) => (
-        <p key={stay.id} className="text-sm text-gray-700">
+        <p key={stay.id} className="text-sm text-muted">
           Alta de {stay.room.name} el {stay.dischargedAt ? fmtDateTime(stay.dischargedAt) : "—"}.{" "}
           <Link to={`/veterinaria/hospitalizacion/${stay.id}`} className="underline">
             Hoja de alta

@@ -60,7 +60,9 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
       onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error al guardar");
+      setError(
+        e instanceof Error ? e.message : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -87,7 +89,9 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
       }
     >
       <div className="space-y-4">
-        {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+        {error && (
+          <p className="text-sm text-danger bg-danger-soft rounded-lg px-3 py-2">{error}</p>
+        )}
 
         <div>
           <label className="label">Nombre de la sala *</label>

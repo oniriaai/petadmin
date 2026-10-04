@@ -11,18 +11,24 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  icon,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  /** A unit tile or similar, to the left of the title. */
+  icon?: ReactNode;
 }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h1 className="page-title">{title}</h1>
-        {subtitle && <p className="text-muted text-sm mt-1">{subtitle}</p>}
+      <div className="flex min-w-0 items-start gap-3">
+        {icon}
+        <div className="min-w-0">
+          <h1 className="page-title">{title}</h1>
+          {subtitle && <p className="text-muted text-sm mt-1">{subtitle}</p>}
+        </div>
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 print:hidden">{actions}</div>}
     </div>
   );
 }

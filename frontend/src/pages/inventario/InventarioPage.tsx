@@ -83,7 +83,7 @@ export function InventarioPage() {
       setError(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : "Error al cargar el inventario",
+          : "No pudimos cargar el inventario. Inténtalo de nuevo.",
       );
     } finally {
       setLoading(false);
@@ -103,7 +103,9 @@ export function InventarioPage() {
       await load();
     } catch (err) {
       setError(
-        err instanceof ApiError || err instanceof Error ? err.message : "Error al dar de baja",
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "No pudimos darlo de baja. Inténtalo de nuevo.",
       );
     }
   }
@@ -135,10 +137,7 @@ export function InventarioPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
@@ -146,7 +145,7 @@ export function InventarioPage() {
       {lowStockCount > 0 && !onlyLowStock && (
         <button
           onClick={() => setOnlyLowStock(true)}
-          className="w-full text-left rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-center gap-2"
+          className="w-full text-left rounded-lg border border-warning-line bg-warning-soft px-4 py-3 text-sm text-warning-ink flex items-center gap-2"
         >
           <AlertTriangle size={16} className="shrink-0" />
           {lowStockCount} artículo(s) en el mínimo o por debajo. Ver solo esos.
@@ -155,7 +154,7 @@ export function InventarioPage() {
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar por nombre o categoría"
@@ -175,7 +174,7 @@ export function InventarioPage() {
         <PageLoader />
       ) : visible.length === 0 ? (
         <div className="card p-10 text-center">
-          <Package size={28} className="mx-auto mb-2 text-gray-300" />
+          <Package size={28} className="mx-auto mb-2 text-faint" />
           <p className="text-sm text-muted">
             {items.length === 0
               ? "Todavía no hay artículos registrados."
@@ -205,7 +204,7 @@ export function InventarioPage() {
                       <td className="table-td font-medium text-ink">{item.name}</td>
                       <td className="table-td">{item.category}</td>
                       <td className="table-td">
-                        <span className={isLow ? "text-amber-700 font-semibold" : ""}>
+                        <span className={isLow ? "text-warning-ink font-semibold" : ""}>
                           {item.currentStock} {item.unit}
                           {isLow && (
                             <AlertTriangle size={13} className="inline-block ml-1.5 -mt-0.5" />
@@ -230,7 +229,7 @@ export function InventarioPage() {
                           <Pencil size={14} />
                         </button>
                         <button
-                          className="btn-ghost btn-sm text-red-600"
+                          className="btn-ghost btn-sm text-danger"
                           onClick={() => void remove(item)}
                           aria-label={`Dar de baja ${item.name}`}
                         >
@@ -308,7 +307,11 @@ function ItemForm({
       else await api.post("/inventory/items", payload);
       onSaved();
     } catch (err) {
-      setError(err instanceof ApiError || err instanceof Error ? err.message : "Error al guardar");
+      setError(
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "No pudimos guardar los cambios. Inténtalo de nuevo.",
+      );
     } finally {
       setSaving(false);
     }
@@ -318,10 +321,7 @@ function ItemForm({
     <Modal open onClose={onClose} title={item ? "Editar artículo" : "Nuevo artículo"}>
       <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-            role="alert"
-          >
+          <div className="notice notice-danger" role="alert">
             {error}
           </div>
         )}
@@ -489,7 +489,7 @@ function MovementModal({
       setError(
         err instanceof ApiError || err instanceof Error
           ? err.message
-          : "Error al registrar el movimiento",
+          : "No pudimos registrar el movimiento. Inténtalo de nuevo.",
       );
     } finally {
       setSaving(false);
@@ -497,13 +497,10 @@ function MovementModal({
   }
 
   return (
-    <Modal open onClose={onClose} title={`Movimiento — ${item.name}`}>
+    <Modal open onClose={onClose} title={`Movimiento: ${item.name}`}>
       <form onSubmit={submit} className="space-y-4">
         {error && (
-          <div
-            className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-            role="alert"
-          >
+          <div className="notice notice-danger" role="alert">
             {error}
           </div>
         )}
@@ -592,14 +589,14 @@ function MovementModal({
           {quantity !== "" && (
             <>
               {" → "}
-              <span className={`font-medium ${resulting < 0 ? "text-red-600" : "text-ink"}`}>
+              <span className={`font-medium ${resulting < 0 ? "text-danger" : "text-ink"}`}>
                 {resulting} {item.unit}
               </span>
             </>
           )}
         </p>
         {resulting < 0 && (
-          <p className="text-xs text-red-600">La salida supera el stock disponible.</p>
+          <p className="text-xs text-danger">La salida supera el stock disponible.</p>
         )}
 
         {movements.length > 0 && (

@@ -23,7 +23,7 @@ export function ConsentimientoPage() {
 
   if (error) {
     return (
-      <p className="p-6 text-sm text-red-600" role="alert">
+      <p className="p-6 text-sm text-danger" role="alert">
         {error}
       </p>
     );
@@ -44,10 +44,12 @@ export function ConsentimientoPage() {
         </button>
       </div>
 
-      <article className="card p-6 sm:p-8 space-y-6 text-sm text-gray-800 print:border-0 print:shadow-none print:p-0">
-        <header className="flex flex-wrap justify-between gap-4 border-b border-gray-200 pb-4">
+      <article className="card p-6 sm:p-8 space-y-6 text-sm text-ink print:border-0 print:shadow-none print:p-0">
+        <header className="flex flex-wrap justify-between gap-4 border-b border-line-subtle pb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">{daycare?.name ?? "Clínica"}</h1>
+            <h1 className="font-display text-2xl leading-tight text-ink">
+              {daycare?.name ?? "Clínica"}
+            </h1>
             <p className="text-muted">
               Consentimiento informado: {CONSENT_TYPES[consent.type] ?? consent.type}
             </p>
@@ -61,7 +63,7 @@ export function ConsentimientoPage() {
         <dl className="grid gap-3 sm:grid-cols-2">
           <div>
             <dt className="text-xs text-muted">Paciente</dt>
-            <dd className="font-medium text-gray-900">{pet.name}</dd>
+            <dd className="font-medium text-ink">{pet.name}</dd>
             <dd>
               {pet.species === "cat" ? "Gato" : pet.species === "dog" ? "Perro" : pet.species}
               {pet.breed ? ` · ${pet.breed}` : ""} · {petAge(pet.birthdate)}
@@ -69,7 +71,7 @@ export function ConsentimientoPage() {
           </div>
           <div>
             <dt className="text-xs text-muted">Tutor</dt>
-            <dd className="font-medium text-gray-900">
+            <dd className="font-medium text-ink">
               {client.firstName} {client.lastName}
             </dd>
             <dd>{[client.idNumber, client.phone].filter(Boolean).join(" · ") || "—"}</dd>
@@ -79,8 +81,8 @@ export function ConsentimientoPage() {
         <p className="whitespace-pre-line leading-relaxed">{consent.text}</p>
 
         <footer className="grid gap-10 sm:grid-cols-2 pt-12">
-          <div className="border-t border-gray-400 pt-2">
-            <p className="font-medium text-gray-900">
+          <div className="border-t border-line pt-2">
+            <p className="font-medium text-ink">
               {consent.signedByName ?? `${client.firstName} ${client.lastName}`}
             </p>
             <p>
@@ -89,10 +91,8 @@ export function ConsentimientoPage() {
                 : "Firma del tutor"}
             </p>
           </div>
-          <div className="border-t border-gray-400 pt-2">
-            <p className="font-medium text-gray-900">
-              {veterinarian?.name ?? "Médico veterinario"}
-            </p>
+          <div className="border-t border-line pt-2">
+            <p className="font-medium text-ink">{veterinarian?.name ?? "Médico veterinario"}</p>
             {veterinarian?.licenseNumber && <p>Matrícula {veterinarian.licenseNumber}</p>}
           </div>
         </footer>

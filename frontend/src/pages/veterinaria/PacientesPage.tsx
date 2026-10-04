@@ -36,17 +36,14 @@ export function PacientesPage() {
       <PageHeader title="Pacientes" subtitle="Historia clínica por paciente" />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
       <div className="card p-4">
         <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar por nombre, raza o microchip"
@@ -61,7 +58,7 @@ export function PacientesPage() {
         <PageLoader />
       ) : pets.length === 0 ? (
         <div className="card p-10 text-center">
-          <PawPrint size={28} className="mx-auto mb-2 text-gray-300" />
+          <PawPrint size={28} className="mx-auto mb-2 text-faint" />
           <p className="text-sm text-muted">
             {search
               ? "Ningún paciente coincide con la búsqueda."
@@ -83,7 +80,7 @@ export function PacientesPage() {
               <tbody>
                 {pets.map((pet) => (
                   <tr key={pet.id} className="table-tr">
-                    <td className="table-td font-medium text-gray-900">{pet.name}</td>
+                    <td className="table-td font-medium text-ink">{pet.name}</td>
                     <td className="table-td">
                       {SPECIES[pet.species] ?? pet.species}
                       {pet.breed ? ` · ${pet.breed}` : ""}

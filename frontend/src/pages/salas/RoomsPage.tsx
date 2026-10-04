@@ -4,6 +4,7 @@ import { api } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
 import { RoomForm } from "./RoomForm";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 interface Room {
   id: string;
@@ -40,12 +41,12 @@ export function RoomsPage() {
   }, [load]);
 
   async function deleteRoom(id: string, name: string) {
-    if (!confirm(`¿Eliminar la sala "${name}"?`)) return;
+    if (!confirm(`¿Eliminamos la sala "${name}"? Esta acción no se puede deshacer.`)) return;
     try {
       await api.del(`/rooms/${id}`);
       load();
     } catch (e) {
-      alert("Error al eliminar: " + (e instanceof Error ? e.message : "Unknown error"));
+      alert(e instanceof Error ? e.message : "No pudimos eliminarlo. Inténtalo de nuevo.");
     }
   }
 
@@ -77,13 +78,13 @@ export function RoomsPage() {
     capacity > 0 && occupancy > capacity;
 
   const capacityColor = (occupancy: number, capacity: number) => {
-    if (capacity <= 0) return "text-gray-500";
-    if (isOverCapacity(occupancy, capacity)) return "text-red-700 font-bold";
+    if (capacity <= 0) return "text-muted";
+    if (isOverCapacity(occupancy, capacity)) return "text-danger-ink font-bold";
     const percent = (occupancy / capacity) * 100;
-    if (percent === 0) return "text-green-600";
-    if (percent < 50) return "text-blue-600";
-    if (percent < 80) return "text-yellow-600";
-    return "text-red-600";
+    if (percent === 0) return "text-success";
+    if (percent < 50) return "text-action";
+    if (percent < 80) return "text-warning-ink";
+    return "text-danger";
   };
 
   return (
@@ -100,7 +101,7 @@ export function RoomsPage() {
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar sala…"
@@ -126,7 +127,7 @@ export function RoomsPage() {
         {loading ? (
           <PageLoader />
         ) : rooms.length === 0 ? (
-          <p className="text-center text-gray-400 py-16">Sin salas registradas</p>
+          <EmptyState title="Todavía no hay salas. Crea la primera para empezar a asignar cupos." />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -153,7 +154,7 @@ export function RoomsPage() {
                         {room.currentOccupancy || 0} / {room.capacity}
                       </span>
                       {isOverCapacity(room.currentOccupancy || 0, room.capacity) && (
-                        <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 align-middle">
+                        <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded bg-danger-soft text-danger-ink align-middle">
                           Sobrecupo
                         </span>
                       )}
@@ -162,8 +163,8 @@ export function RoomsPage() {
                       <span
                         className={`text-xs px-2 py-1 rounded-full ${
                           room.isActive
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-success-soft text-success-ink"
+                            : "bg-sunken text-muted"
                         }`}
                       >
                         {room.isActive ? "Activa" : "Inactiva"}
@@ -181,7 +182,7 @@ export function RoomsPage() {
                         {room.isActive && (
                           <button
                             onClick={() => deleteRoom(room.id, room.name)}
-                            className="btn-ghost btn-sm p-1.5 text-red-500 hover:bg-red-50"
+                            className="btn-ghost btn-sm p-1.5 text-danger hover:bg-danger-soft"
                             title="Eliminar"
                           >
                             <Trash2 size={14} />

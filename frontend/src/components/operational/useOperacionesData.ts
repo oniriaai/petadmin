@@ -186,7 +186,9 @@ export function useOperacionesData(): UseOperacionesDataReturn {
       setEvents(unifiedEvents);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Error al cargar datos de operaciones";
+        err instanceof Error
+          ? err.message
+          : "No pudimos cargar las operaciones. Inténtalo de nuevo.";
       setError(errorMessage);
     } finally {
       setLoading(false);

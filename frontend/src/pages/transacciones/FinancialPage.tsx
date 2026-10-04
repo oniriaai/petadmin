@@ -21,6 +21,9 @@ import { FinancialDashboard } from "./FinancialDashboard";
 import { Badge } from "../../components/ui/Badge";
 import { fmt, fmtCurrency, EXPENSE_CATEGORIES } from "../../lib/utils";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { Stat, StatStrip } from "../../components/ui/Stat";
+import { Tabs } from "../../components/ui/Tabs";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 interface IncomeEntry {
   id: string;
@@ -80,9 +83,9 @@ interface Payment {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  PENDIENTE: "bg-yellow-100 text-yellow-800",
-  PARCIAL: "bg-blue-100 text-blue-800",
-  PAGADO: "bg-green-100 text-green-800",
+  PENDIENTE: "bg-warning-soft text-warning-ink",
+  PARCIAL: "bg-info-soft text-info-ink",
+  PAGADO: "bg-success-soft text-success-ink",
 };
 
 export function FinancialPage() {
@@ -155,17 +158,17 @@ export function FinancialPage() {
   }, [activeTab, loadAll]);
 
   async function deleteIncome(id: string, concept: string) {
-    if (!confirm(`¿Eliminar ingreso "${concept}"?`)) return;
+    if (!confirm(`¿Eliminamos el ingreso "${concept}"? Esta acción no se puede deshacer.`)) return;
     try {
       await api.del(`/incomes/${id}`);
       loadIncomes();
     } catch (e) {
-      alert("Error al eliminar: " + (e instanceof Error ? e.message : "Unknown error"));
+      alert(e instanceof Error ? e.message : "No pudimos eliminarlo. Inténtalo de nuevo.");
     }
   }
 
   async function deletePayable(id: string) {
-    if (!confirm("¿Eliminar este documento?")) return;
+    if (!confirm("¿Eliminamos este documento? Esta acción no se puede deshacer.")) return;
     await api.del(`/payables/${id}`);
     loadPayables();
   }
@@ -233,79 +236,60 @@ export function FinancialPage() {
         }
       />
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        {[
-          { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      <Tabs
+        label="Gestión Financiera"
+        value={activeTab}
+        onChange={(id) => {
+          setActiveTab(id);
+          setSearch("");
+          setDateFilter("");
+          setStatusFilter("");
+        }}
+        items={[
+          { id: "dashboard", label: "Resumen", icon: LayoutDashboard },
           { id: "income", label: "Ingresos", icon: TrendingUp },
           { id: "egresos", label: "Egresos", icon: TrendingDown },
           { id: "providers", label: "Proveedores", icon: Building2 },
-        ].map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => {
-              setActiveTab(id as typeof activeTab);
-              setSearch("");
-              setDateFilter("");
-              setStatusFilter("");
-            }}
-            className={`flex items-center gap-2 px-4 py-3 border-b-2 transition ${
-              activeTab === id
-                ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            <Icon size={18} />
-            {label}
-          </button>
-        ))}
-      </div>
+        ]}
+      />
 
-      {activeTab !== "providers" && activeTab !== "dashboard" && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {activeTab === "income" ? (
-            <>
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="text-sm text-gray-600">Total Ingresos</div>
-                <div className="text-2xl font-bold text-green-600 mt-1">
-                  ${totalIncomes.toLocaleString()}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">{filteredIncomes.length} registros</div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="text-sm text-gray-600">Total Egresos</div>
-                <div className="text-2xl font-bold text-red-600 mt-1">
-                  ${totalEgresos.toLocaleString()}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {filteredPayables.length} documentos
-                </div>
-              </div>
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="text-sm text-gray-600">Saldo Pendiente</div>
-                <div className="text-2xl font-bold text-orange-600 mt-1">
-                  ${pendingEgresos.toLocaleString()}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">Cuentas por pagar</div>
-              </div>
-            </>
-          )}
-        </div>
+      {activeTab === "income" && (
+        <StatStrip>
+          <Stat
+            label="Total de ingresos"
+            value={fmtCurrency(totalIncomes)}
+            tone="success"
+            hint={`${filteredIncomes.length} registros`}
+          />
+        </StatStrip>
+      )}
+      {activeTab === "egresos" && (
+        <StatStrip>
+          <Stat
+            label="Total de egresos"
+            value={fmtCurrency(totalEgresos)}
+            hint={`${filteredPayables.length} documentos`}
+          />
+          <Stat
+            label="Saldo pendiente"
+            value={fmtCurrency(pendingEgresos)}
+            tone={pendingEgresos > 0 ? "warning" : undefined}
+            hint="Cuentas por pagar"
+          />
+        </StatStrip>
       )}
 
       {/* Filters */}
       {activeTab !== "dashboard" && (
-        <div className="flex gap-3 items-center bg-white border border-gray-200 rounded-lg p-4">
-          <Search size={18} className="text-gray-400" />
+        <div className="card flex flex-wrap items-center gap-3 px-4 py-2.5">
+          <Search size={18} className="text-faint" aria-hidden="true" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
-            className="flex-1 outline-none text-sm"
+            aria-label="Buscar"
+            className="min-w-[10rem] flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
           />
 
           {activeTab === "income" && (
@@ -313,7 +297,7 @@ export function FinancialPage() {
               type="month"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded text-sm outline-none focus:ring-2 focus:ring-blue-500"
+              className="input w-auto"
             />
           )}
 
@@ -337,7 +321,7 @@ export function FinancialPage() {
               setStatusFilter("");
               loadAll();
             }}
-            className="p-2 hover:bg-gray-100 rounded transition"
+            className="p-2 hover:bg-sunken rounded transition"
             title="Limpiar filtros"
           >
             <RefreshCw size={18} />
@@ -424,14 +408,16 @@ export function FinancialPage() {
 
 function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-surface border border-line-subtle rounded-lg overflow-hidden">
       {incomes.length === 0 ? (
-        <div className="p-8 text-center text-gray-500">No hay ingresos registrados</div>
+        <div className="p-8 text-center text-muted">
+          Todavía no hay ingresos registrados. ¿Anotamos el primero?
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-sunken border-b">
                 <tr>
                   <th className="table-th">Concepto</th>
                   <th className="table-th text-right">Monto Base</th>
@@ -448,10 +434,10 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
                   <tr key={income.id} className="table-tr">
                     <td className="table-td font-medium">{income.concept}</td>
                     <td className="table-td text-right font-mono">{fmtCurrency(income.amount)}</td>
-                    <td className="table-td text-right font-mono text-gray-600">
+                    <td className="table-td text-right font-mono text-muted">
                       {fmtCurrency((income.vatPercent / 100) * income.amount)}
                     </td>
-                    <td className="table-td text-right font-bold text-green-600">
+                    <td className="table-td text-right font-bold text-success">
                       {fmtCurrency(
                         income.total || income.amount + (income.vatPercent / 100) * income.amount,
                       )}
@@ -461,8 +447,8 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
                       <Badge
                         color={
                           income.invoiceStatus === "PAGADO"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                            ? "bg-success-soft text-success-ink"
+                            : "bg-warning-soft text-warning-ink"
                         }
                       >
                         {income.invoiceStatus}
@@ -476,13 +462,13 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
                             onEdit(income);
                             onOpenForm();
                           }}
-                          className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition"
+                          className="p-1.5 hover:bg-info-soft text-action rounded transition"
                         >
                           <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => onDelete(income.id, income.concept)}
-                          className="p-1.5 hover:bg-red-50 text-red-600 rounded transition"
+                          className="p-1.5 hover:bg-danger-soft text-danger rounded transition"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -501,13 +487,13 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
 
 function EgresosTable({ payables, onPay, onDelete }: any) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-surface border border-line-subtle rounded-lg overflow-hidden">
       {payables.length === 0 ? (
-        <p className="text-center text-gray-400 py-12">Sin documentos registrados</p>
+        <EmptyState title="Todavía no hay egresos registrados." />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-sunken border-b">
               <tr>
                 <th className="table-th">Descripción</th>
                 <th className="table-th">Proveedor</th>
@@ -523,24 +509,24 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
               {payables.map((p: any) => (
                 <tr key={p.id} className="table-tr">
                   <td className="table-td">
-                    <p className="font-medium text-gray-900 text-sm">{p.description}</p>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-tight">
+                    <p className="font-medium text-ink text-sm">{p.description}</p>
+                    <p className="text-[10px] text-muted uppercase font-bold tracking-tight">
                       {p.type} · {p.invoiceNumber ?? "Sin factura"}
                     </p>
                   </td>
-                  <td className="table-td text-xs font-medium text-indigo-600">
+                  <td className="table-td text-xs font-medium text-action">
                     {p.provider?.name ?? "—"}
                   </td>
                   <td className="table-td text-xs capitalize">
                     {EXPENSE_CATEGORIES.find((c) => c.value === p.category)?.label ?? p.category}
                   </td>
                   <td className="table-td text-right font-medium">{fmtCurrency(p.total)}</td>
-                  <td className="table-td text-right text-green-600">{fmtCurrency(p.paid)}</td>
-                  <td className="table-td text-right font-semibold text-red-600">
+                  <td className="table-td text-right text-success">{fmtCurrency(p.paid)}</td>
+                  <td className="table-td text-right font-semibold text-danger">
                     {fmtCurrency(p.balance)}
                   </td>
                   <td className="table-td">
-                    <Badge color={STATUS_COLOR[p.status] ?? "bg-gray-100 text-gray-700"}>
+                    <Badge color={STATUS_COLOR[p.status] ?? "bg-sunken text-muted"}>
                       {p.status}
                     </Badge>
                   </td>
@@ -549,7 +535,7 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
                       {p.status !== "PAGADO" && (
                         <button
                           onClick={() => onPay(p)}
-                          className="p-1.5 bg-green-50 text-green-600 rounded hover:bg-green-100 transition"
+                          className="p-1.5 bg-success-soft text-success rounded hover:bg-success-soft transition"
                           title="Registrar pago"
                         >
                           <CreditCard size={14} />
@@ -557,7 +543,7 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
                       )}
                       <button
                         onClick={() => onDelete(p.id)}
-                        className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"
+                        className="p-1.5 hover:bg-danger-soft text-danger rounded transition"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -575,19 +561,19 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
 
 function ProvidersTable({ providers, onEdit, load }: any) {
   async function deactivate(id: string) {
-    if (!confirm("¿Desactivar proveedor?")) return;
+    if (!confirm("¿Desactivamos este proveedor? Podrás volver a activarlo después.")) return;
     await api.del(`/providers/${id}`);
     load();
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-surface border border-line-subtle rounded-lg overflow-hidden">
       {providers.length === 0 ? (
-        <p className="text-center text-gray-400 py-12">Sin proveedores</p>
+        <EmptyState title="Todavía no hay proveedores. Agrega el primero para asociarlo a tus egresos." />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-sunken border-b">
               <tr>
                 <th className="table-th">Nombre</th>
                 <th className="table-th">Producto</th>
@@ -602,12 +588,12 @@ function ProvidersTable({ providers, onEdit, load }: any) {
                 <tr key={p.id} className="table-tr">
                   <td className="table-td">
                     <p className="font-semibold">{p.name}</p>
-                    <p className="text-[10px] text-gray-400">{p.idNumber ?? "—"}</p>
+                    <p className="text-[10px] text-muted">{p.idNumber ?? "—"}</p>
                   </td>
                   <td className="table-td text-xs">{p.product ?? "—"}</td>
                   <td className="table-td text-xs">
                     {p.phone && <p>{p.phone}</p>}
-                    {p.email && <p className="text-gray-400 truncate max-w-32">{p.email}</p>}
+                    {p.email && <p className="text-muted truncate max-w-32">{p.email}</p>}
                   </td>
                   <td className="table-td text-xs">
                     {[p.city, p.province].filter(Boolean).join(", ") || "—"}
@@ -615,7 +601,7 @@ function ProvidersTable({ providers, onEdit, load }: any) {
                   <td className="table-td">
                     <Badge
                       color={
-                        p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                        p.isActive ? "bg-success-soft text-success-ink" : "bg-sunken text-muted"
                       }
                     >
                       {p.isActive ? "Activo" : "Inactivo"}
@@ -625,14 +611,16 @@ function ProvidersTable({ providers, onEdit, load }: any) {
                     <div className="flex gap-1 justify-end">
                       <button
                         onClick={() => onEdit(p)}
-                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        className="p-1.5 hover:bg-sunken rounded transition text-muted"
+                        aria-label="Editar proveedor"
+                        title="Editar"
                       >
-                        ✏️
+                        <Edit2 size={15} aria-hidden="true" />
                       </button>
                       {p.isActive && (
                         <button
                           onClick={() => deactivate(p.id)}
-                          className="p-1.5 hover:bg-red-50 text-red-500 rounded transition"
+                          className="p-1.5 hover:bg-danger-soft text-danger rounded transition"
                         >
                           <Trash2 size={13} />
                         </button>

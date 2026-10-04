@@ -7,6 +7,7 @@ import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { PetForm } from "../clientes/PetForm";
 import { PageHeader } from "../../components/layout/PageHeader";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 interface Pet {
   id: string;
@@ -45,14 +46,14 @@ function PetAvatar({ pet, size = "small" }: { pet: Pet; size?: "small" | "large"
         loading="lazy"
         decoding="async"
         onError={() => setBroken(true)}
-        className={`${wrapperClass} object-cover ${isSmall ? "border border-gray-100" : "border-2 border-white shadow-sm"}`}
+        className={`${wrapperClass} object-cover ${isSmall ? "border border-line-subtle" : "border-2 border-white shadow-sm"}`}
       />
     );
   }
 
   return (
     <span
-      className={`${isSmall ? "text-2xl" : "text-5xl"} ${wrapperClass} flex items-center justify-center ${isSmall ? "bg-gray-50" : "bg-white shadow-sm"}`}
+      className={`${isSmall ? "text-2xl" : "text-5xl"} ${wrapperClass} flex items-center justify-center ${isSmall ? "bg-sunken" : "bg-surface shadow-sm"}`}
     >
       {pet.species === "dog" ? <Dog size={isSmall ? 22 : 40} /> : <Cat size={isSmall ? 22 : 40} />}
     </span>
@@ -131,7 +132,7 @@ export function AnimalesPage() {
       <div className="flex items-center justify-between gap-3">
         <PageHeader title="Animales" subtitle={<>{pets.length} mascotas registradas</>} />
         {isRefreshing && (
-          <div className="text-xs text-gray-500 flex items-center gap-2">
+          <div className="text-xs text-muted flex items-center gap-2">
             <Spinner size={14} />
             Actualizando...
           </div>
@@ -140,7 +141,7 @@ export function AnimalesPage() {
 
       <div className="card p-4 flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
           <input
             className="input pl-9"
             placeholder="Buscar por nombre, raza, microchip…"
@@ -159,7 +160,7 @@ export function AnimalesPage() {
         {isInitialLoading ? (
           <PageLoader />
         ) : pets.length === 0 ? (
-          <p className="text-center text-gray-400 py-16">Sin animales encontrados</p>
+          <EmptyState title="No encontramos perrhijos con ese filtro." />
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -182,8 +183,8 @@ export function AnimalesPage() {
                         <div className="flex items-center gap-2">
                           <PetAvatar pet={p} size="small" />
                           <div>
-                            <p className="font-semibold text-gray-900">{p.name}</p>
-                            <p className="text-xs text-gray-400">
+                            <p className="font-semibold text-ink">{p.name}</p>
+                            <p className="text-xs text-muted">
                               {p.sex === "M" ? "Macho" : "Hembra"}
                               {p.isNeutered ? " · Esterilizado" : ""}
                             </p>
@@ -194,11 +195,11 @@ export function AnimalesPage() {
                         <p className="text-sm font-medium">
                           {p.client.firstName} {p.client.lastName}
                         </p>
-                        <p className="text-xs text-gray-400">{p.client.phone ?? ""}</p>
+                        <p className="text-xs text-muted">{p.client.phone ?? ""}</p>
                       </td>
                       <td className="table-td text-xs">
                         <p>{p.breed ?? "—"}</p>
-                        {p.color && <p className="text-gray-400">{p.color}</p>}
+                        {p.color && <p className="text-muted">{p.color}</p>}
                       </td>
                       <td className="table-td text-xs">
                         {p.weight && <p>Peso: {p.weight} kg</p>}
@@ -208,13 +209,13 @@ export function AnimalesPage() {
                       <td className="table-td">
                         <Badge
                           color={
-                            p.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                            p.isActive ? "bg-success-soft text-success-ink" : "bg-sunken text-muted"
                           }
                         >
                           {p.isActive ? "Activo" : "Inactivo"}
                         </Badge>
                         {p.allergies && (
-                          <Badge color="bg-red-100 text-red-700" className="ml-1">
+                          <Badge color="bg-danger-soft text-danger-ink" className="ml-1">
                             Alergia
                           </Badge>
                         )}
@@ -246,8 +247,8 @@ export function AnimalesPage() {
               </table>
             </div>
 
-            <div className="px-4 py-3 border-t border-gray-100 flex items-center justify-between">
-              <p className="text-xs text-gray-500">
+            <div className="px-4 py-3 border-t border-line-subtle flex items-center justify-between">
+              <p className="text-xs text-muted">
                 Mostrando {Math.min((safePage - 1) * PAGE_SIZE + 1, pets.length)}-
                 {Math.min(safePage * PAGE_SIZE, pets.length)} de {pets.length}
               </p>
@@ -259,7 +260,7 @@ export function AnimalesPage() {
                 >
                   Anterior
                 </button>
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-muted">
                   {safePage}/{totalPages}
                 </span>
                 <button
@@ -276,8 +277,8 @@ export function AnimalesPage() {
       </div>
 
       {error && (
-        <div className="card p-3 border border-red-100 bg-red-50 flex items-center justify-between gap-3">
-          <p className="text-sm text-red-700">{error}</p>
+        <div className="card p-3 border border-danger-line bg-danger-soft flex items-center justify-between gap-3">
+          <p className="text-sm text-danger-ink">{error}</p>
           <button className="btn-ghost btn-sm" onClick={() => void load()}>
             Reintentar
           </button>
@@ -303,11 +304,11 @@ export function AnimalesPage() {
       >
         {selected && (
           <div className="space-y-5">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+            <div className="flex items-center gap-4 p-4 bg-sunken rounded-xl">
               <PetAvatar pet={selected} size="large" />
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{selected.name}</h2>
-                <p className="text-gray-500 text-sm">
+                <h2 className="font-display text-2xl leading-tight text-ink">{selected.name}</h2>
+                <p className="text-muted text-sm">
                   {selected.breed} · {selected.sex === "M" ? "Macho" : "Hembra"}
                   {selected.isNeutered ? " · Esterilizado" : ""}
                 </p>
@@ -339,22 +340,22 @@ export function AnimalesPage() {
               )}
             </div>
             {selected.allergies && (
-              <div className="p-3 bg-red-50 rounded-lg">
-                <p className="label text-red-700 flex items-center gap-1">
+              <div className="p-3 bg-danger-soft rounded-lg">
+                <p className="label text-danger-ink flex items-center gap-1">
                   <AlertCircle size={15} /> Alergias / Observaciones
                 </p>
-                <p className="text-sm text-red-800">{selected.allergies}</p>
+                <p className="text-sm text-danger-ink">{selected.allergies}</p>
               </div>
             )}
             {selected.notes && (
               <div>
                 <p className="label">Notas</p>
-                <p className="text-sm text-gray-600">{selected.notes}</p>
+                <p className="text-sm text-muted">{selected.notes}</p>
               </div>
             )}
             {selected.vaccinations.length > 0 && (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Vacunas</h3>
+                <h3 className="font-semibold text-ink mb-2">Vacunas</h3>
                 <table className="w-full text-sm">
                   <thead>
                     <tr>

@@ -73,10 +73,7 @@ export function InformeClinicaPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
@@ -151,7 +148,7 @@ function Figure({ label, value, hint }: { label: string; value: string; hint?: s
   return (
     <div className="card p-4">
       <p className="text-xs text-muted">{label}</p>
-      <p className="text-2xl font-semibold text-gray-900">{value}</p>
+      <p className="text-2xl font-semibold text-ink">{value}</p>
       {hint && <p className="text-xs text-muted mt-1">{hint}</p>}
     </div>
   );
@@ -160,15 +157,15 @@ function Figure({ label, value, hint }: { label: string; value: string; hint?: s
 function Breakdown({ title, rows }: { title: string; rows: Array<[string, string]> }) {
   return (
     <section className="card p-4 space-y-2 text-sm" aria-label={title}>
-      <h2 className="font-semibold text-gray-900">{title}</h2>
+      <h2 className="section-title">{title}</h2>
       {rows.length === 0 ? (
         <p className="text-muted">Sin datos en el periodo.</p>
       ) : (
-        <dl className="divide-y divide-gray-100">
+        <dl className="divide-y divide-line-subtle">
           {rows.map(([label, value]) => (
             <div key={label} className="flex justify-between gap-3 py-1.5">
-              <dt className="text-gray-700">{label}</dt>
-              <dd className="font-medium text-gray-900 tabular-nums">{value}</dd>
+              <dt className="text-muted">{label}</dt>
+              <dd className="font-medium text-ink tabular-nums">{value}</dd>
             </div>
           ))}
         </dl>

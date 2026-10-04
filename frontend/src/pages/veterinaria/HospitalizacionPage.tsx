@@ -5,8 +5,10 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
-import { cls, fmtDateTime } from "../../lib/utils";
+import { fmtDateTime } from "../../lib/utils";
 import { errorMessage, veterinariaApi, type Stay, type TreatmentOrder, type Ward } from "./api";
+import { Tabs } from "../../components/ui/Tabs";
+import { EmptyState } from "../../components/ui/EmptyState";
 
 type Tab = "ward" | "discharged";
 type Run = (action: () => Promise<unknown>, failure: string) => Promise<void>;
@@ -79,10 +81,7 @@ export function HospitalizacionPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
@@ -91,8 +90,8 @@ export function HospitalizacionPage() {
         <ul className="flex flex-wrap gap-2 text-sm" aria-label="Ocupación de las salas">
           {wards.map((ward) => (
             <li key={ward.id} className="card px-3 py-2">
-              <span className="font-medium text-gray-900">{ward.name}</span>{" "}
-              <span className={ward.occupied >= ward.capacity ? "text-red-700" : "text-muted"}>
+              <span className="font-medium text-ink">{ward.name}</span>{" "}
+              <span className={ward.occupied >= ward.capacity ? "text-danger-ink" : "text-muted"}>
                 {ward.occupied}/{ward.capacity}
               </span>
             </li>
@@ -100,24 +99,15 @@ export function HospitalizacionPage() {
         </ul>
       )}
 
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Hospitalización">
-        {(
-          [
-            ["ward", `Ingresados (${stays.length})`],
-            ["discharged", `Altas (${discharged.length})`],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            className={cls("btn-sm", tab === key ? "btn-primary" : "btn-secondary")}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Hospitalización"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "ward", label: "Ingresados", count: stays.length },
+          { id: "discharged", label: "Altas", count: discharged.length },
+        ]}
+      />
 
       {loading ? (
         <PageLoader />
@@ -125,11 +115,11 @@ export function HospitalizacionPage() {
         discharged.length === 0 ? (
           <Empty text="Todavía no hay altas registradas." />
         ) : (
-          <ul className="card divide-y divide-gray-100 text-sm">
+          <ul className="card divide-y divide-line-subtle text-sm">
             {discharged.map((stay) => (
               <li key={stay.id} className="flex flex-wrap items-center justify-between gap-2 p-3">
                 <div>
-                  <p className="font-medium text-gray-900">{stay.pet.name}</p>
+                  <p className="font-medium text-ink">{stay.pet.name}</p>
                   <p className="text-xs text-muted">
                     {stay.room.name} · {fmtDateTime(stay.admittedAt)} →{" "}
                     {stay.dischargedAt ? fmtDateTime(stay.dischargedAt) : "—"}
@@ -147,15 +137,15 @@ export function HospitalizacionPage() {
       ) : (
         <>
           <section className="card p-4 space-y-3" aria-label="Tratamientos por administrar">
-            <h2 className="font-semibold text-gray-900">Por administrar ahora ({due.length})</h2>
+            <h2 className="section-title">Por administrar ahora ({due.length})</h2>
             {due.length === 0 ? (
               <p className="text-sm text-muted">Ninguna dosis pendiente en este momento.</p>
             ) : (
-              <ul className="divide-y divide-gray-100 text-sm">
+              <ul className="divide-y divide-line-subtle text-sm">
                 {due.map(({ stay, order }) => (
                   <li key={order.id} className="flex flex-wrap items-center gap-2 py-2">
                     <div className="flex-1 min-w-[14rem]">
-                      <p className="text-gray-900">
+                      <p className="text-ink">
                         <span className="font-medium">{stay.pet.name}</span> · {orderLine(order)}
                       </p>
                       <p className="text-xs text-muted">
@@ -206,9 +196,8 @@ export function HospitalizacionPage() {
 
 function Empty({ text }: { text: string }) {
   return (
-    <div className="card p-10 text-center">
-      <BedDouble size={28} className="mx-auto mb-2 text-gray-300" />
-      <p className="text-sm text-muted">{text}</p>
+    <div className="card">
+      <EmptyState icon={BedDouble} title={text} />
     </div>
   );
 }
@@ -300,7 +289,7 @@ function StayCard({
     <article className="card p-4 space-y-4 text-sm" aria-label={`Ingreso de ${stay.pet.name}`}>
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="font-semibold text-gray-900">
+          <h2 className="section-title">
             <Link to={`/veterinaria/consultas/${stay.visit.id}`} className="hover:underline">
               {stay.pet.name}
             </Link>
@@ -310,7 +299,7 @@ function StayCard({
             {stay.visit.client.lastName}
             {stay.visit.client.phone ? ` · ${stay.visit.client.phone}` : ""}
           </p>
-          <p className="text-gray-700 mt-1">{stay.reason}</p>
+          <p className="text-muted mt-1">{stay.reason}</p>
         </div>
         <button className="btn-secondary btn-sm" onClick={onDischarge}>
           Dar el alta
@@ -318,13 +307,13 @@ function StayCard({
       </header>
 
       {stay.pet.allergies && (
-        <p className="flex items-center gap-1.5 text-red-700">
+        <p className="flex items-center gap-1.5 text-danger-ink">
           <AlertTriangle size={15} /> Alergias: {stay.pet.allergies}
         </p>
       )}
 
       <div className="space-y-2">
-        <h3 className="font-medium text-gray-900">Indicaciones</h3>
+        <h3 className="font-medium text-ink">Indicaciones</h3>
         {stay.orders.length === 0 ? (
           <p className="text-muted">Sin indicaciones todavía.</p>
         ) : (
@@ -332,17 +321,20 @@ function StayCard({
             {stay.orders.map((order) => {
               const last = order.administrations[0];
               return (
-                <li key={order.id} className="rounded-lg border border-gray-200 p-2.5 space-y-1.5">
+                <li
+                  key={order.id}
+                  className="rounded-lg border border-line-subtle p-2.5 space-y-1.5"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className={order.isActive ? "text-gray-900" : "text-muted line-through"}>
+                    <p className={order.isActive ? "text-ink" : "text-muted line-through"}>
                       {orderLine(order)}
                     </p>
                     {!order.isActive ? (
                       <Badge>Suspendida</Badge>
                     ) : order.nextDueAt === null ? (
-                      <Badge color="bg-emerald-100 text-emerald-800">Completa</Badge>
+                      <Badge color="bg-success-soft text-success-ink">Completa</Badge>
                     ) : isDue(order, now) ? (
-                      <Badge color="bg-amber-100 text-amber-800">Toca ahora</Badge>
+                      <Badge color="bg-warning-soft text-warning-ink">Toca ahora</Badge>
                     ) : (
                       <Badge>Próxima {fmtDateTime(order.nextDueAt)}</Badge>
                     )}
@@ -363,7 +355,7 @@ function StayCard({
                         <DoseButtons order={order} run={run} onSkip={onSkip} />
                       )}
                       <button
-                        className="btn-ghost btn-sm text-red-600"
+                        className="btn-ghost btn-sm text-danger"
                         onClick={() =>
                           run(
                             () => veterinariaApi.stopTreatmentOrder(order.id),
@@ -412,7 +404,7 @@ function StayCard({
       </div>
 
       <div className="space-y-2">
-        <h3 className="font-medium text-gray-900">Signos vitales</h3>
+        <h3 className="font-medium text-ink">Signos vitales</h3>
         <p className="text-muted">
           {latest
             ? `Última toma ${fmtDateTime(latest.takenAt)}: ${
@@ -521,7 +513,7 @@ function DischargeModal({
       {stay && (
         <div className="space-y-3 text-sm">
           {error && (
-            <p className="text-red-600" role="alert">
+            <p className="text-danger" role="alert">
               {error}
             </p>
           )}
@@ -618,11 +610,11 @@ function SkipModal({
       {order && (
         <div className="space-y-3 text-sm">
           {error && (
-            <p className="text-red-600" role="alert">
+            <p className="text-danger" role="alert">
               {error}
             </p>
           )}
-          <p className="text-gray-700">{orderLine(order)}</p>
+          <p className="text-muted">{orderLine(order)}</p>
           <div>
             <label className="label" htmlFor="skip-reason">
               Motivo

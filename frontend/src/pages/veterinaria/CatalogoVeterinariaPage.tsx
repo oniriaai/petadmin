@@ -4,7 +4,7 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
-import { cls, fmtCurrency } from "../../lib/utils";
+import { fmtCurrency } from "../../lib/utils";
 import {
   SERVICE_CATEGORIES,
   errorMessage,
@@ -12,6 +12,7 @@ import {
   type VetService,
   type VetStaff,
 } from "./api";
+import { Tabs } from "../../components/ui/Tabs";
 
 type Tab = "services" | "staff";
 
@@ -71,32 +72,20 @@ export function CatalogoVeterinariaPage() {
       />
 
       {error && (
-        <div
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          role="alert"
-        >
+        <div className="notice notice-danger" role="alert">
           {error}
         </div>
       )}
 
-      <div className="flex gap-2" role="tablist" aria-label="Secciones del catálogo">
-        {(
-          [
-            ["services", `Servicios (${services.length})`],
-            ["staff", `Veterinarios (${staff.length})`],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            className={cls("btn-sm", tab === key ? "btn-primary" : "btn-secondary")}
-            onClick={() => setTab(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        label="Secciones del catálogo"
+        value={tab}
+        onChange={setTab}
+        items={[
+          { id: "services", label: "Servicios", count: services.length },
+          { id: "staff", label: "Veterinarios", count: staff.length },
+        ]}
+      />
 
       {loading ? (
         <PageLoader />
@@ -123,7 +112,7 @@ export function CatalogoVeterinariaPage() {
                 )}
                 {services.map((service) => (
                   <tr key={service.id} className="table-tr">
-                    <td className="table-td font-medium text-gray-900">{service.name}</td>
+                    <td className="table-td font-medium text-ink">{service.name}</td>
                     <td className="table-td">
                       {SERVICE_CATEGORIES[service.category] ?? service.category}
                     </td>
@@ -131,14 +120,14 @@ export function CatalogoVeterinariaPage() {
                     <td className="table-td tabular-nums">{fmtCurrency(service.basePrice)}</td>
                     <td className="table-td text-right whitespace-nowrap">
                       <button
-                        className="text-gray-400 hover:text-gray-700 p-1"
+                        className="text-muted hover:text-ink p-1"
                         aria-label={`Editar ${service.name}`}
                         onClick={() => setEditingService(service)}
                       >
                         <Pencil size={15} />
                       </button>
                       <button
-                        className="text-gray-400 hover:text-red-600 p-1"
+                        className="text-muted hover:text-danger p-1"
                         aria-label={`Dar de baja ${service.name}`}
                         onClick={() =>
                           remove(
@@ -180,7 +169,7 @@ export function CatalogoVeterinariaPage() {
                 {staff.map((member) => (
                   <tr key={member.id} className="table-tr">
                     <td className="table-td">
-                      <span className="font-medium text-gray-900">{member.name}</span>{" "}
+                      <span className="font-medium text-ink">{member.name}</span>{" "}
                       {member.isExternal && <Badge>Externo</Badge>}
                       {member.user && (
                         <span className="block text-xs text-muted">
@@ -193,14 +182,14 @@ export function CatalogoVeterinariaPage() {
                     <td className="table-td">{member.phone || member.email || "—"}</td>
                     <td className="table-td text-right whitespace-nowrap">
                       <button
-                        className="text-gray-400 hover:text-gray-700 p-1"
+                        className="text-muted hover:text-ink p-1"
                         aria-label={`Editar ${member.name}`}
                         onClick={() => setEditingStaff(member)}
                       >
                         <Pencil size={15} />
                       </button>
                       <button
-                        className="text-gray-400 hover:text-red-600 p-1"
+                        className="text-muted hover:text-danger p-1"
                         aria-label={`Dar de baja ${member.name}`}
                         onClick={() =>
                           remove(
@@ -243,10 +232,7 @@ export function CatalogoVeterinariaPage() {
 function FormError({ message }: { message: string }) {
   if (!message) return null;
   return (
-    <div
-      className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-      role="alert"
-    >
+    <div className="notice notice-danger" role="alert">
       {message}
     </div>
   );
@@ -488,7 +474,7 @@ function StaffModal({
           {text("st-phone", "Teléfono", phone, setPhone, "tel")}
           {text("st-email", "Email", email, setEmail, "email")}
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
             checked={isExternal}

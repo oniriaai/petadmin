@@ -58,31 +58,33 @@ export function Modal({ open, onClose, title, children, size = "md", footer }: P
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-[rgb(28_25_23/0.5)]" />
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
         tabIndex={-1}
-        className={`relative w-full ${sizes[size]} bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh]`}
+        className={`relative w-full ${sizes[size]} bg-surface text-ink rounded-xl shadow-overlay flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 id="modal-title" className="text-lg font-semibold text-gray-900">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-line-subtle">
+          <h2 id="modal-title" className="font-display text-xl leading-tight text-ink">
             {title}
           </h2>
           <button
             onClick={onClose}
             aria-label="Cerrar ventana"
-            className="icon-button rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="icon-button rounded-lg text-muted hover:text-ink hover:bg-sunken transition-colors"
           >
             <X size={18} />
           </button>
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
         {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">{footer}</div>
+          <div className="px-6 py-4 border-t border-line-subtle flex justify-end gap-3">
+            {footer}
+          </div>
         )}
       </div>
     </div>

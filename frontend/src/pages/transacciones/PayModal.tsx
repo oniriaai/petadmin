@@ -62,10 +62,10 @@ export function PayModal({ payable, onClose, onSaved }: Props) {
     >
       {payable && (
         <div className="space-y-4">
-          <div className="p-3 bg-gray-50 rounded-lg text-sm">
+          <div className="p-3 bg-sunken rounded-lg text-sm">
             <p className="font-medium">{payable.description}</p>
-            <p className="text-gray-500">
-              Saldo: <strong className="text-red-600">{fmtCurrency(payable.balance)}</strong>
+            <p className="text-muted">
+              Saldo: <strong className="text-danger">{fmtCurrency(payable.balance)}</strong>
             </p>
           </div>
           <div>

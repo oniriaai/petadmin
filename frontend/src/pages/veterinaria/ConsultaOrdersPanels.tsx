@@ -58,7 +58,7 @@ export function PreventivePanel({
 
   return (
     <section className="card p-4 space-y-3" aria-label="Vacunas y preventivos">
-      <h2 className="font-semibold text-gray-900">Vacunas y preventivos</h2>
+      <h2 className="section-title">Vacunas y preventivos</h2>
       {empty ? (
         <p className="text-sm text-muted">Nada aplicado en esta consulta.</p>
       ) : (
@@ -66,7 +66,7 @@ export function PreventivePanel({
           {visit.vaccinations.map((vaccination) => (
             <li key={vaccination.id} className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-gray-800">
+                <p className="text-ink">
                   {vaccination.name} <Badge>Vacuna</Badge>
                 </p>
                 <p className="text-xs text-muted">
@@ -76,7 +76,7 @@ export function PreventivePanel({
               </div>
               {!locked && (
                 <button
-                  className="text-gray-400 hover:text-red-600 p-1"
+                  className="text-muted hover:text-danger p-1"
                   aria-label={`Quitar vacuna ${vaccination.name}`}
                   onClick={() =>
                     run(
@@ -93,7 +93,7 @@ export function PreventivePanel({
           {visit.preventives.map((preventive) => (
             <li key={preventive.id} className="flex items-start justify-between gap-2">
               <div>
-                <p className="text-gray-800">{preventive.product}</p>
+                <p className="text-ink">{preventive.product}</p>
                 <p className="text-xs text-muted">
                   {PREVENTIVE_KINDS[preventive.kind] ?? preventive.kind}
                   {preventive.nextDue ? ` · próxima ${fmt(preventive.nextDue)}` : ""}
@@ -101,7 +101,7 @@ export function PreventivePanel({
               </div>
               {!locked && (
                 <button
-                  className="text-gray-400 hover:text-red-600 p-1"
+                  className="text-muted hover:text-danger p-1"
                   aria-label={`Quitar ${preventive.product}`}
                   onClick={() =>
                     run(
@@ -257,7 +257,7 @@ export function PrescriptionPanel({
   return (
     <section className="card p-4 space-y-4" aria-label="Recetas">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-gray-900">Recetas</h2>
+        <h2 className="section-title">Recetas</h2>
         {!locked && lines.length === 0 && (
           <button className="btn-secondary btn-sm" onClick={() => setLines([{ ...emptyLine }])}>
             <Plus size={15} /> Nueva receta
@@ -266,7 +266,7 @@ export function PrescriptionPanel({
       </div>
 
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <p className="text-sm text-danger" role="alert">
           {error}
         </p>
       )}
@@ -276,7 +276,7 @@ export function PrescriptionPanel({
       )}
 
       {visit.prescriptions.map((prescription) => (
-        <div key={prescription.id} className="rounded-lg border border-gray-200 p-3 text-sm">
+        <div key={prescription.id} className="rounded-lg border border-line-subtle p-3 text-sm">
           <div className="flex items-center justify-between gap-2 mb-2">
             <p className="text-xs text-muted">Emitida {fmt(prescription.issuedAt, "HH:mm")}</p>
             <span className="flex items-center gap-1">
@@ -285,7 +285,7 @@ export function PrescriptionPanel({
               </Link>
               {!locked && (
                 <button
-                  className="text-gray-400 hover:text-red-600 p-1"
+                  className="text-muted hover:text-danger p-1"
                   aria-label="Eliminar receta"
                   onClick={() =>
                     run(
@@ -302,11 +302,11 @@ export function PrescriptionPanel({
           <ul className="space-y-1.5">
             {prescription.items.map((item) => (
               <li key={item.id}>
-                <span className="font-medium text-gray-900">{item.drug}</span>: {item.dose},{" "}
+                <span className="font-medium text-ink">{item.drug}</span>: {item.dose},{" "}
                 {item.frequency}
                 {item.durationDays ? `, ${item.durationDays} días` : ""}
                 {item.dispensedAt && (
-                  <Badge color="bg-emerald-100 text-emerald-800" className="ml-2">
+                  <Badge color="bg-success-soft text-success-ink" className="ml-2">
                     Dispensado
                   </Badge>
                 )}
@@ -371,7 +371,7 @@ export function PrescriptionPanel({
                 onChange={(e) => setLine(index, { durationDays: e.target.value })}
               />
               <button
-                className="text-gray-400 hover:text-red-600 p-2 sm:col-span-1 justify-self-end"
+                className="text-muted hover:text-danger p-2 sm:col-span-1 justify-self-end"
                 aria-label={`Quitar medicamento ${index + 1}`}
                 onClick={() => setLines((current) => current.filter((_, i) => i !== index))}
               >
