@@ -33,6 +33,18 @@ makes it scoped and gated — there is nothing to remember per route.
    If you add a new `ProductModule`, also add its id to `PRODUCT_MODULE_IDS` in
    `frontend/src/modules/shared/contracts.ts` — unless it is `platformOnly`, which no
    tenant can hold and which therefore never appears in a session's `enabledModules`.
+   **Decide what a staff member needs a permission for.** A role opens the module; a
+   permission says what one user may do inside it. If the module exposes money, stock, a bulk
+   export or the deletion of a record, declare `permissions` rules on the entry — by verb
+   (`methods: "read" | "write" | "delete"`) and, when only part of the module is sensitive, by
+   `path` inside it — using the ids in `backend/src/core/tenancy/permissions.ts`. Do not check
+   them in the router. A new permission goes in that catalog **and** in `PERMISSION_IDS` /
+   `PERMISSIONS` in `frontend/src/modules/shared/contracts.ts`; it reaches nobody but admins
+   until one grants it, so say in the PR who is expected to hold it.
+
+   Do not put a permission in front of work that only writes money or stock as a side effect.
+   Closing a stay records its charge and dispensing a prescription moves stock whoever does it;
+   those go through Core, not through the finance or inventory API.
 6. **Do not add `requireAuth` to the router.** The registry mounts
    `requireAuth → requireModuleAccess(module) → router` for every non-public module;
    a second copy in the router would verify the same JWT twice and imply that
@@ -108,6 +120,9 @@ makes it scoped and gated — there is nothing to remember per route.
    A route with no `requires` is claiming to be free for every daycare.
    `module-gating.test.tsx` pins that list to an explicit array, so adding a route
    without the field fails the suite rather than silently making it free.
+   Declare `permissions` the same way when the page cannot work without one (`/transacciones`
+   needs `finanzas.read`). A control the page can live without — a delete button, an export —
+   is gated in place with `can(id)` from `useAuth()` instead, so the page still opens.
 4. If the product module has **no page of its own** — its surface is a tab, a panel
    or a single control — gate it in place with `hasModule(id)` from `useAuth()`, and
    make sure the UI gives way if the module is switched off mid-session.

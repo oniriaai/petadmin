@@ -42,6 +42,8 @@ function session(overrides: Record<string, unknown> = {}) {
     logout,
     hasModule: () => true,
     hasModules: () => true,
+    can: () => true,
+    canAll: () => true,
     ...overrides,
   };
 }

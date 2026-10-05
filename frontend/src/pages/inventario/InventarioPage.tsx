@@ -64,7 +64,9 @@ const emptyItem: Omit<InventoryItem, "id" | "businessUnit"> = {
 };
 
 export function InventarioPage() {
-  const { activeBusinessUnit, user } = useAuth();
+  const { activeBusinessUnit, user, can } = useAuth();
+  // Without it the page is a stock list: the server refuses every write, so none is offered.
+  const canWrite = can("inventario.write");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,15 +126,17 @@ export function InventarioPage() {
         title="Inventario"
         subtitle={`${items.length} artículo(s) · valor estimado ${fmtCurrency(totalValue)}`}
         actions={
-          <button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-            }}
-            className="btn-primary"
-          >
-            <Plus size={16} /> Nuevo artículo
-          </button>
+          canWrite && (
+            <button
+              onClick={() => {
+                setEditing(null);
+                setShowForm(true);
+              }}
+              className="btn-primary"
+            >
+              <Plus size={16} /> Nuevo artículo
+            </button>
+          )
         }
       />
 
@@ -215,26 +219,33 @@ export function InventarioPage() {
                       <td className="table-td">{fmtCurrency(item.unitCost)}</td>
                       <td className="table-td">{fmtCurrency(item.currentStock * item.unitCost)}</td>
                       <td className="table-td text-right whitespace-nowrap">
-                        <button className="btn-ghost btn-sm" onClick={() => setMovementFor(item)}>
-                          <SlidersHorizontal size={14} /> Movimiento
-                        </button>
-                        <button
-                          className="btn-ghost btn-sm"
-                          onClick={() => {
-                            setEditing(item);
-                            setShowForm(true);
-                          }}
-                          aria-label={`Editar ${item.name}`}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          className="btn-ghost btn-sm text-danger"
-                          onClick={() => void remove(item)}
-                          aria-label={`Dar de baja ${item.name}`}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {canWrite && (
+                          <>
+                            <button
+                              className="btn-ghost btn-sm"
+                              onClick={() => setMovementFor(item)}
+                            >
+                              <SlidersHorizontal size={14} /> Movimiento
+                            </button>
+                            <button
+                              className="btn-ghost btn-sm"
+                              onClick={() => {
+                                setEditing(item);
+                                setShowForm(true);
+                              }}
+                              aria-label={`Editar ${item.name}`}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className="btn-ghost btn-sm text-danger"
+                              onClick={() => void remove(item)}
+                              aria-label={`Dar de baja ${item.name}`}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   );

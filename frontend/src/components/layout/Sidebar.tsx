@@ -50,7 +50,7 @@ export function Sidebar({
   onNavigate?: () => void;
   onToggleCollapsed?: () => void;
 }) {
-  const { user, activeBusinessUnit, hasModules, fullAccess } = useAuth();
+  const { user, activeBusinessUnit, hasModules, canAll, fullAccess } = useAuth();
   const effectiveUnit = activeBusinessUnit ?? normalizeBusinessUnit(user?.businessUnit);
 
   // Collapsed mode has no room for labels, and a drawer is always full width.
@@ -78,6 +78,7 @@ export function Sidebar({
     if (item.unit && effectiveUnit && item.unit !== effectiveUnit) return false;
     // A superadmin is not restricted by entitlements, matching the backend gate.
     if (!fullAccess && !hasModules(item.requires)) return false;
+    if (!canAll(item.permissions)) return false;
     return true;
   };
 

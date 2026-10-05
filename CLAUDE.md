@@ -73,7 +73,7 @@ npx vitest run -t "name of the test"              # one test
 ### What CI runs
 
 `.github/workflows/ci.yml`: `static` (typecheck, lint, format check, architecture suite, frontend
-build + tests) → `e2e` (all twelve suites, then greps the backend log for tenant-scope violations)
+build + tests) → `e2e` (all thirteen suites, then greps the backend log for tenant-scope violations)
 and `production-image`. Before pushing, at minimum run typecheck, lint, `format:check` and
 `test:architecture` in the backend, and typecheck, lint, `format:check`, build and test in the
 frontend.
@@ -98,7 +98,7 @@ Every backend module must be claimed by exactly one product module. `validateBac
 `requireAuth → requireModuleAccess(module) → router`. Consequences:
 
 - Never add `requireAuth` inside a router. Only `auth` is `public: true`.
-- Role, business-unit and entitlement checks live at the registry, not per route.
+- Role, business-unit, entitlement and permission checks live at the registry, not per route.
 - A module the tenant hasn't bought returns **403** with `code: "MODULE_DISABLED"`.
 
 Code layout: `src/core/` (shared domains and tenancy), `src/modules/<name>/` (business slices,
@@ -138,11 +138,31 @@ the module gate before the role check, and is never assignable by a tenant
 (`ASSIGNABLE_TENANT_ROLES`). Never list it in a module's `access.roles`. Tenant roles are `admin`
 (every unit), `daycare`, `grooming` and `veterinary`. Usernames are unique per tenant, not globally.
 
+### Permissions
+
+A role opens modules; a permission says what one staff member may do inside them. The catalog is
+fixed in `backend/src/core/tenancy/permissions.ts` (`finanzas.read`/`.write`,
+`inventario.read`/`.write`, `datos.export`, `registros.delete`) and each user row carries the list
+it was granted (`users.permissions`). `admin` and `superadmin` hold all of them implicitly; a new
+staff user starts with `DEFAULT_STAFF_PERMISSIONS` (inventory read-only).
+
+- Declare them as `permissions` rules on the `BackendModule` (by verb and by path inside the
+  module), not inside the router. The gate checks them **after** the entitlement, so an unsold
+  module still answers `MODULE_DISABLED`; a missing permission is **403** `PERMISSION_DENIED`.
+- `hasPermission(req, id)` is only for a handler that returns a mixed payload and must leave a
+  field out (`/dashboard/summary` and its income figures).
+- Work that writes money or stock as a side effect (closing a stay, dispensing a prescription)
+  does not go through the finance or inventory API and must not be gated by their permissions.
+- `requireAuth` reads role and permissions live, so a grant, a revocation or a role change bites
+  on the next request; a token whose role no longer matches the row is refused with 401.
+- The frontend mirrors the catalog in `src/modules/shared/contracts.ts`. Routes and nav items
+  declare `permissions`; a control inside a page is gated with `can(id)` from `useAuth()`.
+
 ### Caches that must be invalidated
 
 - Writing entitlements → `invalidate(daycareId)` from `platform/module-access.ts`.
-- Deactivating a user or daycare → `invalidatePrincipal` / `invalidatePrincipalsForDaycare` from
-  `core/tenancy/principal.ts`. `requireAuth` re-reads account state per request, so suspension
+- Deactivating a user or daycare, or changing a user's role or permissions →
+  `invalidatePrincipal` / `invalidatePrincipalsForDaycare` from `core/tenancy/principal.ts`. `requireAuth` re-reads account state per request, so suspension
   bites on the next request (`403` `USER_INACTIVE` / `DAYCARE_INACTIVE`).
 
 ### Route handler conventions
@@ -199,7 +219,8 @@ production it is a scheduled job (`npm run job:recurring-plans`), idempotent on
 ### Tests to add with a new module
 
 A workflow test, an authorization test, and a cross-tenant isolation test in
-`backend/tests/tenant-isolation.e2e.ts` covering **writes as well as reads**. On the frontend, a
+`backend/tests/tenant-isolation.e2e.ts` covering **writes as well as reads**. If the module
+declares permission rules, pin them in `backend/tests/permissions.ts`. On the frontend, a
 test that the nav item disappears when its product module is absent.
 
 ## Further reading

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 
 import { ASSIGNABLE_TENANT_ROLES, handleAuthzError } from "../../middleware/auth";
+import { PERMISSION_IDS } from "../../core/tenancy/permissions";
 import { getRequiredDaycareId } from "../../core/tenancy/scope";
 import { invalidatePrincipal } from "../../core/tenancy/principal";
 import { listTenantUsers, provisionUser, updateUser } from "../platform-admin/daycares.service";
@@ -37,6 +38,7 @@ const createSchema = z.object({
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
   name: z.string().min(1).max(120),
   role: z.enum(ASSIGNABLE_TENANT_ROLES),
+  permissions: z.array(z.enum(PERMISSION_IDS)).optional(),
 });
 
 const updateSchema = z.object({
@@ -44,6 +46,7 @@ const updateSchema = z.object({
   role: z.enum(ASSIGNABLE_TENANT_ROLES).optional(),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").optional(),
   isActive: z.boolean().optional(),
+  permissions: z.array(z.enum(PERMISSION_IDS)).optional(),
 });
 
 function fail(res: import("express").Response, error: unknown): void {

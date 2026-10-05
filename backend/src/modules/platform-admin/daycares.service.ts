@@ -7,6 +7,8 @@ import {
   type BusinessUnit,
   AuthzError,
 } from "../../middleware/auth";
+import { DEFAULT_STAFF_PERMISSIONS, normalizePermissions } from "../../core/tenancy/permissions";
+import type { PermissionId } from "../../core/tenancy/permissions";
 import { DEFAULT_TIMEZONE } from "../../core/tenancy/unit-settings";
 import { invalidate } from "../../platform/module-access";
 import { invalidatePrincipal, invalidatePrincipalsForDaycare } from "../../core/tenancy/principal";
@@ -95,6 +97,7 @@ export async function getDaycare(id: string) {
           role: true,
           businessUnit: true,
           isActive: true,
+          permissions: true,
           createdAt: true,
         },
       },
@@ -121,6 +124,7 @@ export async function listTenantUsers(daycareId: string) {
       role: true,
       businessUnit: true,
       isActive: true,
+      permissions: true,
       createdAt: true,
     },
   });
@@ -263,6 +267,8 @@ export interface ProvisionUserInput {
   password: string;
   name: string;
   role: AssignableTenantRole;
+  /** Omitted: the narrow staff default. Inert for an admin, which holds every permission. */
+  permissions?: readonly PermissionId[];
 }
 
 export async function provisionUser(daycareId: string, input: ProvisionUserInput) {
@@ -291,6 +297,7 @@ export async function provisionUser(daycareId: string, input: ProvisionUserInput
       businessUnit: businessUnitForRole(input.role),
       passwordHash: bcrypt.hashSync(input.password, BCRYPT_ROUNDS),
       isActive: true,
+      permissions: normalizePermissions(input.permissions ?? DEFAULT_STAFF_PERMISSIONS),
     },
     select: {
       id: true,
@@ -299,6 +306,7 @@ export async function provisionUser(daycareId: string, input: ProvisionUserInput
       role: true,
       businessUnit: true,
       isActive: true,
+      permissions: true,
       createdAt: true,
     },
   });
@@ -309,6 +317,8 @@ export interface UpdateUserInput {
   role?: AssignableTenantRole;
   password?: string;
   isActive?: boolean;
+  /** Replaces the granted list. Omitted: left as it is. */
+  permissions?: readonly PermissionId[];
 }
 
 export async function updateUser(daycareId: string, userId: string, input: UpdateUserInput) {
@@ -350,6 +360,7 @@ export async function updateUser(daycareId: string, userId: string, input: Updat
       businessUnit: input.role ? businessUnitForRole(input.role) : undefined,
       passwordHash: input.password ? bcrypt.hashSync(input.password, BCRYPT_ROUNDS) : undefined,
       isActive: input.isActive,
+      permissions: input.permissions ? normalizePermissions(input.permissions) : undefined,
     },
     select: {
       id: true,
@@ -358,6 +369,7 @@ export async function updateUser(daycareId: string, userId: string, input: Updat
       role: true,
       businessUnit: true,
       isActive: true,
+      permissions: true,
     },
   });
 

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { localDatePartsInTimezone } from "../src/core/tenancy/local-time";
+import { DEFAULT_STAFF_PERMISSIONS } from "../src/core/tenancy/permissions";
 import { deleteDaycare } from "../src/modules/platform-admin/offboarding.service";
 import { TOGGLEABLE_PRODUCT_MODULES } from "../src/platform/product-modules";
 import { seedShowcaseTenant } from "./seed-showcase";
@@ -216,6 +217,7 @@ async function ensureVeterinaryClinic() {
       passwordHash: bcrypt.hashSync("vet12345", 10),
       role: "veterinary",
       businessUnit: BU.VETERINARY,
+      permissions: [...DEFAULT_STAFF_PERMISSIONS],
     },
   });
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Edit2, Trash2, RefreshCw, Search } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 import { fmt, SERVICES } from "../../lib/utils";
 import { PageLoader } from "../../components/ui/Spinner";
 import { RecurringPlanForm } from "./RecurringPlanForm";
@@ -26,6 +27,8 @@ interface RecurringPlan {
 }
 
 export function RecurringPlansPage() {
+  // The server refuses the delete without this permission, so the button is not offered.
+  const canDelete = useAuth().can("registros.delete");
   const [plans, setPlans] = useState<RecurringPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -182,7 +185,7 @@ export function RecurringPlansPage() {
                         >
                           <Edit2 size={14} />
                         </button>
-                        {plan.isActive && (
+                        {plan.isActive && canDelete && (
                           <button
                             onClick={() => deletePlan(plan.id)}
                             className="btn-ghost btn-sm p-1.5 text-danger hover:bg-danger-soft"

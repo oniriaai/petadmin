@@ -63,6 +63,7 @@ async function runGate(
   moduleId: string,
   user: unknown,
   businessUnitHeader?: string,
+  request: { method: string; path: string } = { method: "GET", path: "/" },
 ): Promise<GateResult> {
   const module = backendModules.find((m) => m.id === moduleId);
   assert.ok(module, `unknown module ${moduleId}`);
@@ -73,6 +74,8 @@ async function runGate(
     user,
     headers: businessUnitHeader ? { "x-business-unit": businessUnitHeader } : {},
     query: {},
+    method: request.method,
+    path: request.path,
   } as unknown as Request;
   const res = {
     status(code: number) {
@@ -230,6 +233,66 @@ async function main(): Promise<void> {
     assert.equal(productModule?.core, true, `${moduleId} is expected to be core`);
     assert.equal((await runGate(moduleId, daycareUser)).passed, true, `${moduleId} must be free`);
   }
+
+  // --- permissions -------------------------------------------------------------
+  // Decided on core modules, where the gate resolves without the entitlement lookup.
+  const del = { method: "DELETE", path: "/client_1" };
+  const deniedDelete = await runGate(
+    "clients",
+    { ...daycareUser, permissions: [] },
+    undefined,
+    del,
+  );
+  assert.equal(deniedDelete.status, 403);
+  assert.equal(deniedDelete.body?.code, "PERMISSION_DENIED");
+  assert.equal(deniedDelete.body?.permission, "registros.delete");
+  assert.equal(
+    (await runGate("clients", { ...daycareUser, permissions: [] })).passed,
+    true,
+    "reading a client needs no permission",
+  );
+  assert.equal(
+    (
+      await runGate(
+        "clients",
+        { ...daycareUser, permissions: ["registros.delete"] },
+        undefined,
+        del,
+      )
+    ).passed,
+    true,
+    "a granted permission opens the route",
+  );
+  assert.equal(
+    (await runGate("clients", { ...tenantAdmin, permissions: [] }, undefined, del)).passed,
+    true,
+    "an admin holds every permission, whatever its row says",
+  );
+  assert.equal((await runGate("clients", superadmin, undefined, del)).passed, true);
+
+  const money = { method: "GET", path: "/financial/summary" };
+  assert.equal(
+    (await runGate("dashboard", { ...daycareUser, permissions: [] }, undefined, money)).body?.code,
+    "PERMISSION_DENIED",
+    "the money figures in the core dashboard are not free",
+  );
+  assert.equal(
+    (
+      await runGate(
+        "dashboard",
+        { ...daycareUser, permissions: ["finanzas.read"] },
+        undefined,
+        money,
+      )
+    ).passed,
+    true,
+  );
+
+  // On a sold module the entitlement is checked first: a tenant that never bought finanzas must
+  // hear MODULE_DISABLED, not "ask your admin". Reaching the lookup proves the order.
+  const unsold = await runGate("incomes", { ...daycareUser, permissions: [] });
+  assert.equal(unsold.reachedEntitlementCheck, true, "entitlement precedes permission");
+  assert.equal(unsold.status, undefined);
 
   // --- catalog expansion -------------------------------------------------------
   // What the gate consults, checked independently of it.

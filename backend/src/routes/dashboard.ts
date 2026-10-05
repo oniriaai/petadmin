@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
+import { hasPermission } from "../core/tenancy/permissions";
 import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
 
 export const dashboardRouter = Router();
@@ -8,6 +9,9 @@ export const dashboardRouter = Router();
 dashboardRouter.get("/summary", async (req, res) => {
   try {
     const buWhere = buildScopeWhere(req);
+    // This summary is open to every user, so the two income figures are left out (null, and not
+    // even queried) for one who may not read the finances.
+    const canSeeIncome = hasPermission(req, "finanzas.read");
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
@@ -35,10 +39,12 @@ dashboardRouter.get("/summary", async (req, res) => {
             checkOut: { gte: todayStart, lte: todayEnd },
           },
         }),
-        prisma.income.aggregate({
-          where: { ...buWhere, date: { gte: todayStart, lte: todayEnd } },
-          _sum: { total: true },
-        }),
+        canSeeIncome
+          ? prisma.income.aggregate({
+              where: { ...buWhere, date: { gte: todayStart, lte: todayEnd } },
+              _sum: { total: true },
+            })
+          : null,
         prisma.alert.findMany({
           where: { ...buWhere, isResolved: false },
           orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
@@ -64,10 +70,12 @@ dashboardRouter.get("/summary", async (req, res) => {
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const ingresosMes = await prisma.income.aggregate({
-      where: { ...buWhere, date: { gte: monthStart } },
-      _sum: { total: true },
-    });
+    const ingresosMes = canSeeIncome
+      ? await prisma.income.aggregate({
+          where: { ...buWhere, date: { gte: monthStart } },
+          _sum: { total: true },
+        })
+      : null;
     const totalClientes = await prisma.client.count({
       where: { isActive: true, ...buildDaycareWhere(req) },
     });
@@ -77,8 +85,8 @@ dashboardRouter.get("/summary", async (req, res) => {
       activas,
       entradas,
       salidas,
-      ingresosHoy: ingresosHoy._sum.total ?? 0,
-      ingresosMes: ingresosMes._sum.total ?? 0,
+      ingresosHoy: ingresosHoy ? (ingresosHoy._sum.total ?? 0) : null,
+      ingresosMes: ingresosMes ? (ingresosMes._sum.total ?? 0) : null,
       totalClientes,
       alertas: alertas.map((a) => ({
         id: a.id,

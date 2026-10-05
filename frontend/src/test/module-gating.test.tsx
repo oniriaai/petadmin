@@ -4,7 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { GuardedRoute, SuperAdminRoute } from "../App";
 import { Sidebar } from "../components/layout/Sidebar";
 import { frontendModules, validateFrontendModules } from "../modules/registry";
-import type { ProductModuleId } from "../modules/shared/contracts";
+import { PERMISSION_IDS } from "../modules/shared/contracts";
+import type { PermissionId, ProductModuleId } from "../modules/shared/contracts";
 
 const mockUseAuth = vi.fn();
 
@@ -18,6 +19,8 @@ interface SessionOptions {
   modules?: ProductModuleId[];
   fullAccess?: boolean;
   businessUnit?: string;
+  /** Defaults to what the server reports for the role: everything for an admin, none otherwise. */
+  permissions?: PermissionId[];
 }
 
 function session({
@@ -25,8 +28,11 @@ function session({
   modules = [],
   fullAccess = false,
   businessUnit = "GLOBAL",
+  permissions,
 }: SessionOptions = {}) {
   const enabled = new Set<string>(modules);
+  const granted = new Set<string>(permissions ?? (role === "admin" ? PERMISSION_IDS : []));
+  const holds = (id: string) => fullAccess || granted.has(id);
   return {
     user: { id: "u1", username: "u", name: "U", role, businessUnit, daycareId: "d1" },
     daycare: { id: "d1", name: "Guardería Uno", slug: "uno" },
@@ -42,6 +48,9 @@ function session({
     logout: vi.fn(),
     hasModule: (id?: string) => (id ? enabled.has(id) : true),
     hasModules: (ids?: readonly string[]) => !ids || ids.every((id) => enabled.has(id)),
+    permissions: [...granted],
+    can: (id?: string) => !id || holds(id),
+    canAll: (ids?: readonly string[]) => !ids || ids.every(holds),
   };
 }
 
@@ -49,6 +58,7 @@ function renderGuarded(route: {
   path: string;
   roles?: string[];
   requires?: ProductModuleId[];
+  permissions?: PermissionId[];
   unit?: "DAYCARE" | "GROOMING";
 }) {
   render(
@@ -70,6 +80,95 @@ function renderGuarded(route: {
 beforeEach(() => {
   mockUseAuth.mockReset();
   localStorage.clear();
+});
+
+describe("permission gating", () => {
+  const finance = {
+    path: "/transacciones",
+    requires: ["finanzas" as const],
+    permissions: ["finanzas.read" as const],
+  };
+
+  it("keeps a staff user without the permission out, and says who can grant it", () => {
+    mockUseAuth.mockReturnValue(session({ role: "daycare", modules: ["finanzas"] }));
+    renderGuarded(finance);
+    expect(screen.queryByText("contenido")).not.toBeInTheDocument();
+    expect(screen.getByText("No tienes acceso a esta sección")).toBeInTheDocument();
+    // Not the entitlement notice: the daycare did buy the module.
+    expect(screen.queryByText("Este módulo aún no está en tu plan")).not.toBeInTheDocument();
+  });
+
+  it("opens the route once the permission is granted", () => {
+    mockUseAuth.mockReturnValue(
+      session({ role: "daycare", modules: ["finanzas"], permissions: ["finanzas.read"] }),
+    );
+    renderGuarded(finance);
+    expect(screen.getByText("contenido")).toBeInTheDocument();
+  });
+
+  it("reports a module the daycare lacks as that, not as a missing permission", () => {
+    mockUseAuth.mockReturnValue(session({ role: "daycare", modules: [] }));
+    renderGuarded(finance);
+    expect(screen.getByText("Este módulo aún no está en tu plan")).toBeInTheDocument();
+  });
+
+  it("lets an admin and a superadmin through without any grant", () => {
+    mockUseAuth.mockReturnValue(session({ role: "admin", modules: ["finanzas"] }));
+    renderGuarded(finance);
+    expect(screen.getByText("contenido")).toBeInTheDocument();
+  });
+
+  it("does not restrict a superadmin", () => {
+    mockUseAuth.mockReturnValue(session({ role: "superadmin", fullAccess: true, permissions: [] }));
+    renderGuarded(finance);
+    expect(screen.getByText("contenido")).toBeInTheDocument();
+  });
+
+  it("hides the nav items a staff user has no permission for", () => {
+    mockUseAuth.mockReturnValue(
+      session({
+        role: "daycare",
+        businessUnit: "DAYCARE",
+        modules: ["reservas", "finanzas", "inventario", "informes"],
+        permissions: ["inventario.read"],
+      }),
+    );
+    render(
+      <MemoryRouter initialEntries={["/"]}>
+        <Sidebar />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("Finanzas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informes")).not.toBeInTheDocument();
+    expect(screen.getByText("Inventario")).toBeInTheDocument();
+    expect(screen.getByText("Operaciones")).toBeInTheDocument();
+  });
+
+  it("declares a permission on every route that opens on money or stock", () => {
+    const declared = Object.fromEntries(
+      frontendModules
+        .flatMap((module) => module.routes)
+        .filter((route) => route.permissions)
+        .map((route) => [route.path, route.permissions]),
+    );
+    expect(declared).toEqual({
+      "/transacciones": ["finanzas.read"],
+      "/inventario": ["inventario.read"],
+      "/informes": ["finanzas.read"],
+    });
+  });
+
+  it("rejects a route naming a permission that does not exist", () => {
+    expect(() =>
+      validateFrontendModules([
+        {
+          id: "x",
+          label: "X",
+          routes: [{ path: "/x", component: () => null, permissions: ["finanzas.todo" as never] }],
+        },
+      ]),
+    ).toThrow(/Unknown permission/);
+  });
 });
 
 describe("entitlement gating", () => {

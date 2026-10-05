@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Search, Eye, Edit2, UserX, PawPrint, Phone, Dog, Cat } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 import { fmt } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
@@ -35,6 +36,8 @@ interface Client {
 }
 
 export function ClientesPage() {
+  // The server refuses the delete without this permission, so the button is not offered.
+  const canDelete = useAuth().can("registros.delete");
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -198,7 +201,7 @@ export function ClientesPage() {
                         >
                           <PawPrint size={14} />
                         </button>
-                        {c.isActive && (
+                        {c.isActive && canDelete && (
                           <button
                             onClick={() => deactivate(c.id)}
                             className="btn-ghost btn-sm p-1.5 text-danger"

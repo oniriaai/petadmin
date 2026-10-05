@@ -348,7 +348,9 @@ async function run() {
       409,
       "reabrir",
     );
-    expectStatus((await vet.delete(path)).status, 409, "eliminar");
+    // As the admin: deleting a visit needs `registros.delete`, which the clinic account lacks,
+    // and this is about the visit being frozen, not about who asks.
+    expectStatus((await admin.delete(path)).status, 409, "eliminar");
   });
 
   await test("El saldo pendiente se abona hasta quedar en cero, y no más", async () => {
@@ -435,7 +437,9 @@ async function run() {
 
   await test("Una receta se dispensa una sola vez, descuenta stock y puede cobrarse", async () => {
     const path = `/veterinaria/visits/${pharmacyVisitId}`;
-    const item = await vet.post("/inventory/items", {
+    // Stock is set up by the admin: the clinic account dispenses from it without holding
+    // `inventario.write`, which is the point of moving stock through Core.
+    const item = await admin.post("/inventory/items", {
       name: `Tramadol E2E ${Date.now()}`,
       category: "Medicamentos",
       unit: "tableta",
@@ -446,7 +450,7 @@ async function run() {
     stockItemId = item.data.id;
     expectEqual(item.data.businessUnit, "VETERINARY", "unidad del artículo");
 
-    const entry = await vet.post(`/inventory/items/${stockItemId}/movements`, {
+    const entry = await admin.post(`/inventory/items/${stockItemId}/movements`, {
       type: "ENTRADA",
       quantity: 3,
       lotNumber: "TR-77",
@@ -1022,8 +1026,8 @@ async function run() {
 
   // Unclosed visits go through the API, which is itself under test. The rest cannot: see
   // purgeSuiteData.
-  for (const id of cleanupVisitIds) await vet.delete(`/veterinaria/visits/${id}`);
-  if (stockItemId) await vet.delete(`/inventory/items/${stockItemId}`);
+  for (const id of cleanupVisitIds) await admin.delete(`/veterinaria/visits/${id}`);
+  if (stockItemId) await admin.delete(`/inventory/items/${stockItemId}`);
   try {
     await purgeSuiteData();
   } catch (error) {

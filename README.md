@@ -440,9 +440,12 @@ con ellos.
 | Usuario | Contraseña | Rol | Contexto |
 |---|---|---|---|
 | `admin_global` | `admin123` | `admin` | Vista consolidada con selector de unidad |
-| `guarderia_admin` | `guarderia123` | `daycare` | Operación y finanzas de Guardería |
-| `peluqueria_admin` | `peluqueria123` | `grooming` | Operación y finanzas de Peluquería |
+| `guarderia_admin` | `guarderia123` | `daycare` | Operación de Guardería |
+| `peluqueria_admin` | `peluqueria123` | `grooming` | Operación de Peluquería |
 | `vet_admin` | `vet12345` | `veterinary` | Clínica veterinaria: agenda, historias clínicas, farmacia, hospitalización y laboratorio |
+
+Las tres cuentas de unidad nacen con el permiso mínimo (ver el inventario): finanzas, exportación
+y eliminación de registros se las concede `admin_global` desde Configuración → Equipo.
 
 ### Guardería `demo` — solo `GROOMING`, con `reservas` y `peluqueria`
 

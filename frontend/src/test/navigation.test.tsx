@@ -48,6 +48,9 @@ function session(enabledModules: string[], overrides: Record<string, unknown> = 
     logout: vi.fn(),
     hasModule: (id?: string) => !id || enabledModules.includes(id),
     hasModules: (ids?: readonly string[]) => !ids || ids.every((id) => enabledModules.includes(id)),
+    // An admin, as above: it holds every permission.
+    can: () => true,
+    canAll: () => true,
     ...overrides,
   };
 }
