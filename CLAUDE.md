@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Argos Suite (formerly Pethijos Admin): a multi-tenant modular monolith for dog daycares, grooming
+Argos Suite: a multi-tenant modular monolith for dog daycares, grooming
 salons and veterinary clinics. Brand, voice and design tokens are defined in `BRAND.md`. Each customer
 is a tenant (`Daycare`) with its own users, data and **purchased product modules**; the vendor
 manages tenants from a platform console. A tenant runs up to three business units, `DAYCARE`
@@ -49,7 +49,7 @@ Tests are plain `tsx` scripts, not a test runner. Run one file directly:
 ```bash
 npx tsx tests/pagination.ts            # a single architecture suite
 npm run test:tenancy                   # a single e2e suite (see package.json for test:* names)
-docker exec pethijos-backend npm run test:tenancy   # same, inside the dev container
+docker exec argos-backend npm run test:tenancy   # same, inside the dev container
 ```
 
 E2E suites (`tests/*.e2e.ts`) speak HTTP to a running backend at `http://localhost:3001/api/v1`
@@ -174,7 +174,7 @@ the backfill sits between adding the column and making it `NOT NULL`. There is i
 `prisma migrate diff` drift check: the partial unique index in `per_tenant_usernames` can't be
 expressed in `schema.prisma`.
 
-The seed provisions two tenants on purpose: `pethijos` (everything enabled) and `demo` (grooming
+The seed provisions two tenants on purpose: `principal` (everything enabled) and `demo` (grooming
 only, most modules off, no clients). Tests in `test:tenancy` count what `demo` owns, so a suite
 that touches a seeded tenant must undo it.
 

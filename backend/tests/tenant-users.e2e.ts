@@ -182,7 +182,7 @@ async function run() {
   await test("Un admin no puede tocar a un usuario de otra guardería", async () => {
     // The seeded tenant's admin, named by id. The daycare is taken from the token, never from
     // the request, so this must read as absent rather than as forbidden.
-    const foreign = await consoleApi.get("/platform/daycares/daycare_pethijos");
+    const foreign = await consoleApi.get("/platform/daycares/daycare_principal");
     const victim = foreign.data.users[0];
 
     const read = await clientFor(adminToken, "DAYCARE").patch(`/users/${victim.id}`, {
@@ -191,7 +191,7 @@ async function run() {
     expectStatus(read.status, 404, "Editar un usuario ajeno");
 
     // And it must not have been modified.
-    const after = await consoleApi.get("/platform/daycares/daycare_pethijos");
+    const after = await consoleApi.get("/platform/daycares/daycare_principal");
     const unchanged = after.data.users.find((u: any) => u.id === victim.id);
     if (unchanged.name === "Secuestrado")
       throw new Error("Se modificó un usuario de otra guardería");

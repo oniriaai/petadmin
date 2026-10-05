@@ -69,7 +69,7 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     ]);
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Pethijos Admin";
+  wb.creator = "Argos Suite";
   wb.created = new Date();
 
   const sheet = (name: string, headers: string[]) => {
@@ -129,7 +129,7 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     ]),
   );
 
-  const ps = sheet("Perrhijos", [
+  const ps = sheet("Mascotas", [
     "Nombre",
     "Tutor",
     "Especie",
@@ -168,7 +168,7 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
     "Servicio",
     "Estado",
     "Tutor",
-    "Perrhijos",
+    "Mascotas",
     "Entrada",
     "Salida",
     "Base",

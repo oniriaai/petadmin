@@ -111,7 +111,7 @@ peluqueriaRouter.patch("/appointments/:id/status", async (req, res) => {
   }
 });
 
-// Complete and Collect (Cobro Independiente Pethijos)
+// Complete and Collect (Cobro Independiente Peluquería)
 const completeSchema = z.object({
   paymentMethod: z.string().default("EFECTIVO"),
   amount: z.number().min(0).optional(),

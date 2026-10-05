@@ -83,8 +83,8 @@ async function run() {
     // username. If this fails, the limiter is keyed by IP alone and one attacker could lock
     // every account on a shared NAT out of the product.
     const ok = await raw.post("/auth/login", {
-      username: "kinderdog_admin",
-      password: "kinderdog123",
+      username: "guarderia_admin",
+      password: "guarderia123",
       businessUnit: "DAYCARE",
     });
     expectStatus(ok.status, 200, "Login legítimo tras los intentos fallidos");

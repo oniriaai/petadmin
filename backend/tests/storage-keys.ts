@@ -9,7 +9,7 @@ import {
   tenantOfKey,
 } from "../src/core/storage/object-keys";
 
-const BUCKET = "pethijos-media";
+const BUCKET = "argos-media";
 const ENDPOINT = "s3.us-east-005.backblazeb2.com";
 
 // --- sanitizeSegment ---------------------------------------------------------
@@ -32,13 +32,13 @@ assert.ok((sanitizeSegment("x".repeat(500)) ?? "").length <= 80, "segments are l
 
 // --- buildPetPhotoKey -------------------------------------------------------
 const key = buildPetPhotoKey({
-  daycareId: "daycare_pethijos",
+  daycareId: "daycare_principal",
   petName: "Max",
   ownerName: "María",
   fileName: "foto perfil.jpg",
   timestamp: 1,
 });
-assert.equal(key, "daycares/daycare_pethijos/pets/Max_Mar_a/1-foto_perfil.jpg");
+assert.equal(key, "daycares/daycare_principal/pets/Max_Mar_a/1-foto_perfil.jpg");
 
 // Two daycares with the same pet and owner names must not share a prefix.
 const a = buildPetPhotoKey({
@@ -84,14 +84,14 @@ assert.throws(
 
 // A hostile petName cannot escape the pets/ prefix (this was the live traversal bug).
 const hostile = buildPetPhotoKey({
-  daycareId: "daycare_pethijos",
+  daycareId: "daycare_principal",
   petName: "../../../secrets",
   ownerName: "../..",
   fileName: "../../x.jpg",
   timestamp: 1,
 });
 assert.ok(
-  hostile.startsWith("daycares/daycare_pethijos/pets/"),
+  hostile.startsWith("daycares/daycare_principal/pets/"),
   `expected tenant prefix, got ${hostile}`,
 );
 const hostileSegments = hostile.split("/");

@@ -74,7 +74,7 @@ async function main(): Promise<void> {
     process.env.SUPERADMIN_USERNAME ?? "superadmin",
     process.env.SUPERADMIN_PASSWORD ?? "superadmin123",
   );
-  const tenantAdmin = await login("pethijos_admin", "pethijos123", "GROOMING");
+  const tenantAdmin = await login("peluqueria_admin", "peluqueria123", "GROOMING");
   const platform = clientFor(superadmin);
   const tenant = clientFor(tenantAdmin);
 

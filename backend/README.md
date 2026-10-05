@@ -269,12 +269,12 @@ Es la única acción irreversible de la consola, así que tiene dos salvaguardas
    así como dos decisiones tomadas en dos momentos distintos.
 
 `GET /platform/daycares/:id/export` entrega antes un libro con la guardería, sus usuarios, tutores,
-perrhijos, salas, reservas, cobros, cuentas por pagar, inventario y contratos. Sin hashes de
+mascotas, salas, reservas, cobros, cuentas por pagar, inventario y contratos. Sin hashes de
 contraseña: no son datos que el cliente necesite y entregarlos es entregar algo que se puede romper
 sin prisa.
 
 El borrado va en **una sola transacción y en orden**: varias tablas se referencian entre sí
-(`check_in_outs` apunta a reservas, perrhijos, tutores, salas y usuarios; `incomes` a reservas) y
+(`check_in_outs` apunta a reservas, mascotas, tutores, salas y usuarios; `incomes` a reservas) y
 `users.daycareId` es `onDelete: Restrict`, así que la fila de la guardería no puede caer antes que
 sus usuarios. La respuesta informa del recuento por tabla.
 
@@ -581,7 +581,7 @@ docker compose up --build
 # Las doce suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
 # sesión a propósito y throttlearía los logins que necesitan las demás.
 for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler veterinaria ratelimit; do
-  docker exec pethijos-backend npm run "test:$s" || break
+  docker exec argos-backend npm run "test:$s" || break
 done
 ```
 

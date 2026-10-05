@@ -46,19 +46,19 @@ describe("login", () => {
     expect(screen.queryByRole("button", { name: /Plataforma/ })).not.toBeInTheDocument();
     expect(screen.getByLabelText("Usuario")).toBeInTheDocument();
     expect(screen.getByLabelText("Contraseña")).toBeInTheDocument();
-    // The product is Argos Suite; Pethijos is a tenant's brand, not the product's.
+    // The login carries the product brand, never a tenant's.
     expect(screen.getByRole("img", { name: "Argos Suite" })).toBeInTheDocument();
   });
 
   it("never sends a business unit, so the server decides the scope", async () => {
     login.mockResolvedValue({ role: "grooming" });
     renderLogin();
-    await signIn("pethijos_admin", "pethijos123");
+    await signIn("peluqueria_admin", "peluqueria123");
     // The first argument is the unit; sending one is what could contradict the account. The
     // fourth is the daycare slug, which stays undefined until the server asks for it: a
     // username that is unique across the installation resolves without one.
     await waitFor(() =>
-      expect(login).toHaveBeenCalledWith(null, "pethijos_admin", "pethijos123", undefined),
+      expect(login).toHaveBeenCalledWith(null, "peluqueria_admin", "peluqueria123", undefined),
     );
   });
 

@@ -63,7 +63,7 @@ app.get("/api/v1/health", async (_req, res) => {
       ok: pending === 0,
       db: true,
       migrations: { applied: Number(migrations?.applied ?? 0), pending },
-      service: "pethijos-backend",
+      service: "argos-backend",
       // Set by the host on Render; the demo's deploy workflow polls it to know when the commit
       // it asked for is the one answering. Null anywhere else.
       commit: process.env.RENDER_GIT_COMMIT ?? null,
@@ -74,7 +74,7 @@ app.get("/api/v1/health", async (_req, res) => {
       ok: false,
       db: false,
       error: error instanceof Error ? error.message : "Database connection failed",
-      service: "pethijos-backend",
+      service: "argos-backend",
       ts: new Date().toISOString(),
     });
   }
@@ -110,7 +110,7 @@ const runSchedulerInProcess = process.env.RUN_SCHEDULER_IN_PROCESS
   : process.env.NODE_ENV !== "production";
 
 app.listen(port, () => {
-  logger.info(`Pethijos backend escuchando en http://localhost:${port}/api/v1`);
+  logger.info(`Argos Suite backend escuchando en http://localhost:${port}/api/v1`);
   if (runSchedulerInProcess) {
     startRecurringPlansScheduler();
   } else {

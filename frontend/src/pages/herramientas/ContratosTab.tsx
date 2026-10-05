@@ -309,7 +309,7 @@ function ContractForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
           </div>
           <div>
             <label className="label" htmlFor="ct-pet">
-              Perrhijo (opcional)
+              Mascota (opcional)
             </label>
             <select
               id="ct-pet"

@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: pethijos-postgres
+    container_name: argos-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -18,9 +18,9 @@ services:
 
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pethijos-pgadmin
+    container_name: argos-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@pethijos.com
+      PGADMIN_DEFAULT_EMAIL: admin@argos.example.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
       - "5050:80"
@@ -29,7 +29,7 @@ services:
 
   backend:
     image: node:20-alpine
-    container_name: pethijos-backend
+    container_name: argos-backend
     working_dir: /app
     command: >
       sh -c "
@@ -64,7 +64,7 @@ services:
 
   frontend:
     image: node:20-alpine
-    container_name: pethijos-frontend
+    container_name: argos-frontend
     working_dir: /app
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port ${FRONTEND_PORT}"
     environment:

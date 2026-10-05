@@ -5,7 +5,7 @@
 #
 # Usage:  scripts/restore.sh <file.dump> [target-database-name]
 #
-# The default target is pethijos_restore_check, so running this against a production host
+# The default target is argos_restore_check, so running this against a production host
 # verifies the backup without touching the data it is insuring.
 
 set -euo pipefail
@@ -14,13 +14,13 @@ cd "$(dirname "$0")/.."
 [ -f .env ] && set -a && . ./.env && set +a
 
 FILE="${1:?Uso: scripts/restore.sh <file.dump> [base-de-datos-destino]}"
-TARGET="${2:-pethijos_restore_check}"
-CONTAINER="${POSTGRES_CONTAINER:-pethijos-postgres}"
+TARGET="${2:-argos_restore_check}"
+CONTAINER="${POSTGRES_CONTAINER:-argos-postgres}"
 USER="${POSTGRES_USER:?POSTGRES_USER es obligatorio}"
 
 [ -f "$FILE" ] || { echo "No existe $FILE" >&2; exit 1; }
 
-if [ "$TARGET" = "${POSTGRES_DB:-pethijos}" ]; then
+if [ "$TARGET" = "${POSTGRES_DB:-argos}" ]; then
   echo "ERROR: rehúso restaurar sobre la base en uso ($TARGET)." >&2
   echo "Indica otro nombre, o renombra la base en uso primero si de verdad es una recuperación." >&2
   exit 1
@@ -43,7 +43,7 @@ docker exec -i "$CONTAINER" psql -U "$USER" -d "$TARGET" -c "
     (SELECT count(*) FROM daycares)              AS guarderias,
     (SELECT count(*) FROM users)                 AS usuarios,
     (SELECT count(*) FROM clients)               AS tutores,
-    (SELECT count(*) FROM pets)                  AS perrhijos,
+    (SELECT count(*) FROM pets)                  AS mascotas,
     (SELECT count(*) FROM reservations)          AS reservas,
     (SELECT count(*) FROM _prisma_migrations WHERE finished_at IS NOT NULL) AS migraciones;
 "

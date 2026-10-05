@@ -1,7 +1,7 @@
 import axios from "axios";
 
 /**
- * Tenant isolation. Requires a seeded stack with both daycares (daycare_pethijos and the
+ * Tenant isolation. Requires a seeded stack with both daycares (daycare_principal and the
  * restricted daycare_demo) and the platform superadmin.
  *
  * Before tenancy, Client and Pet had no scoping at all — every authenticated user could read
@@ -9,7 +9,7 @@ import axios from "axios";
  */
 
 const BASE_URL = "http://localhost:3001/api/v1";
-const PETHIJOS_ID = "daycare_pethijos";
+const MAIN_ID = "daycare_principal";
 const DEMO_ID = "daycare_demo";
 
 interface TestResult {
@@ -70,19 +70,19 @@ function expectStatus(actual: number, expected: number, what: string) {
 async function run() {
   console.log("🚀 Pruebas de aislamiento entre guarderías\n");
 
-  let pethijos = "";
+  let principal = "";
   let demo = "";
   let superadmin = "";
 
   await test("Autenticación de ambas guarderías y de la cuenta de plataforma", async () => {
-    pethijos = await loginAs("kinderdog_admin", "kinderdog123", "DAYCARE");
+    principal = await loginAs("guarderia_admin", "guarderia123", "DAYCARE");
     demo = await loginAs("demo_admin", "demo123", "GROOMING");
     superadmin = await loginAs("superadmin", process.env.SUPERADMIN_PASSWORD || "superadmin123");
-    if (!pethijos || !demo || !superadmin) throw new Error("Fallo obteniendo tokens");
+    if (!principal || !demo || !superadmin) throw new Error("Fallo obteniendo tokens");
   });
 
   await test("Los listados solo devuelven registros de la propia guardería", async () => {
-    const a = clientFor(pethijos);
+    const a = clientFor(principal);
     const b = clientFor(demo);
     // Only endpoints the demo tenant actually bought. An endpoint it has not bought is denied
     // by the entitlement gate, which also returns no rows -- see the next test, which keeps the
@@ -100,7 +100,7 @@ async function run() {
   });
 
   await test("Un módulo no habilitado se deniega con 403 MODULE_DISABLED, no con una lista vacía", async () => {
-    const a = clientFor(pethijos);
+    const a = clientFor(principal);
     const b = clientFor(demo);
     // The demo tenant is seeded without finanzas, inventario, informes, cumplimiento or
     // guarderia. Isolation and entitlement are different protections and must not be confused:
@@ -139,7 +139,7 @@ async function run() {
   });
 
   await test("Leer un registro de otra guardería por id devuelve 404, no 403", async () => {
-    const a = clientFor(pethijos);
+    const a = clientFor(principal);
     const b = clientFor(demo);
     const clients = await a.get("/clients");
     const clientId = clients.data[0]?.id;
@@ -151,7 +151,7 @@ async function run() {
   });
 
   await test("Escribir o borrar un registro de otra guardería devuelve 404", async () => {
-    const a = clientFor(pethijos);
+    const a = clientFor(principal);
     const b = clientFor(demo);
     const clientId = (await a.get("/clients")).data[0]?.id;
     expectStatus(
@@ -167,7 +167,7 @@ async function run() {
   });
 
   await test("Una mascota no puede crearse contra un cliente de otra guardería", async () => {
-    const a = clientFor(pethijos);
+    const a = clientFor(principal);
     const b = clientFor(demo);
     const clientId = (await a.get("/clients")).data[0]?.id;
     const res = await b.post("/pets", { clientId, name: "Intruso", species: "dog", sex: "M" });
@@ -175,7 +175,7 @@ async function run() {
   });
 
   await test("Un usuario de guardería no puede fijar otra guardería con X-Daycare-Id", async () => {
-    const impersonating = clientFor(demo, PETHIJOS_ID);
+    const impersonating = clientFor(demo, MAIN_ID);
     const res = await impersonating.get("/clients");
     expectStatus(res.status, 403, "X-Daycare-Id ajeno");
   });
@@ -190,7 +190,7 @@ async function run() {
     if (pinnedDemo.data.length !== 0)
       throw new Error("La guardería demo no debería tener clientes");
 
-    const pinnedMain = await clientFor(superadmin, PETHIJOS_ID).get("/clients");
+    const pinnedMain = await clientFor(superadmin, MAIN_ID).get("/clients");
     if (pinnedMain.data.length === 0)
       throw new Error("La guardería principal debería tener clientes");
     if (pinnedMain.data.length > globalCount) throw new Error("El alcance fijado excede el global");
@@ -238,16 +238,14 @@ async function run() {
     // A token shaped like the pre-tenancy payload must not be accepted even if well-formed;
     // requireAuth checks the token version explicitly.
     const stale = await axios.post(`${BASE_URL}/auth/login`, {
-      username: "kinderdog_admin",
-      password: "kinderdog123",
+      username: "guarderia_admin",
+      password: "guarderia123",
       businessUnit: "DAYCARE",
     });
     const payload = JSON.parse(Buffer.from(stale.data.token.split(".")[1], "base64").toString());
     if (payload.tv !== 2) throw new Error(`El token debería declarar tv=2, trae ${payload.tv}`);
-    if (payload.daycareId !== PETHIJOS_ID) {
-      throw new Error(
-        `El token debería llevar daycareId=${PETHIJOS_ID}, trae ${payload.daycareId}`,
-      );
+    if (payload.daycareId !== MAIN_ID) {
+      throw new Error(`El token debería llevar daycareId=${MAIN_ID}, trae ${payload.daycareId}`);
     }
   });
 
@@ -257,7 +255,7 @@ async function run() {
     // client -- never that the client belonged to the caller's daycare. It wrote a reservation
     // into the attacker's tenant pointing at the victim's client, and returned the victim's
     // pet name in `concept`.
-    const victims = await clientFor(pethijos, undefined, "DAYCARE").get("/clients");
+    const victims = await clientFor(principal, undefined, "DAYCARE").get("/clients");
     const victim = (victims.data as any[]).find((c) => c.pets?.length > 0);
     if (!victim) throw new Error("La guardería principal debería tener un cliente con mascotas");
 
@@ -279,7 +277,7 @@ async function run() {
   });
 
   await test("No se puede crear una reserva con el cliente de otra guardería", async () => {
-    const victims = await clientFor(pethijos, undefined, "DAYCARE").get("/clients");
+    const victims = await clientFor(principal, undefined, "DAYCARE").get("/clients");
     const victim = (victims.data as any[]).find((c) => c.pets?.length > 0);
 
     const denied = await clientFor(demo, undefined, "GROOMING").post("/reservations", {
@@ -300,7 +298,7 @@ async function run() {
     // daycare has a DAYCARE and/or GROOMING unit, so that check passed for a foreign room:
     // the booking landed in someone else's room and its capacity was computed from that
     // tenant's occupancy, which the product treats as a hard physical limit.
-    const rooms = await clientFor(pethijos, undefined, "DAYCARE").get("/rooms");
+    const rooms = await clientFor(principal, undefined, "DAYCARE").get("/rooms");
     const foreignRoom = (rooms.data as any[])[0];
     if (!foreignRoom) throw new Error("La guardería principal debería tener salas");
 

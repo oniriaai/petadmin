@@ -28,7 +28,7 @@ compartidos, y accede únicamente a los módulos de producto que contrató.
 ## 1. Módulo Core Compartido (Datos Maestros Unificados)
 
 - ✅ **Clientes / Tutores (CRUD completo)**: Cédula, teléfono, WhatsApp, email, dirección, notas y estado activo.
-- ✅ **Mascotas / Perrhijos (CRUD completo)**: Nombre, especie, raza, sexo, fecha de nacimiento, microchip, notas médicas, alergias, foto y estado.
+- ✅ **Mascotas (CRUD completo)**: Nombre, especie, raza, sexo, fecha de nacimiento, microchip, notas médicas, alergias, foto y estado.
 - ✅ **Almacenamiento de Imágenes y Documentos**: Carga directa a Backblaze B2 mediante URLs presignadas sin sobrecargar la API.
 - ✅ **Autenticación y Control de Acceso**: JWT con roles `admin`, `daycare` y `grooming` dentro de
   cada guardería, más el rol `superadmin` del proveedor, que no pertenece a ninguna guardería y que
@@ -40,13 +40,13 @@ compartidos, y accede únicamente a los módulos de producto que contrató.
 
 Centrado en estancias físicas prolongadas (día completo o medio día) y ocupación de espacios:
 
-- ✅ **Salas y Capacidad Física**: Nombre, tipo de sala y capacidad máxima de perrhijos.
+- ✅ **Salas y Capacidad Física**: Nombre, tipo de sala y capacidad máxima de mascotas.
 - ✅ **Semáforo de Cupos en Vivo**: Monitoreo en tiempo real de cupos ocupados, cupos libres y porcentaje de saturación por sala.
 - ✅ **Control de Asistencia (Check-In / Check-Out)**:
   - Check-in con validación estricta de cupo disponible en sala (bloqueo automático ante sobrecupo).
   - Check-out con registro de cobro contable independiente para `DAYCARE`.
 - ✅ **Planes Recurrentes de Guardería**: Suscripciones por días semanales (2, 3, 4, 5 días) con generación automática de estancias para los próximos 30 días mediante scheduler diario.
-- ✅ **Rutas de Transporte**: Control de perrhijos con servicio de transporte, segmentado en ruta de recogida (mañana) y ruta de entrega (tarde).
+- ✅ **Rutas de Transporte**: Control de mascotas con servicio de transporte, segmentado en ruta de recogida (mañana) y ruta de entrega (tarde).
 - ✅ **Finanzas de Guardería**: Registro de ingresos, gastos y compras separados estrictamente de Peluquería.
 
 ---
@@ -95,7 +95,7 @@ Centrado en citas y turnos individuales por servicio de estética:
   a una única guardería. El proveedor puede fijar un inquilino con la cabecera `X-Daycare-Id`; al
   hacerlo, el workspace muestra un aviso permanente de "modo plataforma".
 - ✅ **Dashboard Consolidado**: Resumen diario de ingresos totales de la guardería (todas sus unidades),
-  ocupación promedio y flujo de perrhijos.
+  ocupación promedio y flujo de mascotas.
 - ✅ **Gestión Contable Segregada**:
   - Un cobro separado por unidad cuando una mascota recibe servicios de más de una el mismo día.
   - Cuentas por pagar (`Payables`) y pagos parciales/totales categorizados por unidad.

@@ -11,7 +11,7 @@ import { prisma } from "../src/db";
  */
 
 const BASE_URL = process.env.API_URL || "http://localhost:3001/api/v1";
-const DAYCARE_ID = "daycare_pethijos";
+const DAYCARE_ID = "daycare_principal";
 
 /**
  * Removes what this suite writes into the seeded tenant.
@@ -120,7 +120,7 @@ async function run() {
     vet = clientFor(await loginAs("vet_admin", "vet12345"));
     adminToken = await loginAs("admin_global", "admin123");
     admin = clientFor(adminToken, "VETERINARY");
-    grooming = clientFor(await loginAs("pethijos_admin", "pethijos123"));
+    grooming = clientFor(await loginAs("peluqueria_admin", "peluqueria123"));
   });
 
   await test("La sesión del rol veterinary queda fijada a la unidad Veterinaria", async () => {

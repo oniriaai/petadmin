@@ -29,7 +29,7 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
     id: "nucleo",
     label: "Núcleo",
     description:
-      "Autenticación, dashboard, ajustes de la guardería y los registros compartidos de tutores y perrhijos.",
+      "Autenticación, dashboard, ajustes de la guardería y los registros compartidos de tutores y mascotas.",
     // `users` is core on purpose: a daycare administering its own staff is not a feature to
     // be sold or withheld. Without it every password reset is a vendor support ticket.
     backendModuleIds: ["auth", "dashboard", "clients", "pets", "storage", "settings", "users"],
@@ -94,7 +94,7 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
     id: "cumplimiento",
     label: "Contratos y Alertas",
     description:
-      "Contratos de estancia por tutor y perrhijo, y alertas operativas y sanitarias. Ambos viven en la pantalla de Herramientas.",
+      "Contratos de estancia por tutor y mascota, y alertas operativas y sanitarias. Ambos viven en la pantalla de Herramientas.",
     backendModuleIds: ["contracts", "alerts"],
   },
   {

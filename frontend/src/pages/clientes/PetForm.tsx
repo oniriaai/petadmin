@@ -123,7 +123,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
       return;
     }
     if (!client && !pet) {
-      setError("Falta elegir el tutor de este perrhijo.");
+      setError("Falta elegir el tutor de esta mascota.");
       return;
     }
     setSaving(true);

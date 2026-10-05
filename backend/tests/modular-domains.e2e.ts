@@ -59,9 +59,9 @@ async function run() {
   let createdCheckInOutId: string;
 
   // 1. Auth
-  await test("Autenticación por roles (Pethijos, Kinderdog, Admin)", async () => {
-    groomingToken = await loginAs("pethijos_admin", "pethijos123", "GROOMING");
-    daycareToken = await loginAs("kinderdog_admin", "kinderdog123", "DAYCARE");
+  await test("Autenticación por roles (Peluquería, Guardería, Admin)", async () => {
+    groomingToken = await loginAs("peluqueria_admin", "peluqueria123", "GROOMING");
+    daycareToken = await loginAs("guarderia_admin", "guarderia123", "DAYCARE");
     adminToken = await loginAs("admin_global", "admin123");
     if (!groomingToken || !daycareToken || !adminToken) throw new Error("Fallo en tokens");
   });
@@ -167,7 +167,7 @@ async function run() {
     if (res.data.status !== "LISTO") throw new Error("Estado no actualizado a LISTO");
   });
 
-  await test("Peluquería: Completar y registrar cobro independiente para Pethijos", async () => {
+  await test("Peluquería: Completar y registrar cobro independiente", async () => {
     const client = axios.create({
       baseURL: BASE_URL,
       headers: { Authorization: `Bearer ${groomingToken}` },
@@ -175,7 +175,7 @@ async function run() {
     const res = await client.post(`/peluqueria/appointments/${createdAppointmentId}/complete`, {
       paymentMethod: "EFECTIVO",
       amount: 15.7, // Saldo
-      notes: "Cobro en mostrador Pethijos",
+      notes: "Cobro en mostrador de peluquería",
     });
 
     if (res.data.status !== "COMPLETADA") throw new Error("Estado no es COMPLETADA");
@@ -192,7 +192,7 @@ async function run() {
     });
     try {
       await client.get("/peluqueria/appointments");
-      throw new Error("Kinderdog no debería tener acceso a peluquería");
+      throw new Error("Guardería no debería tener acceso a peluquería");
     } catch (err: any) {
       if (err.response?.status !== 403)
         throw new Error(`Esperado 403, recibido ${err.response?.status}`);
@@ -237,7 +237,7 @@ async function run() {
     if (!petFound) throw new Error("Mascota no aparece en la sala ocupada");
   });
 
-  await test("Guardería: Registrar check-out con cobro independiente para Kinderdog", async () => {
+  await test("Guardería: Registrar check-out con cobro independiente", async () => {
     const client = axios.create({
       baseURL: BASE_URL,
       headers: { Authorization: `Bearer ${daycareToken}` },
@@ -252,7 +252,7 @@ async function run() {
 
     if (!res.data.checkOutTime) throw new Error("checkOutTime no registrado");
 
-    // Verificar que el ingreso de guardería quedó en Kinderdog
+    // Verificar que el ingreso de guardería quedó en la unidad de guardería
     const incClient = axios.create({
       baseURL: BASE_URL,
       headers: { Authorization: `Bearer ${daycareToken}` },
@@ -271,7 +271,7 @@ async function run() {
     });
     try {
       await client.get("/guarderia/occupancy");
-      throw new Error("Pethijos no debería tener acceso a guardería");
+      throw new Error("Peluquería no debería tener acceso a guardería");
     } catch (err: any) {
       if (err.response?.status !== 403)
         throw new Error(`Esperado 403, recibido ${err.response?.status}`);
