@@ -32,8 +32,25 @@ function preloadFonts(): Plugin {
   };
 }
 
+/**
+ * Publishes the commit a hosted build was made from as /version.txt, which is how the demo's
+ * deploy workflow knows what the static site is serving. Emitted by the build itself, not by
+ * the host's build command: that command lives in the host's settings and can lag behind the
+ * repository. Nothing is written when the host does not say which commit it is building.
+ */
+function publishCommit(): Plugin {
+  return {
+    name: "publish-commit",
+    generateBundle() {
+      const commit = process.env.RENDER_GIT_COMMIT;
+      if (!commit) return;
+      this.emitFile({ type: "asset", fileName: "version.txt", source: `${commit}\n` });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), tailwindcss(), preloadFonts()],
+  plugins: [react(), tailwindcss(), preloadFonts(), publishCommit()],
   server: {
     host: "0.0.0.0",
     port: 5174,

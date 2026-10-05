@@ -77,9 +77,9 @@ services:
     rootDir: frontend
     branch: main
     autoDeployTrigger: "off"
-    # version.txt is how the deploy workflow knows which commit the site is serving. A real
-    # file, so it is served as such and not rewritten to index.html.
-    buildCommand: npm ci && npm run build && echo "$RENDER_GIT_COMMIT" > dist/version.txt
+    # The build also writes dist/version.txt (frontend/vite.config.ts), which is how the deploy
+    # workflow knows which commit the site is serving.
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     # A single-page app: unknown paths are routes, not missing files.
     routes:
