@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.seed.json",
     "build:seed": "tsc -p tsconfig.prod-seed.json",
     "start": "node dist/main.js",
+    "start:demo": "npx --yes prisma@5.22.0 migrate deploy && node dist-seed/prisma/seed.js && node dist/main.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",

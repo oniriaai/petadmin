@@ -19,12 +19,12 @@ services:
     dockerfilePath: ./backend/Dockerfile
     # The free plan has no pre-deploy step, so migrations and the seed run before the server on
     # every start, including each wake from idle. Both are no-ops when there is nothing to do.
-    # The Prisma CLI is a dev dependency and is not in the image; the version is pinned to the
-    # one in package-lock.json so `npx` cannot fetch a newer major.
-    dockerCommand: >-
-      sh -c "npx --yes prisma@5.22.0 migrate deploy
-      && node dist-seed/prisma/seed.js
-      && node dist/main.js"
+    # The sequence lives in an npm script (backend/package.json) rather than here: Render does
+    # not parse a quoted `sh -c "a && b"` the way a shell does, and passed the whole string to
+    # sh as the name of one command.
+    # The script pins the Prisma CLI to the version in package-lock.json: it is a dev dependency,
+    # absent from the image, and an unpinned `npx prisma` would fetch a newer major.
+    dockerCommand: npm run start:demo
     healthCheckPath: /api/v1/ready
     envVars:
       - key: NODE_ENV
