@@ -1,0 +1,84 @@
+# Render Blueprint for the hosted DEMO. Not production: see docker-compose.prod.yml for that.
+#
+# Two free services: the API as a Docker web service, and the frontend as a static site. The
+# database is external (Neon free tier), because Render's own free Postgres is deleted 30 days
+# after it is created.
+#
+# This instance seeds the demo tenants, whose passwords are public, and rebuilds the main one
+# every day. Never point its DATABASE_URL at a database that holds a customer's data.
+#
+# Step by step, including the values entered by hand: docs/demo-hosting.md
+
+services:
+  - type: web
+    name: argos-demo-api
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    # The free plan has no pre-deploy step, so migrations and the seed run before the server on
+    # every start, including each wake from idle. Both are no-ops when there is nothing to do.
+    # The Prisma CLI is a dev dependency and is not in the image; the version is pinned to the
+    # one in package-lock.json so `npx` cannot fetch a newer major.
+    dockerCommand: >-
+      sh -c "npx --yes prisma@5.22.0 migrate deploy
+      && node dist-seed/prisma/seed.js
+      && node dist/main.js"
+    healthCheckPath: /api/v1/ready
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render routes to the port the process listens on; the backend reads BACKEND_PORT.
+      - key: BACKEND_PORT
+        value: "10000"
+      - key: PORT
+        value: "10000"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SEED_DEMO_DATA
+        value: "true"
+      - key: SEED_DEMO_RESET
+        value: daily
+      # No cron on the free plan. The generator runs once at each start instead, which for a
+      # service that sleeps after 15 idle minutes is several times a day.
+      - key: RUN_SCHEDULER_IN_PROCESS
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPERADMIN_PASSWORD
+        generateValue: true
+      # Neon's DIRECT connection string (the host without "-pooler"): `migrate deploy` needs a
+      # session, which the pooled endpoint does not give it.
+      - key: DATABASE_URL
+        sync: false
+      # The static site's URL, e.g. https://argos-demo.onrender.com (no trailing slash).
+      - key: CORS_ORIGINS
+        sync: false
+      - key: B2_KEY_ID
+        sync: false
+      - key: B2_APPLICATION_KEY
+        sync: false
+      - key: B2_BUCKET_NAME
+        sync: false
+      - key: B2_ENDPOINT
+        sync: false
+      - key: B2_REGION
+        sync: false
+
+  - type: web
+    name: argos-demo
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    # A single-page app: unknown paths are routes, not missing files.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Baked into the bundle at build time, e.g. https://argos-demo-api.onrender.com/api/v1.
+      # Left empty, every request the page makes 404s; redeploy after setting it.
+      - key: VITE_API_URL
+        sync: false

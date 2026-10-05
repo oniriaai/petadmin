@@ -433,6 +433,10 @@ contratación deben evitar.
 
 ### Guardería `pethijos` — todos los módulos activos
 
+Se muestra como **Huellas Felices**, un negocio ficticio de Quito con las tres unidades y un mes
+de historial. El identificador y los usuarios conservan sus nombres porque las suites e2e entran
+con ellos.
+
 | Usuario | Contraseña | Rol | Contexto |
 |---|---|---|---|
 | `admin_global` | `admin123` | `admin` | Vista consolidada con selector de unidad |
@@ -493,4 +497,5 @@ sembrados ni los altera.
 - [docs/alcance.md](docs/alcance.md): alcance funcional por módulo y reglas de negocio.
 - [docs/functional-design.md](docs/functional-design.md): flujos operativos y mapa de experiencia.
 - [docs/adding-a-module.md](docs/adding-a-module.md): checklist para incorporar nuevos módulos.
+- [docs/demo-hosting.md](docs/demo-hosting.md): demo pública sin coste (Render + Neon) y su reinicio diario.
 - [docs/futuras-implementaciones.md](docs/futuras-implementaciones.md): roadmap técnico.
