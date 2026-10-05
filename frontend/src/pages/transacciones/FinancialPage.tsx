@@ -289,7 +289,7 @@ export function FinancialPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar..."
             aria-label="Buscar"
-            className="min-w-[10rem] flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-faint"
+            className="min-w-[10rem] flex-1 bg-transparent text-sm text-ink outline-hidden placeholder:text-faint"
           />
 
           {activeTab === "income" && (
@@ -321,7 +321,7 @@ export function FinancialPage() {
               setStatusFilter("");
               loadAll();
             }}
-            className="p-2 hover:bg-sunken rounded transition"
+            className="p-2 hover:bg-sunken rounded-sm transition"
             title="Limpiar filtros"
           >
             <RefreshCw size={18} />
@@ -462,13 +462,13 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
                             onEdit(income);
                             onOpenForm();
                           }}
-                          className="p-1.5 hover:bg-info-soft text-action rounded transition"
+                          className="p-1.5 hover:bg-info-soft text-action rounded-sm transition"
                         >
                           <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => onDelete(income.id, income.concept)}
-                          className="p-1.5 hover:bg-danger-soft text-danger rounded transition"
+                          className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -535,7 +535,7 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
                       {p.status !== "PAGADO" && (
                         <button
                           onClick={() => onPay(p)}
-                          className="p-1.5 bg-success-soft text-success rounded hover:bg-success-soft transition"
+                          className="p-1.5 bg-success-soft text-success rounded-sm hover:bg-success-soft transition"
                           title="Registrar pago"
                         >
                           <CreditCard size={14} />
@@ -543,7 +543,7 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
                       )}
                       <button
                         onClick={() => onDelete(p.id)}
-                        className="p-1.5 hover:bg-danger-soft text-danger rounded transition"
+                        className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -611,7 +611,7 @@ function ProvidersTable({ providers, onEdit, load }: any) {
                     <div className="flex gap-1 justify-end">
                       <button
                         onClick={() => onEdit(p)}
-                        className="p-1.5 hover:bg-sunken rounded transition text-muted"
+                        className="p-1.5 hover:bg-sunken rounded-sm transition text-muted"
                         aria-label="Editar proveedor"
                         title="Editar"
                       >
@@ -620,7 +620,7 @@ function ProvidersTable({ providers, onEdit, load }: any) {
                       {p.isActive && (
                         <button
                           onClick={() => deactivate(p.id)}
-                          className="p-1.5 hover:bg-danger-soft text-danger rounded transition"
+                          className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
                         >
                           <Trash2 size={13} />
                         </button>

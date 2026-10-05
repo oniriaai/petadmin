@@ -167,7 +167,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
                     flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all cursor-pointer
                     ${
                       isSelected
-                        ? "border-action bg-info-soft text-info-ink shadow-sm"
+                        ? "border-action bg-info-soft text-info-ink shadow-xs"
                         : "border-line-subtle bg-surface hover:border-line text-muted"
                     }
                   `}
@@ -226,13 +226,13 @@ export function CheckInOutForm({ onSuccess }: Props) {
           type="button"
           onClick={() => setFormData((prev) => ({ ...prev, checkInNow: !prev.checkInNow }))}
           className={`
-            relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none
+            relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden
             ${formData.checkInNow ? "bg-action" : "bg-line-subtle"}
           `}
         >
           <span
             className={`
-              pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface shadow ring-0 transition duration-200 ease-in-out
+              pointer-events-none inline-block h-5 w-5 transform rounded-full bg-surface shadow-sm ring-0 transition duration-200 ease-in-out
               ${formData.checkInNow ? "translate-x-5" : "translate-x-0"}
             `}
           />

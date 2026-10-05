@@ -122,7 +122,7 @@ export function CheckOutModal({
                 type="checkbox"
                 checked={createIncome}
                 onChange={(e) => setCreateIncome(e.target.checked)}
-                className="rounded"
+                className="rounded-sm"
               />
               <span className="text-sm font-medium">Crear registro de ingreso</span>
             </label>

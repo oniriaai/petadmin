@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { cls } from "../../lib/utils";
+import { cls } from "../../lib/cls";
 
 /**
  * The Greek-key band.

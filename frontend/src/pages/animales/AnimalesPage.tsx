@@ -46,14 +46,14 @@ function PetAvatar({ pet, size = "small" }: { pet: Pet; size?: "small" | "large"
         loading="lazy"
         decoding="async"
         onError={() => setBroken(true)}
-        className={`${wrapperClass} object-cover ${isSmall ? "border border-line-subtle" : "border-2 border-white shadow-sm"}`}
+        className={`${wrapperClass} object-cover ${isSmall ? "border border-line-subtle" : "border-2 border-white shadow-xs"}`}
       />
     );
   }
 
   return (
     <span
-      className={`${isSmall ? "text-2xl" : "text-5xl"} ${wrapperClass} flex items-center justify-center ${isSmall ? "bg-sunken" : "bg-surface shadow-sm"}`}
+      className={`${isSmall ? "text-2xl" : "text-5xl"} ${wrapperClass} flex items-center justify-center ${isSmall ? "bg-sunken" : "bg-surface shadow-xs"}`}
     >
       {pet.species === "dog" ? <Dog size={isSmall ? 22 : 40} /> : <Cat size={isSmall ? 22 : 40} />}
     </span>

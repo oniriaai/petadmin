@@ -1,10 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 @layer base {
-  * {
+  /*
+   * Tailwind v3 defaults that v4 changed and these screens were built on: a neutral default
+   * border, a pointer on buttons and a fixed placeholder colour.
+   */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
     box-sizing: border-box;
+    border-color: var(--color-gray-200, currentColor);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
   }
   :root {
     /* Argos Suite: warm marble and black-figure ink (BRAND.md). */
@@ -163,21 +179,28 @@
   .shell-tip {
     @apply pointer-events-none fixed z-drawer -translate-y-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-shell-raised px-2.5 py-1.5 text-xs font-medium text-shell-ink shadow-overlay;
   }
-  .btn {
+  /* Tailwind v4 cannot `@apply` a component class, so the variants share the base rule here. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .btn-success,
+  .btn-warning {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-0;
-  }
-  .btn:active:not(:disabled) {
-    transform: translateY(1px);
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
   }
   .btn-primary {
-    @apply btn text-white;
+    @apply text-white;
     background-color: var(--color-action);
   }
   .btn-primary:hover {
     background-color: var(--color-action-hover);
   }
   .btn-secondary {
-    @apply btn border;
+    @apply border;
     color: var(--color-muted);
     background: var(--color-surface);
     border-color: var(--color-border);
@@ -186,21 +209,20 @@
     background: var(--color-sunken);
   }
   .btn-danger {
-    @apply btn text-white;
+    @apply text-white;
     background: #b91c1c;
   }
   .btn-danger:hover {
     background: #991b1b;
   }
   .btn-ghost {
-    @apply btn;
     color: var(--color-muted);
   }
   .btn-ghost:hover {
     background: var(--color-sunken);
   }
   .btn-success {
-    @apply btn text-white;
+    @apply text-white;
     background: #15803d;
   }
   .btn-success:hover {
@@ -208,7 +230,7 @@
   }
   /* Dark text: white on Oro is only 3 : 1. */
   .btn-warning {
-    @apply btn border;
+    @apply border;
     color: var(--color-warning-ink);
     background: var(--color-warning-soft);
     border-color: var(--color-warning-line);

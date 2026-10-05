@@ -1,4 +1,4 @@
-import { cls } from "../../lib/utils";
+import { cls } from "../../lib/cls";
 
 const SIZES = {
   md: { argos: "text-xl", suite: "text-[9px]" },

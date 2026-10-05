@@ -282,7 +282,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                         <span className="font-medium text-ink">
                           {c.lastName}, {c.firstName}
                         </span>
-                        <span className="text-[10px] bg-sunken text-muted px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100">
+                        <span className="text-[10px] bg-sunken text-muted px-1.5 py-0.5 rounded-sm opacity-0 group-hover:opacity-100">
                           Seleccionar
                         </span>
                       </button>
@@ -383,7 +383,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
           {/* Section: Financials & Transport */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 space-y-4">
-              <div className="bg-sunken border border-line-subtle rounded-xl p-5 shadow-sm space-y-4">
+              <div className="bg-sunken border border-line-subtle rounded-xl p-5 shadow-xs space-y-4">
                 <div className="flex items-center gap-2 border-b border-line-subtle pb-2 mb-2">
                   <DollarSign size={18} className="text-success" />
                   <h3 className="font-bold text-ink uppercase tracking-wider text-xs">
@@ -511,7 +511,7 @@ export function NuevaReservaModal({ open, onClose, onSaved }: Props) {
                       type="checkbox"
                       checked={needsTransport}
                       onChange={(e) => setNeedsTransport(e.target.checked)}
-                      className="w-4 h-4 rounded text-action transition-all"
+                      className="w-4 h-4 rounded-sm text-action transition-all"
                     />
                     <span className="text-sm font-bold text-muted group-hover:text-action transition-colors flex items-center gap-1.5">
                       <Truck size={16} /> Requiere transporte
