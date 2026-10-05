@@ -192,7 +192,7 @@ const UNITS: Unit[] = [
       { Icon: Bed, label: "Hospitalización con hoja de tratamiento" },
     ],
     shot: "veterinaria",
-    shotAlt: "Agenda de la clínica veterinaria con la sala de espera del día",
+    shotAlt: "Pacientes de la clínica veterinaria con el acceso a cada historia clínica",
     tab: "bg-veterinary-700",
     panel:
       "bg-veterinary-50 border-veterinary-200 dark:bg-veterinary-900 dark:border-veterinary-800",

@@ -7,10 +7,23 @@ import "./styles.css";
 
 /**
  * The public product page and the application are separate chunks, chosen before either loads:
- * a visitor to /bienvenida never downloads the operator's code or starts a session check, and
- * an operator never downloads the page.
+ * a visitor never downloads the operator's code or starts a session check, and an operator never
+ * downloads the page.
+ *
+ * The page is what the bare address opens. A browser that holds a session goes straight to the
+ * workspace instead, so `/` stays the operator's dashboard; a session that has lapsed is caught
+ * by the application, which sends it to `/login`. `/bienvenida` always shows the page.
  */
-const isLanding = window.location.pathname.replace(/\/+$/, "") === "/bienvenida";
+function hasSession() {
+  try {
+    return localStorage.getItem("token") !== null;
+  } catch {
+    return false;
+  }
+}
+
+const path = window.location.pathname.replace(/\/+$/, "");
+const isLanding = path === "/bienvenida" || (path === "" && !hasSession());
 const Root = lazy(() =>
   isLanding
     ? import("./pages/Landing")
