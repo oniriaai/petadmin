@@ -114,7 +114,7 @@ components:
 
 # Brand identity: Argos Suite
 
-This file is the source of truth for rebranding this repository from **Pethijos Admin** to **Argos Suite**. The frontmatter holds machine-readable tokens; the sections below explain how to apply them. `PRODUCT.md` stays the source of truth for what the product does.
+This file is the source of truth for branding this repository as **Argos Suite**. The frontmatter holds machine-readable tokens; the sections below explain how to apply them. `PRODUCT.md` stays the source of truth for what the product does.
 
 Decided on 4 Oct 2026, and extended the same day for the veterinary unit (Argos Veterinaria), which shipped in PR #14. The full rationale lives in the project's rebranding guide; this file keeps only what an implementer needs.
 
@@ -127,11 +127,11 @@ Decided on 4 Oct 2026, and extended the same day for the veterinary unit (Argos 
 | Descriptor | Argos Suite · Gestión de guarderías, peluquerías y veterinarias | Login screen, website header |
 | Business units | Argos Guardería, Argos Peluquería, Argos Veterinaria | Pricing pages, unit selector, unit badges |
 | Modules | Argos Finanzas, Argos Inventario, Argos Informes, Argos Contratos | Pricing pages, module badges |
-| Tenant brands | Pethijos, Kinderdog and each customer's own name | Inside the app shell, which already shows the tenant's name |
+| Tenant brands | Each customer's own name | Inside the app shell, which already shows the tenant's name |
 
 - Write "Argos Suite" with a normal A everywhere in text. The Greek lambda (Λ) belongs only to the drawn logo.
-- Pethijos and Kinderdog are the first tenant's brands, not the product's. Do not rename the seeded tenant, its slug `pethijos`, or the `DAYCARE` / `GROOMING` / `VETERINARY` identifiers.
-- Keep the interface vocabulary: "Perrhijos" for pets, "Tutor", "Cupos", "Guardería", "Peluquería", and "Veterinaria" for the third unit.
+- A tenant's brand is never the product's. Do not rename the `DAYCARE` / `GROOMING` / `VETERINARY` identifiers.
+- Keep the interface vocabulary: "Mascotas" for pets, "Tutor", "Cupos", "Guardería", "Peluquería", and "Veterinaria" for the third unit.
 - **Argos Veterinaria** is the third business unit (`VETERINARY`, role `veterinary`, module `veterinaria`), next to Guardería and Peluquería, with its own books. It covers the consultation agenda and waiting room, the clinical record and patient history, vaccines and preventive care, prescriptions and pharmacy, hospitalization, procedures with consent, laboratory and imaging, and collection when the visit closes.
 
 **The story.** Argos, Odysseus's dog, waited 20 years and was the only one to recognize him when he came home. Argus, the hundred-eyed watchman, never stopped watching. Argos Suite watches over the business and keeps every record faithfully, so owners can spend their time with the animals. With the veterinary unit, that faithful record follows each pet from the clinic to the groomer and the daycare.
@@ -146,8 +146,8 @@ The veterinary unit adds one message: **one record for each pet across the clini
 | --- | --- |
 | Tagline | Cuidamos tu negocio, para que tú cuides de ellos. |
 | Brand line | Todo tu negocio, a la vista y en buenas manos. |
-| Veterinary line | Una sola ficha para cada perrhijo: de la consulta a la peluquería y la guardería. |
-| Elevator pitch | Argos Suite acompaña a las guarderías, peluquerías y veterinarias de mascotas de Ecuador para que administren su negocio con tranquilidad. Reservas, cupos, citas, fichas clínicas, personal, cobros e inventario en un solo lugar, con las cuentas de cada unidad por separado. Tú dedicas tu tiempo a los perrhijos; nosotros te ayudamos con el resto. Contratas solo los módulos que usas. |
+| Veterinary line | Una sola ficha para cada mascota: de la consulta a la peluquería y la guardería. |
+| Elevator pitch | Argos Suite acompaña a las guarderías, peluquerías y veterinarias de mascotas de Ecuador para que administren su negocio con tranquilidad. Reservas, cupos, citas, fichas clínicas, personal, cobros e inventario en un solo lugar, con las cuentas de cada unidad por separado. Tú dedicas tu tiempo a las mascotas; nosotros te ayudamos con el resto. Contratas solo los módulos que usas. |
 
 Do not claim what has not shipped: SRI electronic invoicing, automatic reminders (the clinic still sends them by hand from its own WhatsApp), a printable vaccination card or file attachments on lab results and consents. Do not give medical advice in product copy, or invent customer numbers, testimonials, time savings or prices (see `PRODUCT.md`).
 
@@ -164,7 +164,7 @@ Warm and close: a trusted colleague who loves animals and knows the business. Ne
 
 | Moment | Write | Avoid |
 | --- | --- | --- |
-| Welcome | ¡Hola, Ana! Hoy tienes 8 perrhijos en guardería y 5 citas en peluquería. | Bienvenido al sistema. |
+| Welcome | ¡Hola, Ana! Hoy tienes 8 mascotas en guardería y 5 citas en peluquería. | Bienvenido al sistema. |
 | Capacity error | La Sala Grande ya está completa (12 de 12). ¿La ubicamos en otra sala o esperamos una salida? | Error: capacidad excedida. |
 | Grooming done | ¡Luna quedó lista! Avísale a su tutora que ya puede pasar por ella. | Servicio terminado con éxito. |
 | Empty state | Hoy todavía no hay citas. ¿Agendamos la primera? | No hay datos. |
@@ -295,7 +295,7 @@ The ramps add a 200 shade because `ConsultaInpatientPanels.tsx` already uses `bo
 
 | Touchpoint | Change | File |
 | --- | --- | --- |
-| Product name | "Pethijos Admin" becomes "Argos Suite" | `frontend/src/pages/Login.tsx`, `frontend/src/components/layout/AppShell.tsx`, `frontend/src/pages/GuidePage.tsx`, `README.md`, `PRODUCT.md`, `CLAUDE.md` |
+| Product name | "Argos Suite" everywhere | `frontend/src/pages/Login.tsx`, `frontend/src/components/layout/AppShell.tsx`, `frontend/src/pages/GuidePage.tsx`, `README.md`, `PRODUCT.md`, `CLAUDE.md` |
 | Browser title and favicon | "Argos Suite"; Sello griego replaces the paw emoji | `frontend/index.html` |
 | Login screen | Lockup, descriptor, Marcellus headline, warm welcome line | `frontend/src/pages/Login.tsx` |
 | Fonts | Self-host Cinzel, Marcellus, Inter; body font becomes Inter | `frontend/src/styles.css` and new font files |

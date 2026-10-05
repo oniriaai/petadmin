@@ -52,13 +52,13 @@ async function main(): Promise<void> {
   console.log("\n⚙️  Configuración por guardería\n" + "=".repeat(60));
 
   const admin = clientFor(await login("admin_global", "admin123"));
-  const operator = clientFor(await login("kinderdog_admin", "kinderdog123", "DAYCARE"));
+  const operator = clientFor(await login("guarderia_admin", "guarderia123", "DAYCARE"));
   const demo = clientFor(await login("demo_admin", "demo123", "GROOMING"));
 
   await test("Devuelve la guardería y una entrada por unidad contratada", async () => {
     const res = await admin.get("/settings");
     expectStatus(res.status, 200, "GET /settings");
-    if (res.data.daycare?.slug !== "pethijos") throw new Error("guardería inesperada");
+    if (res.data.daycare?.slug !== "principal") throw new Error("guardería inesperada");
     const units = res.data.units.map((u: { businessUnit: string }) => u.businessUnit).sort();
     if (units.join(",") !== "DAYCARE,GROOMING,VETERINARY") {
       throw new Error(`unidades: ${units.join(",")}`);

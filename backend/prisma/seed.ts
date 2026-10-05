@@ -14,16 +14,22 @@ const BU = {
 } as const;
 
 /**
- * Literal tenant ids, matching 20260903000000_add_daycare_tenancy so the migration, this seed,
- * the platform console fixtures and the e2e suites all refer to the same daycares.
+ * Literal tenant ids, so this seed, the platform console fixtures and the e2e suites all refer
+ * to the same daycares.
  */
-const PETHIJOS_ID = "daycare_pethijos";
+const MAIN_ID = "daycare_principal";
 const DEMO_ID = "daycare_demo";
+
+/**
+ * The id the main demo tenant was seeded under before it was renamed. It is also the id
+ * 20260903000000_add_daycare_tenancy backfills a single-tenant installation into.
+ */
+const LEGACY_MAIN_ID = "daycare_pethijos";
 
 /**
  * Whether to create the demo tenants and their sample data.
  *
- * The `pethijos` and `demo` tenants carry well-known passwords (`admin123`, `demo123`) and
+ * The `principal` and `demo` tenants carry well-known passwords (`admin123`, `demo123`) and
  * exist for development and for the isolation suites. They must never reach a customer-facing
  * database, so outside development this is off unless asked for explicitly. With it off the
  * seed still provisions the platform superadmin, which is what a fresh production database
@@ -41,10 +47,10 @@ const SEED_DEMO_DATA = process.env.SEED_DEMO_DATA
  * With `SEED_DEMO_RESET=daily` the tenant is deleted and seeded again the first time the seed
  * runs on a later local day.
  *
- * NEVER SET THIS ON A DATABASE THAT HOLDS A CUSTOMER'S DATA. Some installations run their real
- * business under the `daycare_pethijos` id this seed uses (see the comment on
- * 20260905000000_drop_unused_backfill_tenant), and this deletes every row that tenant owns. It
- * is ignored unless SEED_DEMO_DATA is also on.
+ * NEVER SET THIS ON A DATABASE THAT HOLDS A CUSTOMER'S DATA. Besides the main demo tenant it
+ * deletes the one left under the `daycare_pethijos` id this seed used to use, and some
+ * installations run their real business under that id (see the comment on
+ * 20260905000000_drop_unused_backfill_tenant). It is ignored unless SEED_DEMO_DATA is also on.
  */
 const SEED_DEMO_RESET = process.env.SEED_DEMO_RESET?.toLowerCase() === "daily";
 
@@ -97,11 +103,11 @@ async function ensureSuperadmin() {
 /** The two tenants: the showcase business, plus a restricted one for isolation tests. */
 async function ensureDaycares() {
   await prisma.daycare.upsert({
-    where: { id: PETHIJOS_ID },
+    where: { id: MAIN_ID },
     update: {},
     create: {
-      id: PETHIJOS_ID,
-      slug: "pethijos",
+      id: MAIN_ID,
+      slug: "principal",
       name: "Huellas Felices",
       legalName: "Huellas Felices Centro Canino S.A.S.",
       timezone: MAIN_TIMEZONE,
@@ -128,7 +134,7 @@ async function ensureDaycares() {
   const DEMO_ENABLED = new Set(["reservas", "peluqueria"]);
   const entitlements: Array<{ daycareId: string; moduleId: string; isEnabled: boolean }> = [
     ...TOGGLEABLE_PRODUCT_MODULES.map((m) => ({
-      daycareId: PETHIJOS_ID,
+      daycareId: MAIN_ID,
       moduleId: m.id,
       isEnabled: true,
     })),
@@ -183,28 +189,28 @@ async function ensureDaycares() {
  */
 async function ensureVeterinaryClinic() {
   const daycare = await prisma.daycare.findUnique({
-    where: { id: PETHIJOS_ID },
+    where: { id: MAIN_ID },
     select: { units: true },
   });
   if (!daycare) return;
   if (!daycare.units.split(",").includes(BU.VETERINARY)) {
     await prisma.daycare.update({
-      where: { id: PETHIJOS_ID },
+      where: { id: MAIN_ID },
       data: { units: `${daycare.units},${BU.VETERINARY}` },
     });
   }
 
   await prisma.businessUnitSetting.upsert({
-    where: { daycareId_businessUnit: { daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY } },
+    where: { daycareId_businessUnit: { daycareId: MAIN_ID, businessUnit: BU.VETERINARY } },
     update: {},
-    create: { daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY, timezone: MAIN_TIMEZONE },
+    create: { daycareId: MAIN_ID, businessUnit: BU.VETERINARY, timezone: MAIN_TIMEZONE },
   });
 
   const vetUser = await prisma.user.upsert({
-    where: { daycareId_username: { daycareId: PETHIJOS_ID, username: "vet_admin" } },
+    where: { daycareId_username: { daycareId: MAIN_ID, username: "vet_admin" } },
     update: {},
     create: {
-      daycareId: PETHIJOS_ID,
+      daycareId: MAIN_ID,
       username: "vet_admin",
       name: "Dra. Camila Rivas",
       passwordHash: bcrypt.hashSync("vet12345", 10),
@@ -214,7 +220,7 @@ async function ensureVeterinaryClinic() {
   });
 
   const clinicRooms = await prisma.room.count({
-    where: { daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY },
+    where: { daycareId: MAIN_ID, businessUnit: BU.VETERINARY },
   });
   if (clinicRooms === 0) {
     await prisma.room.createMany({
@@ -223,17 +229,17 @@ async function ensureVeterinaryClinic() {
         { name: "Consultorio 2", capacity: 1, type: "consultorio" },
         { name: "Quirófano", capacity: 1, type: "quirofano" },
         { name: "Hospitalización", capacity: 6, type: "hospital" },
-      ].map((room) => ({ ...room, daycareId: PETHIJOS_ID, businessUnit: BU.VETERINARY })),
+      ].map((room) => ({ ...room, daycareId: MAIN_ID, businessUnit: BU.VETERINARY })),
     });
   }
 
   const staff = await prisma.veterinarian.count({
-    where: { daycareId: PETHIJOS_ID, isExternal: false, userId: vetUser.id },
+    where: { daycareId: MAIN_ID, isExternal: false, userId: vetUser.id },
   });
   if (staff === 0) {
     await prisma.veterinarian.create({
       data: {
-        daycareId: PETHIJOS_ID,
+        daycareId: MAIN_ID,
         name: "Dra. Camila Rivas",
         licenseNumber: "MVZ-1042",
         specialty: "Medicina general",
@@ -242,7 +248,7 @@ async function ensureVeterinaryClinic() {
     });
   }
 
-  const services = await prisma.vetService.count({ where: { daycareId: PETHIJOS_ID } });
+  const services = await prisma.vetService.count({ where: { daycareId: MAIN_ID } });
   if (services === 0) {
     await prisma.vetService.createMany({
       data: [
@@ -261,19 +267,43 @@ async function ensureVeterinaryClinic() {
           durationMinutes: 60,
           basePrice: 70,
         },
-      ].map((service) => ({ ...service, daycareId: PETHIJOS_ID })),
+      ].map((service) => ({ ...service, daycareId: MAIN_ID })),
     });
   }
 }
 
 /**
+ * Deletes a demo tenant and everything it owns, returning how many rows went. Stored files are
+ * left alone: the bucket may be shared with something that matters, and a demo visitor's upload
+ * is not worth the risk of a prefix deletion in the wrong place.
+ */
+async function deleteDemoTenant(id: string, slug: string): Promise<number> {
+  // Deleting requires a deactivated tenant: the same two-step the console enforces.
+  await prisma.daycare.update({ where: { id }, data: { isActive: false } });
+  const summary = await deleteDaycare(id, slug, { purgeStorage: false });
+  return Object.values(summary.rows).reduce((sum, count) => sum + count, 0);
+}
+
+/**
  * Deletes the main demo tenant when it was seeded on an earlier local day, so the caller seeds
- * it afresh. Stored files are left alone: the bucket may be shared with something that matters,
- * and a demo visitor's upload is not worth the risk of a prefix deletion in the wrong place.
+ * it afresh.
  */
 async function resetStaleDemoTenant(): Promise<void> {
+  // A demo seeded before the rename still holds its tenant under the old id. Left in place it
+  // would duplicate every demo username next to the new tenant, so it goes whatever its age.
+  const legacy = await prisma.daycare.findUnique({
+    where: { id: LEGACY_MAIN_ID },
+    select: { slug: true },
+  });
+  if (legacy) {
+    const rows = await deleteDemoTenant(LEGACY_MAIN_ID, legacy.slug);
+    console.log(
+      `[seed] SEED_DEMO_RESET: guardería de demostración con el id anterior eliminada (${rows} filas)`,
+    );
+  }
+
   const daycare = await prisma.daycare.findUnique({
-    where: { id: PETHIJOS_ID },
+    where: { id: MAIN_ID },
     select: { slug: true, createdAt: true },
   });
   if (!daycare) return;
@@ -284,10 +314,7 @@ async function resetStaleDemoTenant(): Promise<void> {
   };
   if (localDay(daycare.createdAt) >= localDay(new Date())) return;
 
-  // Deleting requires a deactivated tenant: the same two-step the console enforces.
-  await prisma.daycare.update({ where: { id: PETHIJOS_ID }, data: { isActive: false } });
-  const summary = await deleteDaycare(PETHIJOS_ID, daycare.slug, { purgeStorage: false });
-  const rows = Object.values(summary.rows).reduce((sum, count) => sum + count, 0);
+  const rows = await deleteDemoTenant(MAIN_ID, daycare.slug);
   console.log(
     `[seed] SEED_DEMO_RESET: datos de demostración de un día anterior eliminados (${rows} filas)`,
   );
@@ -300,7 +327,7 @@ async function main() {
   if (!SEED_DEMO_DATA) {
     console.log(
       "[seed] SEED_DEMO_DATA no está activo: solo se provisionó la cuenta de plataforma. " +
-        "Las guarderías de demostración (pethijos, demo) NO se crearon.",
+        "Las guarderías de demostración (principal, demo) NO se crearon.",
     );
     return;
   }
@@ -309,7 +336,7 @@ async function main() {
 
   await ensureDaycares();
 
-  const existing = await prisma.user.count({ where: { daycareId: PETHIJOS_ID } });
+  const existing = await prisma.user.count({ where: { daycareId: MAIN_ID } });
   if (existing > 0) {
     // A database seeded before the clinic existed still gets it.
     await ensureVeterinaryClinic();
@@ -318,7 +345,7 @@ async function main() {
   }
 
   const summary = await seedShowcaseTenant(prisma, {
-    daycareId: PETHIJOS_ID,
+    daycareId: MAIN_ID,
     timezone: MAIN_TIMEZONE,
     ensureClinic: ensureVeterinaryClinic,
   });

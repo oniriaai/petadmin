@@ -41,7 +41,7 @@ control y quedaría gratis para todas las guarderías.
 | `suspension.e2e.ts` | `test:suspension` | Desactivar un usuario o suspender un inquilino invalida los tokens **en la petición siguiente**, no al caducar |
 | `rate-limit.e2e.ts` | `test:ratelimit` | Corte de intentos de login (por IP **y** usuario), lista blanca de CORS y cabeceras de `helmet` |
 | `modular-domains.e2e.ts` | `test:modular` | Peluquería (catálogo con duraciones, agenda, estados del flujo, cobro para `GROOMING`) y Guardería (ocupación en vivo, aforo en el check-in, cobro para `DAYCARE`), con el aislamiento entre ambos roles |
-| `veterinaria.e2e.ts` | `test:veterinaria` | La clínica: consulta desde la sala de espera hasta el cobro en `VETERINARY`, abonos, congelación al cerrar, doble reserva de veterinario y sala (salvo urgencias) también con peticiones simultáneas, vacunas y preventivos con lote, receta dispensada una sola vez con descuento de stock y libro de controlados, hospitalización con hoja de tratamiento y cobro de la estancia al alta, cirugía que exige consentimiento firmado, resultados de laboratorio, eutanasia que registra el fallecimiento y bloquea nuevas reservas, recordatorios que una dosis posterior o un resultado retiran, informe del periodo solo para administradores, y que los demás roles y unidades no la alcancen. Retira sus propios datos de `pethijos` al terminar, por base de datos |
+| `veterinaria.e2e.ts` | `test:veterinaria` | La clínica: consulta desde la sala de espera hasta el cobro en `VETERINARY`, abonos, congelación al cerrar, doble reserva de veterinario y sala (salvo urgencias) también con peticiones simultáneas, vacunas y preventivos con lote, receta dispensada una sola vez con descuento de stock y libro de controlados, hospitalización con hoja de tratamiento y cobro de la estancia al alta, cirugía que exige consentimiento firmado, resultados de laboratorio, eutanasia que registra el fallecimiento y bloquea nuevas reservas, recordatorios que una dosis posterior o un resultado retiran, informe del periodo solo para administradores, y que los demás roles y unidades no la alcancen. Retira sus propios datos de `principal` al terminar, por base de datos |
 | `financial.e2e.ts` | `test:financial` | `incomes` y `payables`: CRUD y pagos parciales y totales por unidad |
 | `check-in-out.e2e.ts` | `test:checkin` | Check-in/check-out ad-hoc y ligado a reservas, histórico y ocupación |
 | `settings.e2e.ts` | `test:settings` | Configuración por (guardería, unidad) y su efecto real en el IVA de una reserva nueva |
@@ -79,7 +79,7 @@ cd backend && npm run test:architecture
 
 # E2E en Docker (recomendado)
 for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler veterinaria ratelimit; do
-  docker exec pethijos-backend npm run "test:$s" || break
+  docker exec argos-backend npm run "test:$s" || break
 done
 
 # E2E en local, con el backend ya corriendo
@@ -102,10 +102,10 @@ desarrollo.
 
 | Guardería | Usuario | Contraseña | Rol |
 |---|---|---|---|
-| `pethijos` | `admin_global` | `admin123` | `admin` |
-| `pethijos` | `kinderdog_admin` | `kinderdog123` | `daycare` |
-| `pethijos` | `pethijos_admin` | `pethijos123` | `grooming` |
-| `pethijos` | `vet_admin` | `vet12345` | `veterinary` |
+| `principal` | `admin_global` | `admin123` | `admin` |
+| `principal` | `guarderia_admin` | `guarderia123` | `daycare` |
+| `principal` | `peluqueria_admin` | `peluqueria123` | `grooming` |
+| `principal` | `vet_admin` | `vet12345` | `veterinary` |
 | `demo` | `demo_admin` | `demo123` | `admin` |
 | — | `superadmin` | `superadmin123` | `superadmin` |
 

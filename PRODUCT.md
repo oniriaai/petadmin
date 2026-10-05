@@ -91,7 +91,7 @@ Durable constraints and terminology:
 
 ## Brand Commitments
 
-The confirmed product and business names are **Pethijos** and **Kinderdog**, which name the original operating business — now the first tenant, seeded under the slug `pethijos`. They are brand names, not identifiers: the business-unit slots are `DAYCARE` and `GROOMING` in code so the system can be sold to other daycares, and the interface labels them “Guardería” and “Peluquería.” Existing product terminology includes “Perrhijos” for pets and Spanish operational labels such as “Tutor,” “Cupos,” and “Gestión Financiera.” The product itself is named **Argos Suite**; its name, voice, colors, typography and logo direction are defined in `BRAND.md`, which is the source of truth for visual identity.
+The original operating business is now the first tenant, and the demo seed provisions a generic stand-in for it under the slug `principal`. A tenant's brand names are not identifiers: the business-unit slots are `DAYCARE` and `GROOMING` in code so the system can be sold to other daycares, and the interface labels them “Guardería” and “Peluquería.” Existing product terminology includes “Mascotas” for pets and Spanish operational labels such as “Tutor,” “Cupos,” and “Gestión Financiera.” The product itself is named **Argos Suite**; its name, voice, colors, typography and logo direction are defined in `BRAND.md`, which is the source of truth for visual identity.
 
 ## Evidence on Hand
 

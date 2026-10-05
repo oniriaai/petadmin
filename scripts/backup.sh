@@ -20,7 +20,7 @@ cd "$(dirname "$0")/.."
 DEST="${1:-${BACKUP_DIR:-./backups}}"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-FILE="$DEST/pethijos-$STAMP.dump"
+FILE="$DEST/argos-$STAMP.dump"
 
 mkdir -p "$DEST"
 
@@ -31,7 +31,7 @@ mkdir -p "$DEST"
 # version always matches the server -- a mismatch is the usual reason a restore fails at the
 # moment it is needed.
 echo "[backup] volcando a $FILE"
-docker exec -i "${POSTGRES_CONTAINER:-pethijos-postgres}" \
+docker exec -i "${POSTGRES_CONTAINER:-argos-postgres}" \
   pg_dump --format=custom --no-owner --no-privileges --dbname "$DATABASE_URL" > "$FILE"
 
 SIZE=$(wc -c < "$FILE" | tr -d ' ')
@@ -47,7 +47,7 @@ echo "[backup] verificando la integridad del volcado"
 # pg_restore reads the archive from stdin when given no file argument. Naming /dev/stdin
 # explicitly fails instead ("did not find magic string in file header"): it is a pipe, and
 # that path makes pg_restore try to seek it.
-docker exec -i "${POSTGRES_CONTAINER:-pethijos-postgres}" pg_restore --list < "$FILE" > /dev/null
+docker exec -i "${POSTGRES_CONTAINER:-argos-postgres}" pg_restore --list < "$FILE" > /dev/null
 echo "[backup] ok: $SIZE bytes"
 
 # Off-box copy. A backup on the same host as the database does not survive losing the host.
@@ -63,6 +63,6 @@ else
 fi
 
 # Local rotation. The remote copy's lifecycle belongs to the bucket's own rules.
-find "$DEST" -name 'pethijos-*.dump' -type f -mtime "+$RETENTION_DAYS" -print -delete
+find "$DEST" -name 'argos-*.dump' -type f -mtime "+$RETENTION_DAYS" -print -delete
 
 echo "[backup] listo"

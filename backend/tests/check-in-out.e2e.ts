@@ -57,8 +57,8 @@ async function login(): Promise<void> {
   const client = axios.create({ baseURL: BASE_URL });
   const response = await client.post("/auth/login", {
     businessUnit: "DAYCARE",
-    username: "kinderdog_admin",
-    password: "kinderdog123",
+    username: "guarderia_admin",
+    password: "guarderia123",
   });
   authToken = response.data.token;
 }

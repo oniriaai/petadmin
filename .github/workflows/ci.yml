@@ -96,13 +96,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: pethijos
-          POSTGRES_USER: pethijos
-          POSTGRES_PASSWORD: pethijos
+          POSTGRES_DB: argos
+          POSTGRES_USER: argos
+          POSTGRES_PASSWORD: argos
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U pethijos -d pethijos"
+          --health-cmd "pg_isready -U argos -d argos"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -111,7 +111,7 @@ jobs:
       # Not `production`: that would make assertSecureConfig demand real secrets, and would put
       # the tenant-scope guard into warn-only mode — in CI a missing tenant filter must fail.
       NODE_ENV: test
-      DATABASE_URL: postgresql://pethijos:pethijos@localhost:5432/pethijos
+      DATABASE_URL: postgresql://argos:argos@localhost:5432/argos
       JWT_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
       SUPERADMIN_USERNAME: superadmin
       SUPERADMIN_PASSWORD: superadmin123

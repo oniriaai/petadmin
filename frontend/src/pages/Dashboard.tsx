@@ -256,7 +256,7 @@ export function Dashboard() {
                   <p className="text-sm font-medium text-ink">
                     {SEVERITY_ICON[a.severity]} {a.title}
                   </p>
-                  {a.pet && <p className="mt-0.5 text-xs text-muted">Perrhijo: {a.pet}</p>}
+                  {a.pet && <p className="mt-0.5 text-xs text-muted">Mascota: {a.pet}</p>}
                 </li>
               ))}
             </ul>

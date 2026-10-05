@@ -6,7 +6,7 @@
 #   - no pgAdmin, and no published Postgres port; the database is reachable only on the
 #     internal network
 #   - no seed on boot. Migrations are applied by a one-shot `migrate` service; the demo
-#     tenants (`pethijos`, `demo`) and their well-known passwords are gated behind
+#     tenants (`principal`, `demo`) and their well-known passwords are gated behind
 #     SEED_DEMO_DATA and must stay off here
 #
 # Required in .env: DATABASE_URL, JWT_SECRET (>= 32 chars, not "change_me"), CORS_ORIGINS,

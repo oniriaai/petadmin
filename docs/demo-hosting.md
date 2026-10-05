@@ -114,8 +114,8 @@ Hasta que existan los cuatro valores, el workflow falla en su primer paso dicien
 | Usuario | Contraseña | Qué enseña |
 |---|---|---|
 | `admin_global` | `admin123` | Las tres unidades, finanzas, inventario e informes |
-| `kinderdog_admin` | `kinderdog123` | Guardería: control del día, estancias y planes |
-| `pethijos_admin` | `pethijos123` | Peluquería: agenda y tablero del salón |
+| `guarderia_admin` | `guarderia123` | Guardería: control del día, estancias y planes |
+| `peluqueria_admin` | `peluqueria123` | Peluquería: agenda y tablero del salón |
 | `vet_admin` | `vet12345` | Clínica: sala de espera, historias, hospitalización y laboratorio |
 | `demo_admin` | `demo123` | Una segunda guardería con casi todos los módulos desactivados |
 
@@ -137,8 +137,9 @@ tocado un visitante.
 - Los archivos subidos por visitantes no se borran del bucket.
 - La guardería `demo` y la cuenta de plataforma no se tocan.
 
-**No actives `SEED_DEMO_RESET` sobre una base de datos con datos de un cliente.** Borra todas las
-filas de `daycare_pethijos`, que en algunas instalaciones es el negocio real.
+**No actives `SEED_DEMO_RESET` sobre una base de datos con datos de un cliente.** Además de
+`daycare_principal` borra todas las filas de `daycare_pethijos` (el id anterior de la demo), que en
+algunas instalaciones es el negocio real.
 
 ---
 

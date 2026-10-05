@@ -211,7 +211,7 @@ export class GroomingAppointmentsService {
         },
       });
 
-      // If an advance was provided, record an initial Income for Pethijos
+      // If an advance was provided, record an initial Income for grooming
       if (advanceAmount > 0) {
         await tx.income.create({
           data: {

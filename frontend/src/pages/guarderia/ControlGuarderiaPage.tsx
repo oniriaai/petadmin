@@ -307,7 +307,7 @@ export function ControlGuarderiaPage() {
                 {/* List of Pets in Room */}
                 <div className="space-y-2 pt-2 border-t border-line-subtle">
                   <p className="text-xs font-semibold text-muted">
-                    Perrhijos en la sala ({room.currentPets.length}):
+                    Mascotas en la sala ({room.currentPets.length}):
                   </p>
                   {room.currentPets.length === 0 ? (
                     <p className="text-xs text-muted italic py-2">Esta sala está libre ahora.</p>
@@ -381,7 +381,7 @@ export function ControlGuarderiaPage() {
       {activeTab === "asistencia" && (
         <div className="card overflow-hidden">
           <div className="p-4 bg-sunken border-b border-line-subtle flex items-center justify-between">
-            <h2 className="section-title">Perrhijos con estancia activa en el local</h2>
+            <h2 className="section-title">Mascotas con estancia activa en el local</h2>
             <span className="badge badge-amber text-xs font-bold">
               {attendance.activeCheckIns.length} activos
             </span>
@@ -402,7 +402,7 @@ export function ControlGuarderiaPage() {
                 {attendance.activeCheckIns.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-10 text-muted">
-                      Ahora mismo no hay perrhijos en estancia.
+                      Ahora mismo no hay mascotas en estancia.
                     </td>
                   </tr>
                 ) : (
@@ -635,7 +635,7 @@ export function ControlGuarderiaPage() {
           {/* Mascota */}
           {selectedClient && (
             <div>
-              <label className="label">Selecciona el Perrhijo</label>
+              <label className="label">Selecciona la Mascota</label>
               <div className="grid grid-cols-2 gap-2">
                 {selectedClient.pets?.map((p: any) => (
                   <button
@@ -715,7 +715,7 @@ export function ControlGuarderiaPage() {
       >
         <form onSubmit={handleCheckOutSubmit} className="space-y-4">
           <div className="p-3 bg-daycare-50 border border-daycare-200 rounded-xl space-y-1">
-            <p className="text-sm font-bold text-ink">Perrhijo: {selectedTarget?.petName}</p>
+            <p className="text-sm font-bold text-ink">Mascota: {selectedTarget?.petName}</p>
             <p className="text-xs text-muted">Tutor: {selectedTarget?.clientName}</p>
           </div>
 

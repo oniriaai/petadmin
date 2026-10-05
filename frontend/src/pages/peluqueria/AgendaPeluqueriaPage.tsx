@@ -307,7 +307,7 @@ export function AgendaPeluqueriaPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
             <input
               type="text"
-              placeholder="Buscar cliente, perrhijo o servicio..."
+              placeholder="Buscar cliente, mascota o servicio..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="input pl-9 text-sm py-1.5"
@@ -418,7 +418,7 @@ export function AgendaPeluqueriaPage() {
                               onClick={() => handleUpdateStatus(appt.id, "RECEPCIONADA")}
                               className="btn-secondary btn-sm w-full justify-center"
                             >
-                              <span>Recibir perrhijo</span>
+                              <span>Recibir mascota</span>
                               <ArrowRight size={12} />
                             </button>
                           )}
@@ -559,7 +559,7 @@ export function AgendaPeluqueriaPage() {
 
           {/* 1. Cliente y Mascotas */}
           <fieldset className="space-y-2">
-            <legend className="section-title mb-2">Cliente y perrhijo</legend>
+            <legend className="section-title mb-2">Cliente y mascota</legend>
             {!selectedClientId ? (
               <div className="relative">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -617,7 +617,7 @@ export function AgendaPeluqueriaPage() {
             {selectedClient && (
               <div className="pt-2">
                 <p className="text-xs text-muted font-medium mb-1.5">
-                  Elige los perrhijos de esta cita:
+                  Elige las mascotas de esta cita:
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {selectedClient.pets?.map((p: any) => {
@@ -784,7 +784,7 @@ export function AgendaPeluqueriaPage() {
               Servicio: {selectedAppt?.service}
             </p>
             <p className="text-sm font-bold text-ink">
-              Perrhijo: {selectedAppt?.pets.map((p) => p.name).join(", ")}
+              Mascota: {selectedAppt?.pets.map((p) => p.name).join(", ")}
             </p>
             <p className="text-xs text-muted">
               Tutor: {selectedAppt?.client.firstName} {selectedAppt?.client.lastName}

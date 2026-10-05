@@ -160,7 +160,7 @@ export function AnimalesPage() {
         {isInitialLoading ? (
           <PageLoader />
         ) : pets.length === 0 ? (
-          <EmptyState title="No encontramos perrhijos con ese filtro." />
+          <EmptyState title="No encontramos mascotas con ese filtro." />
         ) : (
           <>
             <div className="overflow-x-auto">

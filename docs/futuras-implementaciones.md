@@ -7,7 +7,7 @@ Con la reestructuración hacia una **Arquitectura Modular (Modular Monolith)**, 
 - ✅ **Módulo de Guardería**: Salas con cálculo de ocupación y cupos en tiempo real, validación estricta contra sobrecupo, check-in/out, planes recurrentes con scheduler automático y transporte.
 - ✅ **Módulo de Peluquería**: Catálogo de servicios con duraciones estimadas, citas por franja horaria, tablero kanban de estados de atención y cobro directo.
 - ✅ **Módulo de Veterinaria**: Tercera unidad de negocio (`VETERINARY`) con su rol, agenda de consultas, sala de espera, historia clínica y cobro al cerrar; vacunas y preventivos con lote, recetas imprimibles y farmacia sobre el inventario con libro de controlados; hospitalización con hoja de tratamiento, cirugías con consentimiento firmado, laboratorio e imagen; recordatorios calculados, informe clínico y exportación de la historia clínica.
-- ✅ **Core Compartido**: Tutores y perrhijos con historial médico, vacunas y fotos en Backblaze B2.
+- ✅ **Core Compartido**: Tutores y mascotas con historial médico, vacunas y fotos en Backblaze B2.
 - ✅ **Finanzas Segregadas**: Cobros e ingresos independientes por unidad contable (`DAYCARE`, `GROOMING` y `VETERINARY`).
 - ✅ **Multi-Inquilino**: Cada guardería cliente es un inquilino con sus propios datos y usuarios.
   Un registro de otra guardería responde `404 Not Found` (no se confirma que exista) y un módulo no
@@ -83,7 +83,7 @@ encuentre aquí primero.
   guardado, solo dígitos: sin código de país puede abrir el chat equivocado o ninguno.
 - **El rol `veterinary` no ve el informe clínico.** Es solo del `admin`; en una clínica donde el
   veterinario es también quien la administra, necesita un usuario `admin`.
-- **La semilla no crea registros clínicos.** `pethijos` recibe la unidad, el usuario, las salas,
+- **La semilla no crea registros clínicos.** `principal` recibe la unidad, el usuario, las salas,
   un veterinario y el catálogo, pero ninguna consulta de ejemplo: las pantallas arrancan vacías.
 
 ### Modelo de datos
@@ -131,7 +131,7 @@ encuentre aquí primero.
 
 - **Ninguna pantalla de la clínica se ha recorrido en un navegador.** El frontend solo prueba que
   la navegación aparece y desaparece con el módulo; las trece pantallas no tienen pruebas propias.
-- **`test:checkin` y `test:modular` dejan un tutor en `pethijos` en cada ejecución** ("Test User
+- **`test:checkin` y `test:modular` dejan un tutor en `principal` en cada ejecución** ("Test User
   Check-in", "Modular Tester"). `test:veterinaria` ya retira lo suyo, directamente en la base de
   datos porque la API se niega a eliminar una consulta cerrada; el mismo patrón sirve para estas.
 - **La concurrencia se prueba en serie**, salvo la doble reserva. El doble cierre, la doble
@@ -180,7 +180,7 @@ El resto de limitaciones conocidas está en "Deuda Técnica Abierta", más arrib
 
 ### Fase 3: Analítica Avanzada y Business Intelligence
 1. **Plantilla Oficial de Power BI**:
-   - Modelo semántico optimizado con medidas DAX para CAC (Costo de Adquisición de Cliente), LTV (Lifetime Value del Perrhijo) y Churn de planes de guardería.
+   - Modelo semántico optimizado con medidas DAX para CAC (Costo de Adquisición de Cliente), LTV (Lifetime Value de la Mascota) y Churn de planes de guardería.
    - Conector directo o sincronización programada vía script de exportación.
 2. **Previsiones de Ocupación e Ingresos**:
    - Proyección de ingresos recurrentes mensuales basados en suscripciones activas.
@@ -188,7 +188,7 @@ El resto de limitaciones conocidas está en "Deuda Técnica Abierta", más arrib
 
 ### Fase 4: Portal del Tutor (PWA / Autoservicio)
 1. **Acceso Web para Clientes**:
-   - Visualización del carnet de vacunación digital del perrhijo.
+   - Visualización del carnet de vacunación digital de la mascota.
    - Solicitud de turnos de peluquería según disponibilidad en vivo.
    - Seguimiento del estado de su mascota durante la estancia en guardería o sesión de estética (con fotos subidas por el personal).
 

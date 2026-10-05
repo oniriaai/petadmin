@@ -103,7 +103,7 @@ async function run() {
     clientId = client.data.id;
 
     const pet = await api.post("/pets", { clientId, name: "Perro Baja", species: "dog", sex: "M" });
-    expectStatus(pet.status, 201, "Alta de perrhijo");
+    expectStatus(pet.status, 201, "Alta de mascota");
 
     // `type` is required by the rooms schema; `businessUnit` is derived from the request, not
     // accepted from the body.

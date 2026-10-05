@@ -290,7 +290,7 @@ export function ClientesPage() {
               <h3 className="font-semibold text-ink mb-3">Mascotas registradas</h3>
               {selectedClient.pets.length === 0 ? (
                 <p className="text-muted text-sm">
-                  Este tutor todavía no tiene perrhijos registrados.
+                  Este tutor todavía no tiene mascotas registradas.
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">

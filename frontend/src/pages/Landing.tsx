@@ -166,7 +166,7 @@ const UNITS: Unit[] = [
     id: "peluqueria",
     name: "Argos Peluquería",
     blurb:
-      "Cada cita lleva su servicio, su duración y su precio. El tablero muestra en qué paso va cada perrhijo hasta la entrega.",
+      "Cada cita lleva su servicio, su duración y su precio. El tablero muestra en qué paso va cada mascota hasta la entrega.",
     features: [
       { Icon: Scissors, label: "Catálogo de servicios" },
       { Icon: CalendarBlank, label: "Agenda por franja horaria" },
@@ -385,7 +385,7 @@ function Units() {
             Tres unidades, cada una con sus cuentas
           </h2>
           <p className="mt-3 max-w-[60ch] leading-relaxed text-muted">
-            Guardería, peluquería y veterinaria comparten tutores y perrhijos. Los ingresos de cada
+            Guardería, peluquería y veterinaria comparten tutores y mascotas. Los ingresos de cada
             una se registran por separado.
           </p>
         </Reveal>
@@ -491,7 +491,7 @@ function OneRecord() {
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
         <Reveal>
           <h2 className="max-w-3xl font-display text-3xl leading-[1.15] text-ink md:text-5xl md:leading-[1.1]">
-            Una sola ficha para cada perrhijo
+            Una sola ficha para cada mascota
           </h2>
         </Reveal>
 
@@ -535,7 +535,7 @@ function Modules() {
             Contratas solo los módulos que usas
           </h2>
           <p className="mt-3 max-w-[60ch] leading-relaxed text-muted">
-            Todas las cuentas incluyen el núcleo: tutores, perrhijos y tu equipo. El resto se activa
+            Todas las cuentas incluyen el núcleo: tutores, mascotas y tu equipo. El resto se activa
             cuando lo necesitas.
           </p>
         </Reveal>
@@ -581,7 +581,7 @@ function Modules() {
             <ModuleText
               Icon={FileText}
               name="Argos Contratos"
-              line="Contratos de estancia por tutor y perrhijo, junto a las alertas operativas y sanitarias."
+              line="Contratos de estancia por tutor y mascota, junto a las alertas operativas y sanitarias."
             />
             <div className="text-action dark:text-oro">
               <Meander />
@@ -628,7 +628,7 @@ function Story() {
         <p className="mt-5 text-lg leading-relaxed text-muted">
           Argos, el perro de Odiseo, lo esperó veinte años y fue el único que lo reconoció al volver
           a casa. Argos Suite lleva su nombre porque guarda cada registro con esa misma fidelidad,
-          para que tú dediques tu tiempo a los perrhijos.
+          para que tú dediques tu tiempo a las mascotas.
         </p>
       </Reveal>
     </section>

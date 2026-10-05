@@ -17,7 +17,7 @@ Cada inquilino opera hasta tres **unidades de negocio**: `DAYCARE` ("Guardería"
   farmacia sobre el inventario, hospitalización con hoja de tratamiento, cirugías con
   consentimiento firmado, laboratorio e imagen, recordatorios e informe clínico, y cierre con
   cobro acreditado a `VETERINARY`.
-- 🐾 **Núcleo compartido**: tutores y perrhijos (con historial, vacunas y fotos en Backblaze B2),
+- 🐾 **Núcleo compartido**: tutores y mascotas (con historial, vacunas y fotos en Backblaze B2),
   autenticación JWT y aislamiento estricto entre inquilinos.
 - 💵 **Finanzas**: cobros e ingresos contables segregados por unidad, cuentas por pagar, inventario
   por local y dashboard consolidado.
@@ -141,7 +141,7 @@ El contenedor del backend ejecuta:
 ### 3. URLs
 - **Frontend**: [http://localhost:5174](http://localhost:5174)
 - **Health check**: [http://localhost:3001/api/v1/health](http://localhost:3001/api/v1/health)
-- **pgAdmin**: [http://localhost:5050](http://localhost:5050) (`admin@pethijos.com` / `admin123`)
+- **pgAdmin**: [http://localhost:5050](http://localhost:5050) (`admin@argos.example.com` / `admin123`)
 
 ---
 
@@ -384,7 +384,7 @@ incorrecta: no confirma qué guarderías existen.
 ### Baja de una guardería
 
 - `GET /platform/daycares/:id/export` entrega un libro de Excel con todo lo que posee el
-  inquilino (guardería, usuarios, tutores, perrhijos, salas, reservas, cobros, cuentas por
+  inquilino (guardería, usuarios, tutores, mascotas, salas, reservas, cobros, cuentas por
   pagar, inventario y contratos). Sin hashes de contraseña: no son datos que el cliente
   necesite y entregarlos es entregar algo que se puede romper sin prisa.
 - `DELETE /platform/daycares/:id` la elimina de forma permanente. Dos salvaguardas, porque es la
@@ -393,7 +393,7 @@ incorrecta: no confirma qué guarderías existen.
   que "cortarles el acceso" y "destruir sus datos" sean dos decisiones tomadas en dos momentos.
 
 El borrado va en una sola transacción y en orden: varias tablas se referencian entre sí
-(`check_in_outs` apunta a reservas, perrhijos, tutores, salas y usuarios) y `users.daycareId` es
+(`check_in_outs` apunta a reservas, mascotas, tutores, salas y usuarios) y `users.daycareId` es
 `onDelete: Restrict`. Los archivos se borran después y **fuera** de la transacción: el
 almacenamiento de objetos no participa en una transacción de base de datos, y el prefijo
 (`daycares/{id}/`) se deriva del id, así que un fallo al borrar archivos se informa y se puede
@@ -417,7 +417,7 @@ coincida con la del servidor —un desajuste es el motivo habitual de que una re
 justo cuando se necesita—. Después comprueba que `pg_restore` puede leer el archivo: un volcado
 ilegible es peor que ninguno, porque se cree bueno.
 
-`restore.sh` restaura en una base **distinta** (`pethijos_restore_check` por defecto) y se niega
+`restore.sh` restaura en una base **distinta** (`argos_restore_check` por defecto) y se niega
 a escribir sobre la base en uso. Luego cuenta filas y vuelve a comprobar la invariante
 `users_superadmin_untenanted`: si no se cumple, la copia no sirve como punto de partida por
 muchas filas que tenga. Una copia que no se ha restaurado nunca no es una copia de seguridad,
@@ -431,7 +431,7 @@ El seed provisiona **dos inquilinos**. El segundo existe a propósito con módul
 base de datos de un solo inquilino oculta exactamente los fallos que el aislamiento y la
 contratación deben evitar.
 
-### Guardería `pethijos` — todos los módulos activos
+### Guardería `principal` — todos los módulos activos
 
 Se muestra como **Huellas Felices**, un negocio ficticio de Quito con las tres unidades y un mes
 de historial. El identificador y los usuarios conservan sus nombres porque las suites e2e entran
@@ -440,8 +440,8 @@ con ellos.
 | Usuario | Contraseña | Rol | Contexto |
 |---|---|---|---|
 | `admin_global` | `admin123` | `admin` | Vista consolidada con selector de unidad |
-| `kinderdog_admin` | `kinderdog123` | `daycare` | Operación y finanzas de Guardería |
-| `pethijos_admin` | `pethijos123` | `grooming` | Operación y finanzas de Peluquería |
+| `guarderia_admin` | `guarderia123` | `daycare` | Operación y finanzas de Guardería |
+| `peluqueria_admin` | `peluqueria123` | `grooming` | Operación y finanzas de Peluquería |
 | `vet_admin` | `vet12345` | `veterinary` | Clínica veterinaria: agenda, historias clínicas, farmacia, hospitalización y laboratorio |
 
 ### Guardería `demo` — solo `GROOMING`, con `reservas` y `peluqueria`
@@ -469,17 +469,17 @@ En la pantalla de login, el proveedor entra por la tarjeta **Plataforma** (no se
 cd backend && npm run test:architecture
 
 # E2E dentro del contenedor
-docker exec pethijos-backend npm run test:modular     # Guardería, Peluquería, permisos y cobros
-docker exec pethijos-backend npm run test:financial   # Transacciones y cuentas por pagar
-docker exec pethijos-backend npm run test:checkin     # Check-in / check-out
-docker exec pethijos-backend npm run test:tenancy     # Aislamiento, MODULE_DISABLED y unidad de negocio
-docker exec pethijos-backend npm run test:platform    # Consola de plataforma
-docker exec pethijos-backend npm run test:settings    # Configuración por guardería y su efecto en el IVA
-docker exec pethijos-backend npm run test:scheduler   # Idempotencia del generador de planes recurrentes
-docker exec pethijos-backend npm run test:suspension  # Desactivación de usuarios y suspensión de inquilinos
-docker exec pethijos-backend npm run test:ratelimit   # Límite de inicios de sesión y lista blanca de CORS
-docker exec pethijos-backend npm run test:users       # Usuarios por guardería y nombres por inquilino
-docker exec pethijos-backend npm run test:offboarding # Exportación y eliminación de una guardería
+docker exec argos-backend npm run test:modular     # Guardería, Peluquería, permisos y cobros
+docker exec argos-backend npm run test:financial   # Transacciones y cuentas por pagar
+docker exec argos-backend npm run test:checkin     # Check-in / check-out
+docker exec argos-backend npm run test:tenancy     # Aislamiento, MODULE_DISABLED y unidad de negocio
+docker exec argos-backend npm run test:platform    # Consola de plataforma
+docker exec argos-backend npm run test:settings    # Configuración por guardería y su efecto en el IVA
+docker exec argos-backend npm run test:scheduler   # Idempotencia del generador de planes recurrentes
+docker exec argos-backend npm run test:suspension  # Desactivación de usuarios y suspensión de inquilinos
+docker exec argos-backend npm run test:ratelimit   # Límite de inicios de sesión y lista blanca de CORS
+docker exec argos-backend npm run test:users       # Usuarios por guardería y nombres por inquilino
+docker exec argos-backend npm run test:offboarding # Exportación y eliminación de una guardería
 
 # Frontend
 cd frontend && npm run build && npm test -- --run

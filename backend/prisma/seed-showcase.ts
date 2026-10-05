@@ -516,15 +516,15 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
         role: "admin",
       },
       {
-        username: "kinderdog_admin",
-        passwordHash: hash("kinderdog123"),
+        username: "guarderia_admin",
+        passwordHash: hash("guarderia123"),
         name: "Andrés Molina",
         businessUnit: BU.DAYCARE,
         role: "daycare",
       },
       {
-        username: "pethijos_admin",
-        passwordHash: hash("pethijos123"),
+        username: "peluqueria_admin",
+        passwordHash: hash("peluqueria123"),
         name: "Sofía Lara",
         businessUnit: BU.GROOMING,
         role: "grooming",
@@ -532,7 +532,7 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
     ].map((user) => ({ ...user, daycareId })),
   });
   const staffUsers = await prisma.user.findMany({ where: { daycareId } });
-  const daycareLead = staffUsers.find((user) => user.username === "kinderdog_admin")!;
+  const daycareLead = staffUsers.find((user) => user.username === "guarderia_admin")!;
 
   await prisma.businessUnitSetting.createMany({
     data: [BU.DAYCARE, BU.GROOMING].map((businessUnit) => ({ daycareId, businessUnit, timezone })),

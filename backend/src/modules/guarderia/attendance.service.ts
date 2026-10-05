@@ -179,7 +179,7 @@ export class DaycareAttendanceService {
     });
     if (currentActiveInRoom >= room.capacity) {
       throw new Error(
-        `La sala ${room.name} ha alcanzado su capacidad máxima (${room.capacity} perrhijos)`,
+        `La sala ${room.name} ha alcanzado su capacidad máxima (${room.capacity} mascotas)`,
       );
     }
 
@@ -250,7 +250,7 @@ export class DaycareAttendanceService {
   }
 
   /**
-   * Registra check-out de Guardería con opción de cobro independiente para Kinderdog
+   * Registra check-out de Guardería con opción de cobro independiente
    */
   static async registerCheckOut(dto: DaycareCheckOutDTO) {
     const {
@@ -310,7 +310,7 @@ export class DaycareAttendanceService {
         }
       }
 
-      // 3. Cobro independiente para Kinderdog si se solicitó o si hay saldo pendiente
+      // 3. Cobro independiente si se solicitó o si hay saldo pendiente
       if (createIncome) {
         const amount = dto.amount ?? (record.reservation?.pendingAmount || 20);
         if (amount > 0) {
