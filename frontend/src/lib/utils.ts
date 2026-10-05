@@ -46,9 +46,7 @@ export function fmtCurrency(v: number | null | undefined) {
   return new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" }).format(v);
 }
 
-export function cls(...args: (string | undefined | false | null)[]) {
-  return args.filter(Boolean).join(" ");
-}
+export { cls } from "./cls";
 
 export const SERVICES = [
   { value: "GUARDERIA", label: "Guardería Canina" },

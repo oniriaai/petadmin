@@ -344,7 +344,7 @@ export function ControlGuarderiaPage() {
                                 clientName: p.clientName,
                               })
                             }
-                            className="text-[11px] text-danger hover:text-danger-ink font-semibold px-2 py-0.5 rounded bg-danger-soft hover:bg-danger-soft shrink-0"
+                            className="text-[11px] text-danger hover:text-danger-ink font-semibold px-2 py-0.5 rounded-sm bg-danger-soft hover:bg-danger-soft shrink-0"
                           >
                             Salida
                           </button>
@@ -725,7 +725,7 @@ export function ControlGuarderiaPage() {
                 type="checkbox"
                 checked={checkOutIncome}
                 onChange={(e) => setCheckOutIncome(e.target.checked)}
-                className="w-4 h-4 text-daycare-600 rounded border-line"
+                className="w-4 h-4 text-daycare-600 rounded-sm border-line"
               />
               <span className="text-xs font-bold text-ink">
                 Registrar cobro independiente para Guardería

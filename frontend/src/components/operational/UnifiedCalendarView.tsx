@@ -160,7 +160,7 @@ export function UnifiedCalendarView({
     const unit = getUnitConfig(event.businessUnit);
     return (
       <div
-        className="text-[10px] sm:text-xs bg-surface border border-line-subtle rounded-lg shadow-sm p-1 sm:p-1.5 space-y-0.5 sm:space-y-1 cursor-pointer hover:shadow-md transition-shadow"
+        className="text-[10px] sm:text-xs bg-surface border border-line-subtle rounded-lg shadow-xs p-1 sm:p-1.5 space-y-0.5 sm:space-y-1 cursor-pointer hover:shadow-md transition-shadow"
         onClick={() => onViewDetail?.(event)}
         title={`${event.clientName} - ${event.petNames}`}
       >
@@ -183,7 +183,7 @@ export function UnifiedCalendarView({
         {!compact && (
           <div className="flex items-center justify-between gap-1">
             <span
-              className={`text-[8px] sm:text-[10px] px-1 rounded ${unit.bg} border border-current opacity-70`}
+              className={`text-[8px] sm:text-[10px] px-1 rounded-sm ${unit.bg} border border-current opacity-70`}
             >
               {unit.label}
             </span>
@@ -205,7 +205,7 @@ export function UnifiedCalendarView({
                   e.stopPropagation();
                   onCheckin(event.id);
                 }}
-                className="btn-success icon-button rounded"
+                className="btn-success icon-button rounded-sm"
                 disabled={loading}
                 aria-label="Registrar check-in"
                 title="Check In"
@@ -219,7 +219,7 @@ export function UnifiedCalendarView({
                   e.stopPropagation();
                   onCheckout(event.id);
                 }}
-                className="btn-warning icon-button rounded"
+                className="btn-warning icon-button rounded-sm"
                 disabled={loading}
                 aria-label="Registrar check-out"
                 title="Check Out"
@@ -245,20 +245,20 @@ export function UnifiedCalendarView({
           <div className="flex items-center bg-sunken rounded-lg p-1">
             <button
               onClick={viewMode === "month" ? handlePrevMonth : handlePrevWeek}
-              className="p-1 sm:p-1.5 hover:bg-surface hover:shadow-sm rounded-md transition"
+              className="p-1 sm:p-1.5 hover:bg-surface hover:shadow-xs rounded-md transition"
               title="Anterior"
             >
               <ChevronLeft size={18} />
             </button>
             <button
               onClick={handleToday}
-              className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium hover:bg-surface hover:shadow-sm rounded-md transition"
+              className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium hover:bg-surface hover:shadow-xs rounded-md transition"
             >
               Hoy
             </button>
             <button
               onClick={viewMode === "month" ? handleNextMonth : handleNextWeek}
-              className="p-1 sm:p-1.5 hover:bg-surface hover:shadow-sm rounded-md transition"
+              className="p-1 sm:p-1.5 hover:bg-surface hover:shadow-xs rounded-md transition"
               title="Siguiente"
             >
               <ChevronRight size={18} />
@@ -274,7 +274,7 @@ export function UnifiedCalendarView({
             <button
               onClick={() => setViewMode("month")}
               className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${
-                viewMode === "month" ? "bg-surface shadow-sm text-action" : "text-muted"
+                viewMode === "month" ? "bg-surface shadow-xs text-action" : "text-muted"
               }`}
             >
               Mes
@@ -282,7 +282,7 @@ export function UnifiedCalendarView({
             <button
               onClick={() => setViewMode("week")}
               className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition ${
-                viewMode === "week" ? "bg-surface shadow-sm text-action" : "text-muted"
+                viewMode === "week" ? "bg-surface shadow-xs text-action" : "text-muted"
               }`}
             >
               Semana
@@ -441,15 +441,15 @@ export function UnifiedCalendarView({
           </span>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-sunken rounded border border-line-subtle" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-sunken rounded-sm border border-line-subtle" />
               <span className="text-[10px] sm:text-xs text-muted">Pendiente</span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-success-soft rounded border border-success-line" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-success-soft rounded-sm border border-success-line" />
               <span className="text-[10px] sm:text-xs text-muted">Ingresado</span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-info-soft rounded border border-info-line" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-info-soft rounded-sm border border-info-line" />
               <span className="text-[10px] sm:text-xs text-muted">Egresado</span>
             </div>
           </div>
@@ -477,15 +477,15 @@ export function UnifiedCalendarView({
           </span>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-warning" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-xs bg-warning" />
               <span className="text-[10px] sm:text-xs text-muted">Guardería (Ambar)</span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-grooming-500" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-xs bg-grooming-500" />
               <span className="text-[10px] sm:text-xs text-muted">Peluquería (Violeta)</span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5">
-              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm bg-veterinary-500" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-xs bg-veterinary-500" />
               <span className="text-[10px] sm:text-xs text-muted">Veterinaria (Turquesa)</span>
             </div>
           </div>

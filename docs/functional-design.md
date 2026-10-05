@@ -73,19 +73,19 @@ contratado**. Entre corchetes, el módulo que debe estar habilitado; sin corchet
 núcleo y está siempre disponible.
 
 ```text
-├── Dashboard Principal (/)
+├── Inicio (/)
 ├── 🐶 Módulo Guardería (roles admin y daycare)
-│   ├── Control Guardería (/guarderia)      [guarderia]
-│   ├── Salas & Cupos (/salas)              [reservas]
-│   ├── Planes Recurrentes (/planes)        [reservas]
+│   ├── Control de guardería (/guarderia)   [guarderia]
+│   ├── Salas y cupos (/salas)              [reservas]
+│   ├── Planes recurrentes (/planes)        [reservas]
 │   ├── Transporte (/transporte)            [guarderia + informes]
 │   └── Disponibilidad (/disponibilidad)    [reservas]
 ├── ✂️ Módulo Peluquería (roles admin y grooming)
-│   └── Agenda de Peluquería (/peluqueria)  [peluqueria]
+│   └── Agenda de peluquería (/peluqueria)  [peluqueria]
 ├── 🩺 Módulo Veterinaria (roles admin y veterinary)
-│   ├── Agenda Veterinaria (/veterinaria)             [veterinaria + reservas]
+│   ├── Agenda veterinaria (/veterinaria)             [veterinaria + reservas]
 │   ├── Consulta (/veterinaria/consultas/:id)         [veterinaria]
-│   ├── Historias Clínicas (/veterinaria/pacientes)   [veterinaria]
+│   ├── Historias clínicas (/veterinaria/pacientes)   [veterinaria]
 │   ├── Farmacia (/veterinaria/farmacia)              [veterinaria]
 │   ├── Receta imprimible (/veterinaria/recetas/:id)  [veterinaria]
 │   ├── Hospitalización (/veterinaria/hospitalizacion) [veterinaria]
@@ -93,17 +93,17 @@ núcleo y está siempre disponible.
 │   ├── Laboratorio (/veterinaria/laboratorio)        [veterinaria]
 │   ├── Consentimiento (/veterinaria/consentimientos/:id) [veterinaria]
 │   ├── Recordatorios (/veterinaria/recordatorios)    [veterinaria]
-│   ├── Informe Clínico (/veterinaria/informe)        [veterinaria] (solo admin)
-│   └── Catálogo Clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
-└── 💼 Gestión Transversal (todos los roles autorizados)
+│   ├── Informe clínico (/veterinaria/informe)        [veterinaria] (solo admin)
+│   └── Catálogo clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
+└── 💼 Gestión (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
     ├── Clientes (/clientes)
     ├── Animales (/animales)
-    ├── Gestión Financiera (/transacciones) [finanzas]
-    ├── Informes y Gráficos (/informes)     [informes]
+    ├── Finanzas (/transacciones)           [finanzas]
+    ├── Informes (/informes)                [informes]
     ├── Herramientas (/herramientas)        — pestaña Alertas: [cumplimiento]
     ├── Configuración (/configuracion)      [admin]
-    └── Guía de Uso (/guia)
+    └── Guía de uso (/guia)
 ```
 
 `Salas`, `Planes` y `Disponibilidad` dependen de `reservas` y no de `guarderia`: salas, asistencia y

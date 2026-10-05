@@ -49,6 +49,7 @@ export default {
           DEFAULT: "var(--color-shell)",
           ink: "var(--color-shell-ink)",
           muted: "var(--color-shell-muted)",
+          raised: "var(--color-shell-raised)",
         },
         // Decorative only (the meander on the dark shell). Never text on a light background.
         oro: "#ca8a04",

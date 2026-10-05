@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { GuardedRoute, SuperAdminRoute } from "../App";
 import { Sidebar } from "../components/layout/Sidebar";
@@ -156,10 +156,10 @@ describe("entitlement gating", () => {
 });
 
 describe("navigation gating", () => {
-  function renderSidebar(options: SessionOptions) {
+  function renderSidebar(options: SessionOptions, path = "/") {
     mockUseAuth.mockReturnValue(session(options));
-    render(
-      <MemoryRouter>
+    return render(
+      <MemoryRouter initialEntries={[path]}>
         <Sidebar />
       </MemoryRouter>,
     );
@@ -167,27 +167,27 @@ describe("navigation gating", () => {
 
   it("hides nav items whose product module is absent", () => {
     renderSidebar({ modules: ["reservas"] });
-    expect(screen.queryByText("Gestión Financiera")).not.toBeInTheDocument();
-    expect(screen.queryByText("Informes y Gráficos")).not.toBeInTheDocument();
-    expect(screen.getByText("Operaciones (General)")).toBeInTheDocument();
+    expect(screen.queryByText("Finanzas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informes")).not.toBeInTheDocument();
+    expect(screen.getByText("Operaciones")).toBeInTheDocument();
   });
 
   it("shows them once the module is enabled", () => {
     renderSidebar({ modules: ["reservas", "finanzas", "informes"] });
-    expect(screen.getByText("Gestión Financiera")).toBeInTheDocument();
-    expect(screen.getByText("Informes y Gráficos")).toBeInTheDocument();
+    expect(screen.getByText("Finanzas")).toBeInTheDocument();
+    expect(screen.getByText("Informes")).toBeInTheDocument();
   });
 
   it("hides the clinic's navigation when veterinaria is not enabled", () => {
     renderSidebar({ modules: ["reservas"] });
-    expect(screen.queryByText("Agenda Veterinaria")).not.toBeInTheDocument();
-    expect(screen.queryByText("Historias Clínicas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agenda veterinaria")).not.toBeInTheDocument();
+    expect(screen.queryByText("Historias clínicas")).not.toBeInTheDocument();
     expect(screen.queryByText("Farmacia")).not.toBeInTheDocument();
     expect(screen.queryByText("Hospitalización")).not.toBeInTheDocument();
     expect(screen.queryByText("Laboratorio")).not.toBeInTheDocument();
     expect(screen.queryByText("Recordatorios")).not.toBeInTheDocument();
-    expect(screen.queryByText("Informe Clínico")).not.toBeInTheDocument();
-    expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informe clínico")).not.toBeInTheDocument();
+    expect(screen.queryByText("Catálogo clínico")).not.toBeInTheDocument();
   });
 
   it("shows the clinic to its own role, without the admin-only catalogue", () => {
@@ -196,18 +196,18 @@ describe("navigation gating", () => {
       businessUnit: "VETERINARY",
       modules: ["reservas", "veterinaria"],
     });
-    expect(screen.getByText("Agenda Veterinaria")).toBeInTheDocument();
-    expect(screen.getByText("Historias Clínicas")).toBeInTheDocument();
+    expect(screen.getByText("Agenda veterinaria")).toBeInTheDocument();
+    expect(screen.getByText("Historias clínicas")).toBeInTheDocument();
     expect(screen.getByText("Farmacia")).toBeInTheDocument();
     expect(screen.getByText("Hospitalización")).toBeInTheDocument();
     expect(screen.getByText("Laboratorio")).toBeInTheDocument();
     expect(screen.getByText("Recordatorios")).toBeInTheDocument();
     // The clinic's figures are an administrator's.
-    expect(screen.queryByText("Informe Clínico")).not.toBeInTheDocument();
-    expect(screen.queryByText("Catálogo Clínico")).not.toBeInTheDocument();
+    expect(screen.queryByText("Informe clínico")).not.toBeInTheDocument();
+    expect(screen.queryByText("Catálogo clínico")).not.toBeInTheDocument();
     // And nothing of the other units.
-    expect(screen.queryByText("Agenda Peluquería")).not.toBeInTheDocument();
-    expect(screen.queryByText("Control Guardería")).not.toBeInTheDocument();
+    expect(screen.queryByText("Agenda de peluquería")).not.toBeInTheDocument();
+    expect(screen.queryByText("Control de guardería")).not.toBeInTheDocument();
   });
 
   it("keeps the clinic away from the other units' roles", () => {
@@ -216,14 +216,57 @@ describe("navigation gating", () => {
       businessUnit: "GROOMING",
       modules: ["reservas", "veterinaria", "peluqueria"],
     });
-    expect(screen.queryByText("Agenda Veterinaria")).not.toBeInTheDocument();
-    expect(screen.getByText("Agenda Peluquería")).toBeInTheDocument();
+    expect(screen.queryByText("Agenda veterinaria")).not.toBeInTheDocument();
+    expect(screen.getByText("Agenda de peluquería")).toBeInTheDocument();
   });
 
   it("always shows the core items, which are not sold separately", () => {
     renderSidebar({ modules: [] });
-    expect(screen.getByText("Perfil del Cliente")).toBeInTheDocument();
+    expect(screen.getByText("Clientes")).toBeInTheDocument();
     expect(screen.getByText("Animales")).toBeInTheDocument();
+  });
+
+  it("folds a group and remembers it", () => {
+    const { unmount } = renderSidebar({ modules: ["reservas"] });
+    fireEvent.click(screen.getByRole("button", { name: "Gestión" }));
+    expect(screen.queryByText("Clientes")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Gestión" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    unmount();
+
+    // Restored from storage on the next visit.
+    renderSidebar({ modules: ["reservas"] });
+    expect(screen.queryByText("Clientes")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Gestión" }));
+    expect(screen.getByText("Clientes")).toBeInTheDocument();
+  });
+
+  it("keeps the current page in view when its group is folded", () => {
+    renderSidebar({ modules: ["reservas"] }, "/clientes");
+    fireEvent.click(screen.getByRole("button", { name: "Gestión" }));
+    // Folding must not hide where you are.
+    expect(screen.getByText("Clientes").closest("a")).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByText("Animales")).not.toBeInTheDocument();
+  });
+
+  it("marks only the longest matching item as current", () => {
+    renderSidebar(
+      { modules: ["reservas", "veterinaria"], businessUnit: "VETERINARY", role: "veterinary" },
+      "/veterinaria/farmacia",
+    );
+    expect(screen.getByText("Farmacia").closest("a")).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Agenda veterinaria").closest("a")).not.toHaveAttribute("aria-current");
+  });
+
+  it("still renders when the folded-groups preference cannot be read", () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("denied");
+    });
+    expect(() => renderSidebar({ modules: [] })).not.toThrow();
+    expect(screen.getByText("Clientes")).toBeInTheDocument();
+    getItem.mockRestore();
   });
 });
 

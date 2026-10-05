@@ -5,7 +5,7 @@ const sections = [
   {
     id: "inicio",
     title: "Primeros pasos",
-    content: `Argos Suite organiza tu negocio en hasta tres unidades: **Guardería** (estancia diaria), **Peluquería** (estética y baño) y **Veterinaria** (clínica). Al iniciar sesión entras directo a tu unidad; si administras varias, cámbiala desde la barra superior.`,
+    content: `Argos Suite organiza tu negocio en hasta tres unidades: **Guardería** (estancia diaria), **Peluquería** (estética y baño) y **Veterinaria** (clínica). Al iniciar sesión entras directo a tu unidad; si administras varias, cámbiala desde el menú lateral.`,
   },
   {
     id: "reservas",
@@ -35,7 +35,7 @@ const sections = [
     id: "clientes",
     title: "Gestión de Clientes",
     steps: [
-      "Ve a **Perfil del Cliente** para ver todos los clientes",
+      "Ve a **Clientes** para ver todos los clientes",
       "Usa el botón **+ Nuevo Cliente** para registrar un dueño",
       "Desde la lista, usa el ícono de mascota para **agregar mascotas** al cliente",
       "Haz clic en el ícono del ojo para ver el perfil completo con historial de reservas",
@@ -56,7 +56,7 @@ const sections = [
     id: "informes",
     title: "Informes y Exportación",
     steps: [
-      "Ve a **Informes y Gráficos** para ver tu análisis financiero",
+      "Ve a **Informes** para ver tu análisis financiero",
       "Los KPIs muestran ingresos del mes, utilidad y tendencias",
       "Los gráficos de barras muestran ingresos históricos por mes",
       "El gráfico circular muestra distribución por tipo de servicio",
@@ -67,7 +67,7 @@ const sections = [
     id: "consulta-veterinaria",
     title: "Atender una Consulta Veterinaria",
     steps: [
-      "Ve a **Agenda Veterinaria** y pulsa **Nueva consulta**; sin hora, el paciente entra directo a la sala de espera",
+      "Ve a **Agenda veterinaria** y pulsa **Nueva consulta**; sin hora, el paciente entra directo a la sala de espera",
       "Abre la consulta y pásala a **En consulta**",
       "Registra **signos vitales**, el registro clínico (anamnesis, examen, valoración y plan) y los **diagnósticos**",
       "Añade vacunas, preventivos, **recetas**, exámenes de laboratorio y procedimientos según el caso",

@@ -1,10 +1,26 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.js";
 
 @layer base {
-  * {
+  /*
+   * Tailwind v3 defaults that v4 changed and these screens were built on: a neutral default
+   * border, a pointer on buttons and a fixed placeholder colour.
+   */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
     box-sizing: border-box;
+    border-color: var(--color-gray-200, currentColor);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
   }
   :root {
     /* Argos Suite: warm marble and black-figure ink (BRAND.md). */
@@ -18,6 +34,8 @@
     --color-shell: #1c1917;
     --color-shell-ink: #fafaf9;
     --color-shell-muted: #a8a29e;
+    /* One step above the shell: the menus and labels that float over it. */
+    --color-shell-raised: #292524;
     --color-ink: #1c1917;
     --color-muted: #57534e;
     --color-faint: #a8a29e;
@@ -66,6 +84,7 @@
     --color-shell: #1e293b;
     --color-shell-ink: #e2e8f0;
     --color-shell-muted: #94a3b8;
+    --color-shell-raised: #273449;
     --color-border-subtle: #334155;
     --color-ink: #e2e8f0;
     --color-muted: #94a3b8;
@@ -121,35 +140,67 @@
 
 @layer components {
   .sidebar-link {
-    @apply relative flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer;
+    @apply flex items-center gap-3 px-2 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer;
+  }
+  .sidebar-link-icon {
+    @apply shrink-0 transition-colors;
   }
   .sidebar-link.active {
     @apply bg-white/10 text-shell-ink;
   }
-  /* The active item carries the unit's colour (Oro in the consolidated view). */
-  .sidebar-link.active::before {
-    content: "";
-    @apply absolute left-0 top-2 bottom-2 w-0.5 rounded-full;
-    background: var(--unit-accent, #ca8a04);
+  /* The current page's icon carries the unit's colour (Oro in the consolidated view). */
+  .sidebar-link.active .sidebar-link-icon {
+    color: var(--unit-accent);
   }
   .sidebar-link:not(.active) {
     @apply text-shell-muted hover:bg-white/5 hover:text-shell-ink;
   }
-  .btn {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-0;
+  /* A group's heading, which also folds it. The brand's label step: Inter 600, 12px, tracked. */
+  .sidebar-group {
+    @apply flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 mb-0.5 text-xs font-semibold uppercase tracking-[0.05em] text-shell-muted transition-colors cursor-pointer hover:text-shell-ink;
   }
-  .btn:active:not(:disabled) {
-    transform: translateY(1px);
+  .sidebar-tool {
+    @apply grid h-9 w-9 shrink-0 place-items-center rounded-lg text-shell-muted transition-colors cursor-pointer hover:bg-white/5 hover:text-shell-ink;
+  }
+  .unit-switcher {
+    @apply flex w-full items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-2 py-2 transition-colors cursor-pointer hover:bg-white/10;
+  }
+  .unit-switcher[aria-expanded="true"] {
+    @apply bg-white/10;
+  }
+  /* Surfaces that float over the shell: the unit menu and the collapsed rail's labels. */
+  .shell-menu {
+    @apply rounded-xl border border-white/10 bg-shell-raised p-1 text-shell-ink shadow-overlay;
+    animation: shell-pop-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .shell-menu-item {
+    @apply flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm font-medium cursor-pointer hover:bg-white/10 focus-visible:bg-white/10;
+  }
+  .shell-tip {
+    @apply pointer-events-none fixed z-drawer -translate-y-1/2 whitespace-nowrap rounded-lg border border-white/10 bg-shell-raised px-2.5 py-1.5 text-xs font-medium text-shell-ink shadow-overlay;
+  }
+  /* Tailwind v4 cannot `@apply` a component class, so the variants share the base rule here. */
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger,
+  .btn-ghost,
+  .btn-success,
+  .btn-warning {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer border-0;
+    &:active:not(:disabled) {
+      transform: translateY(1px);
+    }
   }
   .btn-primary {
-    @apply btn text-white;
+    @apply text-white;
     background-color: var(--color-action);
   }
   .btn-primary:hover {
     background-color: var(--color-action-hover);
   }
   .btn-secondary {
-    @apply btn border;
+    @apply border;
     color: var(--color-muted);
     background: var(--color-surface);
     border-color: var(--color-border);
@@ -158,21 +209,20 @@
     background: var(--color-sunken);
   }
   .btn-danger {
-    @apply btn text-white;
+    @apply text-white;
     background: #b91c1c;
   }
   .btn-danger:hover {
     background: #991b1b;
   }
   .btn-ghost {
-    @apply btn;
     color: var(--color-muted);
   }
   .btn-ghost:hover {
     background: var(--color-sunken);
   }
   .btn-success {
-    @apply btn text-white;
+    @apply text-white;
     background: #15803d;
   }
   .btn-success:hover {
@@ -180,7 +230,7 @@
   }
   /* Dark text: white on Oro is only 3 : 1. */
   .btn-warning {
-    @apply btn border;
+    @apply border;
     color: var(--color-warning-ink);
     background: var(--color-warning-soft);
     border-color: var(--color-warning-line);
@@ -284,6 +334,17 @@
 /* Exponential ease-out from an already-legible default; the global reduced-motion rule mutes it. */
 .login-error {
   animation: login-error-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes shell-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes rise-in {

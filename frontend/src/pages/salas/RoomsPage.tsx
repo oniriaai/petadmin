@@ -154,7 +154,7 @@ export function RoomsPage() {
                         {room.currentOccupancy || 0} / {room.capacity}
                       </span>
                       {isOverCapacity(room.currentOccupancy || 0, room.capacity) && (
-                        <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded bg-danger-soft text-danger-ink align-middle">
+                        <span className="ml-2 text-[11px] px-1.5 py-0.5 rounded-sm bg-danger-soft text-danger-ink align-middle">
                           Sobrecupo
                         </span>
                       )}

@@ -155,7 +155,7 @@ export function RecurringPlansPage() {
                     <td className="table-td text-sm">{fmt(plan.startDate)}</td>
                     <td className="table-td text-sm">{fmt(plan.endDate)}</td>
                     <td className="table-td text-xs">
-                      <span className="bg-sunken text-muted px-2 py-1 rounded">
+                      <span className="bg-sunken text-muted px-2 py-1 rounded-sm">
                         {daysLabel(plan.daysOfWeek)}
                       </span>
                     </td>

@@ -319,13 +319,13 @@ export function AgendaPeluqueriaPage() {
           <div className="bg-sunken p-1 rounded-lg flex text-xs font-medium">
             <button
               onClick={() => setViewMode("kanban")}
-              className={`px-3 py-1 rounded-md transition ${viewMode === "kanban" ? "bg-surface text-ink shadow-sm" : "text-muted"}`}
+              className={`px-3 py-1 rounded-md transition ${viewMode === "kanban" ? "bg-surface text-ink shadow-xs" : "text-muted"}`}
             >
               Tablero de Flujo
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`px-3 py-1 rounded-md transition ${viewMode === "list" ? "bg-surface text-ink shadow-sm" : "text-muted"}`}
+              className={`px-3 py-1 rounded-md transition ${viewMode === "list" ? "bg-surface text-ink shadow-xs" : "text-muted"}`}
             >
               Lista Detallada
             </button>
@@ -406,7 +406,7 @@ export function AgendaPeluqueriaPage() {
                         </div>
 
                         {appt.notes && (
-                          <p className="text-[11px] text-muted italic bg-warning-soft p-1.5 rounded border border-warning-line">
+                          <p className="text-[11px] text-muted italic bg-warning-soft p-1.5 rounded-sm border border-warning-line">
                             "{appt.notes}"
                           </p>
                         )}
@@ -633,7 +633,7 @@ export function AgendaPeluqueriaPage() {
                         }}
                         className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                           isSelected
-                            ? "bg-grooming-600 text-white shadow-sm"
+                            ? "bg-grooming-600 text-white shadow-xs"
                             : "bg-sunken text-muted hover:bg-line-subtle"
                         }`}
                       >

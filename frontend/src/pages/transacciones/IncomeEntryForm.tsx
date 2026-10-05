@@ -129,7 +129,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
             value={concept}
             onChange={(e) => setConcept(e.target.value)}
             placeholder="Ej: Guardería - Cliente"
-            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
           />
         </div>
 
@@ -141,7 +141,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
               value={amount}
               onChange={(e) => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
               placeholder="0"
-              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
             />
           </div>
 
@@ -153,7 +153,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
               onChange={(e) => setVatPercent(Math.max(0, parseFloat(e.target.value) || 0))}
               min="0"
               max="100"
-              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
             />
           </div>
         </div>
@@ -181,7 +181,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
             >
               <option value="EFECTIVO">Efectivo</option>
               <option value="TARJETA">Tarjeta de Crédito</option>
@@ -195,7 +195,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
             <select
               value={invoiceStatus}
               onChange={(e) => setInvoiceStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+              className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
             >
               <option value="PENDIENTE">Pendiente</option>
               <option value="PAGADO">Pagado</option>
@@ -210,7 +210,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
           />
         </div>
 
@@ -221,7 +221,7 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Información adicional..."
             rows={3}
-            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-none focus:ring-2 focus:ring-action"
+            className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
           />
         </div>
 

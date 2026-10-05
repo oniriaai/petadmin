@@ -260,7 +260,7 @@ export function PetForm({ open, onClose, onSaved, client, pet }: Props) {
               id="neutered"
               checked={form.isNeutered}
               onChange={(e) => setForm((p) => ({ ...p, isNeutered: e.target.checked }))}
-              className="w-4 h-4 rounded"
+              className="w-4 h-4 rounded-sm"
             />
             <label htmlFor="neutered" className="text-sm text-muted cursor-pointer">
               Esterilizado/a

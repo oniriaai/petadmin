@@ -360,7 +360,7 @@ export function UnifiedListView({
                         <button
                           key={page}
                           onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 rounded text-sm font-medium transition ${
+                          className={`px-3 py-1 rounded-sm text-sm font-medium transition ${
                             page === currentPage
                               ? "bg-action text-white"
                               : "bg-sunken text-muted hover:bg-line-subtle"

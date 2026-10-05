@@ -85,24 +85,24 @@ describe("app shell", () => {
     expect(screen.queryByLabelText("Cerrar menú")).not.toBeInTheDocument();
   });
 
-  it("offers the unit switcher inside the drawer, where the topbar one is hidden on mobile", () => {
-    // The topbar switcher is `hidden sm:flex`, so below 640px it did not exist at all and an
-    // administrator on a phone could not change unit. jsdom applies no media queries, so this
-    // asserts the drawer carries its own copy rather than asserting the breakpoint.
+  it("carries the unit switcher into the drawer", () => {
+    // The switcher lives in the sidebar, and below lg the sidebar is the drawer: an administrator
+    // on a phone changes unit there. jsdom applies no media queries, so this asserts the drawer
+    // has its own copy rather than asserting the breakpoint.
     renderShell();
-    expect(screen.getAllByLabelText("Unidad de negocio")).toHaveLength(1);
+    expect(screen.getAllByLabelText(/^Unidad de negocio/)).toHaveLength(1);
 
     fireEvent.click(screen.getByLabelText("Abrir menú"));
-    const switchers = screen.getAllByLabelText("Unidad de negocio");
+    const switchers = screen.getAllByLabelText(/^Unidad de negocio/);
     expect(switchers).toHaveLength(2);
     // The drawer copy must be a real control, not a decorative label.
-    expect(switchers.every((el) => el.tagName === "SELECT")).toBe(true);
+    expect(switchers.every((el) => el.tagName === "BUTTON")).toBe(true);
   });
 
   it("keeps the drawer switcher out of a session that cannot switch units", () => {
     renderShell({ units: ["GROOMING"] });
     fireEvent.click(screen.getByLabelText("Abrir menú"));
-    expect(screen.queryByLabelText("Unidad de negocio")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Unidad de negocio/)).not.toBeInTheDocument();
   });
 
   it("remembers the collapsed sidebar across renders", () => {
@@ -128,24 +128,49 @@ describe("app shell", () => {
 });
 
 describe("unit switcher", () => {
+  const openSwitcher = () => fireEvent.click(screen.getByLabelText(/^Unidad de negocio/));
+
   it("is offered to a role that spans both units", () => {
     renderShell();
-    expect(screen.getByLabelText("Unidad de negocio")).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Consolidado" })).toBeInTheDocument();
+    openSwitcher();
+    expect(screen.getByRole("menuitemradio", { name: "Consolidado" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByRole("menuitemradio", { name: "Guardería" })).toBeInTheDocument();
   });
 
   it("offers and selects the clinic unit when the daycare bought it", () => {
     const setActiveBusinessUnit = vi.fn();
     renderShell({ units: ["DAYCARE", "GROOMING", "VETERINARY"], setActiveBusinessUnit });
-    const switcher = screen.getByLabelText("Unidad de negocio");
-    expect(screen.getByRole("option", { name: "Veterinaria" })).toBeInTheDocument();
+    openSwitcher();
     // The switcher used to accept only the two original units and silently fall back to
     // consolidated for anything else.
-    fireEvent.change(switcher, { target: { value: "VETERINARY" } });
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Veterinaria" }));
     expect(setActiveBusinessUnit).toHaveBeenCalledWith("VETERINARY");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
-  it("is hidden from a unit-scoped role", () => {
+  it("goes back to the consolidated view", () => {
+    const setActiveBusinessUnit = vi.fn();
+    renderShell({ activeBusinessUnit: "GROOMING", setActiveBusinessUnit });
+    openSwitcher();
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Consolidado" }));
+    expect(setActiveBusinessUnit).toHaveBeenCalledWith(null);
+  });
+
+  it("closes on Escape without closing the drawer it sits in", () => {
+    renderShell();
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
+    fireEvent.click(screen.getAllByLabelText(/^Unidad de negocio/)[1]);
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("Cerrar menú").length).toBeGreaterThan(0);
+  });
+
+  it("is a plain statement, not a control, for a unit-scoped role", () => {
     renderShell({
       user: {
         id: "u2",
@@ -156,7 +181,8 @@ describe("unit switcher", () => {
         daycareId: "d1",
       },
     });
-    expect(screen.queryByLabelText("Unidad de negocio")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Unidad de negocio/)).not.toBeInTheDocument();
+    expect(screen.getAllByText("Peluquería").length).toBeGreaterThan(0);
   });
 
   it("offers only the units the daycare bought", () => {
@@ -165,7 +191,7 @@ describe("unit switcher", () => {
       daycare: { id: "d1", name: "Solo Peluquería", slug: "sp", unitList: ["GROOMING"] },
     });
     // One unit leaves nothing to switch between.
-    expect(screen.queryByLabelText("Unidad de negocio")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Unidad de negocio/)).not.toBeInTheDocument();
   });
 });
 
