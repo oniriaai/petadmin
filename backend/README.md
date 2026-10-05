@@ -454,7 +454,7 @@ responderla.
 
 | Endpoint | Para qué |
 |---|---|
-| `GET /api/v1/health` | Base de datos **y** estado de migraciones (`applied` / `pending`). Responde **503** si quedan pendientes: un proceso corriendo contra un esquema sin migrar falla en las rutas reales mientras se declara sano |
+| `GET /api/v1/health` | Base de datos **y** estado de migraciones (`applied` / `pending`). Responde **503** si quedan pendientes: un proceso corriendo contra un esquema sin migrar falla en las rutas reales mientras se declara sano. Incluye `commit`, el commit desplegado cuando el host lo expone (`RENDER_GIT_COMMIT`), o `null` |
 | `GET /api/v1/ready` | Sonda barata para el orquestador |
 
 ---

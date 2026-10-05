@@ -64,6 +64,9 @@ app.get("/api/v1/health", async (_req, res) => {
       db: true,
       migrations: { applied: Number(migrations?.applied ?? 0), pending },
       service: "pethijos-backend",
+      // Set by the host on Render; the demo's deploy workflow polls it to know when the commit
+      // it asked for is the one answering. Null anywhere else.
+      commit: process.env.RENDER_GIT_COMMIT ?? null,
       ts: new Date().toISOString(),
     });
   } catch (error) {

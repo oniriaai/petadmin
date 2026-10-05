@@ -46,8 +46,8 @@ marcados para introducir a mano:
 | `argos-demo` | `VITE_API_URL` | La URL de la API seguida de `/api/v1` |
 
 Las dos últimas dependen de las URLs que Render asigne, que solo se conocen tras crear los
-servicios (normalmente `https://argos-demo.onrender.com` y
-`https://argos-demo-api.onrender.com`, salvo que el nombre esté ocupado). Si no coinciden con lo
+servicios: si el nombre ya está ocupado añade un sufijo, así que cópialas del panel en lugar de
+suponerlas. Si no coinciden con lo
 que pusiste, corrígelas y vuelve a desplegar: la API lee `CORS_ORIGINS` al arrancar y el frontend
 incrusta `VITE_API_URL` al compilar, así que un cambio en esta última exige un *Manual Deploy* del
 sitio estático.
@@ -59,6 +59,53 @@ en *Environment* del servicio de la API.
 
 `https://<api>/api/v1/health` debe responder `200` con `migrations.pending: 0`. Después, entra en
 el sitio estático con cualquiera de las cuentas de abajo.
+
+---
+
+## Despliegue continuo
+
+Render no despliega por su cuenta (`autoDeployTrigger: "off"` en `render.yaml`). Lo hace
+`.github/workflows/deploy-demo.yml`:
+
+1. Un push a `main` ejecuta CI completo.
+2. Si pasa, el workflow compara ese commit con el que está sirviendo cada servicio y pide a
+   Render, mediante su *deploy hook*, que construya exactamente ese commit. Un servicio cuyo
+   código no cambió (`backend/` para la API, `frontend/` para el sitio) no se reconstruye.
+3. Espera a que la API (`commit` en `/api/v1/health`) y el sitio (`/version.txt`) sirvan el
+   commit nuevo.
+4. Comprueba la demo en vivo: salud y migraciones, inicio de sesión con `admin_global`, que la
+   API acepta por CORS el origen del sitio y que el bundle apunta a la URL de la API. Las dos
+   últimas son configuración de Render y no código, así que se comprueban siempre.
+
+Si algo falla, el run queda en rojo con el motivo. Un build que falla en Render se ve aquí como un
+tiempo de espera agotado: el workflow no tiene clave de la API de Render, y el detalle está en el
+registro del deploy.
+
+### Configuración, una sola vez
+
+1. En Render, en *Settings* de cada servicio, comprueba que la rama es `main` y copia la URL de
+   *Deploy Hook*. Esa URL es una credencial: quien la tenga puede redesplegar el servicio.
+2. En GitHub, *Settings → Secrets and variables → Actions*:
+
+   | Tipo | Nombre | Valor |
+   |---|---|---|
+   | Secreto | `RENDER_DEPLOY_HOOK_API` | El *deploy hook* de `argos-demo-api` |
+   | Secreto | `RENDER_DEPLOY_HOOK_SITE` | El *deploy hook* de `argos-demo` |
+   | Variable | `DEMO_API_URL` | La URL de la API seguida de `/api/v1`, igual que `VITE_API_URL` |
+   | Variable | `DEMO_SITE_URL` | La URL del sitio estático, sin barra final, igual que `CORS_ORIGINS` |
+
+3. En Render, sincroniza el Blueprint para que se aplique el cambio de `render.yaml`, o pon
+   *Auto-Deploy* en *Off* a mano en los dos servicios. Mientras siga activo, cada push se
+   despliega dos veces y una de ellas sin esperar a CI.
+
+Hasta que existan los cuatro valores, el workflow falla en su primer paso diciendo cuál falta.
+
+### A mano
+
+- **Redesplegar**: *Actions → Deploy demo → Run workflow*. Reconstruye los dos servicios desde
+  `main` y repite las comprobaciones.
+- **Volver atrás**: en Render, *Deploys → Rollback* sobre el deploy anterior. No deshace
+  migraciones. El siguiente push a `main` vuelve a desplegar lo último.
 
 ---
 

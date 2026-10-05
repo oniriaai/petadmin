@@ -497,5 +497,5 @@ sembrados ni los altera.
 - [docs/alcance.md](docs/alcance.md): alcance funcional por módulo y reglas de negocio.
 - [docs/functional-design.md](docs/functional-design.md): flujos operativos y mapa de experiencia.
 - [docs/adding-a-module.md](docs/adding-a-module.md): checklist para incorporar nuevos módulos.
-- [docs/demo-hosting.md](docs/demo-hosting.md): demo pública sin coste (Render + Neon) y su reinicio diario.
+- [docs/demo-hosting.md](docs/demo-hosting.md): demo pública sin coste (Render + Neon), su reinicio diario y su despliegue continuo.
 - [docs/futuras-implementaciones.md](docs/futuras-implementaciones.md): roadmap técnico.

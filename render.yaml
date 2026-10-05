@@ -17,6 +17,10 @@ services:
     region: virginia
     dockerContext: ./backend
     dockerfilePath: ./backend/Dockerfile
+    # Deploys are started by .github/workflows/deploy-demo.yml once CI has passed on main, and
+    # verified afterwards. Left on, Render would also build every push on its own, ungated.
+    branch: main
+    autoDeployTrigger: "off"
     # The free plan has no pre-deploy step, so migrations and the seed run before the server on
     # every start, including each wake from idle. Both are no-ops when there is nothing to do.
     # The sequence lives in an npm script (backend/package.json) rather than here: Render does
@@ -52,7 +56,8 @@ services:
       # session, which the pooled endpoint does not give it.
       - key: DATABASE_URL
         sync: false
-      # The static site's URL, e.g. https://argos-demo.onrender.com (no trailing slash).
+      # The static site's URL as Render assigned it (no trailing slash). Not necessarily
+      # https://argos-demo.onrender.com: when a name is taken Render appends a suffix.
       - key: CORS_ORIGINS
         sync: false
       - key: B2_KEY_ID
@@ -70,7 +75,11 @@ services:
     name: argos-demo
     runtime: static
     rootDir: frontend
-    buildCommand: npm ci && npm run build
+    branch: main
+    autoDeployTrigger: "off"
+    # version.txt is how the deploy workflow knows which commit the site is serving. A real
+    # file, so it is served as such and not rewritten to index.html.
+    buildCommand: npm ci && npm run build && echo "$RENDER_GIT_COMMIT" > dist/version.txt
     staticPublishPath: dist
     # A single-page app: unknown paths are routes, not missing files.
     routes:
@@ -78,7 +87,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      # Baked into the bundle at build time, e.g. https://argos-demo-api.onrender.com/api/v1.
-      # Left empty, every request the page makes 404s; redeploy after setting it.
+      # Baked into the bundle at build time: the API's URL followed by /api/v1, e.g.
+      # https://argos-demo-api.onrender.com/api/v1. Left empty or without the suffix, every
+      # request the page makes 404s; redeploy after setting it.
       - key: VITE_API_URL
         sync: false
