@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
 import { PageLoader } from "../../components/ui/Spinner";
 import { useAuth } from "../../lib/auth-context";
+import { useGoBack } from "../../lib/use-go-back";
 import { fmtDateTime } from "../../lib/utils";
 import { errorMessage, petAge, veterinariaApi, type Stay } from "./api";
 
 /** The discharge sheet the tutor takes home. The app's navigation is hidden when printing. */
 export function AltaPage() {
   const { id = "" } = useParams();
-  const navigate = useNavigate();
   const { daycare } = useAuth();
   const [stay, setStay] = useState<Stay | null>(null);
   const [error, setError] = useState("");
+  const goBack = useGoBack("/veterinaria/hospitalizacion");
 
   useEffect(() => {
     veterinariaApi
@@ -23,9 +24,14 @@ export function AltaPage() {
 
   if (error) {
     return (
-      <p className="p-6 text-sm text-danger" role="alert">
-        {error}
-      </p>
+      <div className="p-6">
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
+        <Link to="/veterinaria/hospitalizacion" className="btn-secondary mt-4 inline-flex">
+          Volver a hospitalización
+        </Link>
+      </div>
     );
   }
   if (!stay) return <PageLoader />;
@@ -35,7 +41,7 @@ export function AltaPage() {
   return (
     <div className="p-4 sm:p-6 max-w-3xl space-y-4">
       <div className="flex justify-between print:hidden">
-        <button className="btn-secondary" onClick={() => navigate(-1)}>
+        <button className="btn-secondary" onClick={goBack}>
           <ArrowLeft size={16} /> Volver
         </button>
         <button className="btn-primary" onClick={() => window.print()}>

@@ -128,7 +128,14 @@ export function Login() {
       */}
       <aside className="bg-shell text-shell-ink px-6 py-6 sm:px-8 lg:px-12 lg:py-14 lg:flex lg:flex-col lg:justify-between">
         <div className="rise-in max-w-sm">
-          <Wordmark size="lg" />
+          {/* A plain anchor: the product page is a separate chunk chosen at load (see main.tsx). */}
+          <a
+            href="/"
+            className="inline-block text-shell-ink"
+            aria-label="Argos Suite, página de inicio"
+          >
+            <Wordmark size="lg" />
+          </a>
           <div className="mt-4 w-40 text-oro">
             <Meander />
           </div>

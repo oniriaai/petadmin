@@ -11,7 +11,7 @@ const sections = [
     id: "reservas",
     title: "Crear una Reserva",
     steps: [
-      "Ve a **Control de Reservas** en el menú lateral",
+      "Ve a **Operaciones** en el menú lateral",
       "Haz clic en **Nueva Reserva** (arriba a la derecha)",
       "Selecciona el **cliente** y luego las **mascotas** que asistirán",
       "Elige el **servicio** (Guardería, Peluquería Canina, etc.)",
@@ -45,7 +45,7 @@ const sections = [
     id: "administrativa",
     title: "Gestión Administrativa",
     steps: [
-      "Ve a **Gestión Admin** para manejar gastos y proveedores",
+      "Ve a **Finanzas** para manejar gastos y proveedores",
       "En la pestaña **Gastos y Compras**, registra todos los egresos",
       "Para pagar un gasto, haz clic en el botón de pago de la fila correspondiente",
       "El saldo se actualiza automáticamente con cada pago registrado",

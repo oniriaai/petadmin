@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
 import { PageLoader } from "../../components/ui/Spinner";
 import { useAuth } from "../../lib/auth-context";
+import { useGoBack } from "../../lib/use-go-back";
 import { fmt, fmtDateTime } from "../../lib/utils";
 import { CONSENT_TYPES, errorMessage, petAge, veterinariaApi, type PrintableConsent } from "./api";
 
 /** One consent laid out for paper, with the line the tutor signs on. */
 export function ConsentimientoPage() {
   const { id = "" } = useParams();
-  const navigate = useNavigate();
   const { daycare } = useAuth();
   const [consent, setConsent] = useState<PrintableConsent | null>(null);
   const [error, setError] = useState("");
+  const goBack = useGoBack(
+    consent ? `/veterinaria/pacientes/${consent.pet.id}` : "/veterinaria/pacientes",
+  );
 
   useEffect(() => {
     veterinariaApi
@@ -23,9 +26,14 @@ export function ConsentimientoPage() {
 
   if (error) {
     return (
-      <p className="p-6 text-sm text-danger" role="alert">
-        {error}
-      </p>
+      <div className="p-6">
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
+        <Link to="/veterinaria/pacientes" className="btn-secondary mt-4 inline-flex">
+          Volver a historias clínicas
+        </Link>
+      </div>
     );
   }
   if (!consent) return <PageLoader />;
@@ -36,7 +44,7 @@ export function ConsentimientoPage() {
   return (
     <div className="p-4 sm:p-6 max-w-3xl space-y-4">
       <div className="flex justify-between print:hidden">
-        <button className="btn-secondary" onClick={() => navigate(-1)}>
+        <button className="btn-secondary" onClick={goBack}>
           <ArrowLeft size={16} /> Volver
         </button>
         <button className="btn-primary" onClick={() => window.print()}>

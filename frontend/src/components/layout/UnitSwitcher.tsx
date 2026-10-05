@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import { Check, ChevronsUpDown, Compass, PawPrint, Scissors, Stethoscope } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
@@ -6,6 +7,7 @@ import { businessUnitLabel } from "../../modules/shared/contracts";
 import type { BusinessUnit } from "../../modules/shared/contracts";
 import { cls } from "../../lib/utils";
 import { unitTheme } from "../../lib/unit-theme";
+import { findRoute } from "../../modules/access";
 
 const UNIT_ICONS: Record<BusinessUnit, LucideIcon> = {
   DAYCARE: PawPrint,
@@ -32,6 +34,8 @@ export function UnitSwitcher({
   compact?: boolean;
 }) {
   const { user, units, setActiveBusinessUnit } = useAuth();
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -104,6 +108,10 @@ export function UnitSwitcher({
 
   function choose(next: BusinessUnit | null) {
     setActiveBusinessUnit(next);
+    // A page owned by another unit would turn into "this section belongs to..." under the new
+    // one. The switch was deliberate, so it lands on the new unit's home instead.
+    const owner = findRoute(pathname)?.unit;
+    if (next && owner && owner !== next) navigate("/");
     setIsOpen(false);
     triggerRef.current?.focus();
   }

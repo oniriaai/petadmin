@@ -80,6 +80,9 @@ export function UserMenu() {
             onClick={() => {
               setIsOpen(false);
               logout();
+              // Going there by hand rather than through the route guard, which would remember
+              // this page and hand it to whoever signs in next.
+              navigate("/login", { replace: true });
             }}
           >
             <LogOut size={15} /> Cerrar sesión
