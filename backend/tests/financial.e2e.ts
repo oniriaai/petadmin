@@ -38,17 +38,19 @@ function createClient() {
     baseURL: BASE_URL,
     headers: {
       "Content-Type": "application/json",
+      "X-Business-Unit": "DAYCARE",
       ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
     },
   });
 }
 
+// The tenant admin, narrowed to the daycare unit by header. The unit account no longer reaches
+// the finances by default: that boundary is pinned in tests/permissions.e2e.ts.
 async function login(): Promise<void> {
   const client = axios.create({ baseURL: BASE_URL });
   const response = await client.post("/auth/login", {
-    businessUnit: "DAYCARE",
-    username: "guarderia_admin",
-    password: "guarderia123",
+    username: "admin_global",
+    password: "admin123",
   });
   authToken = response.data.token;
 }

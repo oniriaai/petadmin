@@ -75,7 +75,7 @@ export function GuardedRoute({
   children: React.ReactNode;
   route: ModuleRoute;
 }) {
-  const { user, isLoading, isSessionLoading, hasModules, fullAccess, activeBusinessUnit } =
+  const { user, isLoading, isSessionLoading, hasModules, canAll, fullAccess, activeBusinessUnit } =
     useAuth();
   if (isLoading) return <Loading />;
   if (!user) return <Navigate to="/login" replace />;
@@ -96,6 +96,12 @@ export function GuardedRoute({
     // disabled. Wait rather than flash a wrong "not available" page.
     if (isSessionLoading) return <Loading label="Comprobando permisos..." />;
     return <ModuleUnavailable reason="module" modules={route.requires} />;
+  }
+
+  // Last, as on the server: "not in your plan" outranks "not granted to you".
+  if (!canAll(route.permissions)) {
+    if (isSessionLoading) return <Loading label="Comprobando permisos..." />;
+    return <ModuleUnavailable reason="permission" />;
   }
 
   return <>{children}</>;

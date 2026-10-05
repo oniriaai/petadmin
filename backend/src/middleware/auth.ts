@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+import { effectivePermissions } from "../core/tenancy/permissions";
+import type { PermissionId } from "../core/tenancy/permissions";
 import { getPrincipalStatus } from "../core/tenancy/principal";
 
 export const BUSINESS_UNITS = ["DAYCARE", "GROOMING", "VETERINARY"] as const;
@@ -58,10 +60,16 @@ interface JwtPayload {
   tv: number;
 }
 
+/** The token plus what `requireAuth` re-reads on every request. */
+interface AuthenticatedUser extends JwtPayload {
+  /** Effective permissions, read live so a grant or a revocation bites on the next request. */
+  permissions: readonly PermissionId[];
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      user?: AuthenticatedUser;
     }
   }
 }
@@ -239,6 +247,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       res.status(401).json({ message: "Sesión caducada, inicia sesión nuevamente" });
       return;
     }
+    // Nor may one minted before a role change keep the old role: the role decides which
+    // modules open and whether permissions apply at all, so a demoted admin would otherwise
+    // hold everything until the token expired.
+    if (normalizeUserRole(status.role, status.businessUnit) !== role) {
+      res.status(401).json({ message: "Sesión caducada, inicia sesión nuevamente" });
+      return;
+    }
     if (!status.userActive) {
       res.status(403).json({ message: "Tu cuenta está desactivada", code: "USER_INACTIVE" });
       return;
@@ -248,7 +263,12 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    req.user = { ...payload, role, daycareId };
+    req.user = {
+      ...payload,
+      role,
+      daycareId,
+      permissions: effectivePermissions(role, status.permissions),
+    };
     next();
   } catch (error) {
     // The status lookup touches the database, so it can fail for reasons that are not the

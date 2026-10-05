@@ -2,6 +2,11 @@ import { Router, type NextFunction, type Request, type Response } from "express"
 import { z } from "zod";
 
 import { ASSIGNABLE_TENANT_ROLES, BUSINESS_UNITS, handleAuthzError } from "../../middleware/auth";
+import {
+  DEFAULT_STAFF_PERMISSIONS,
+  PERMISSION_IDS,
+  PERMISSIONS,
+} from "../../core/tenancy/permissions";
 import { PRODUCT_MODULES, TOGGLEABLE_PRODUCT_MODULES } from "../../platform/product-modules";
 import { invalidate } from "../../platform/module-access";
 import { listAudit, recordAudit } from "./audit.service";
@@ -67,6 +72,8 @@ platformRouter.get("/modules", (_req, res) => {
     })),
     units: BUSINESS_UNITS,
     roles: ASSIGNABLE_TENANT_ROLES,
+    permissions: PERMISSIONS,
+    defaultStaffPermissions: DEFAULT_STAFF_PERMISSIONS,
   });
 });
 
@@ -226,6 +233,7 @@ const provisionSchema = z.object({
   name: z.string().min(1).max(120),
   // `superadmin` is not a member of this enum, so it cannot be requested at all.
   role: z.enum(ASSIGNABLE_TENANT_ROLES),
+  permissions: z.array(z.enum(PERMISSION_IDS)).optional(),
 });
 
 platformRouter.post("/daycares/:id/users", async (req, res) => {
@@ -239,7 +247,7 @@ platformRouter.post("/daycares/:id/users", async (req, res) => {
       daycareId: req.params.id,
       targetType: "user",
       targetId: user.id,
-      detail: { username: user.username, role: user.role },
+      detail: { username: user.username, role: user.role, permissions: user.permissions },
     });
     res.status(201).json(user);
   } catch (error) {
@@ -252,6 +260,7 @@ const userUpdateSchema = z.object({
   role: z.enum(ASSIGNABLE_TENANT_ROLES).optional(),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").optional(),
   isActive: z.boolean().optional(),
+  permissions: z.array(z.enum(PERMISSION_IDS)).optional(),
 });
 
 platformRouter.patch("/daycares/:id/users/:userId", async (req, res) => {

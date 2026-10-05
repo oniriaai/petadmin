@@ -20,6 +20,11 @@ export interface PrincipalStatus {
   /** null for a superadmin, which belongs to no daycare. */
   daycareId: string | null;
   userActive: boolean;
+  /** As stored: may still be a pre-rename value, so callers normalise it with `businessUnit`. */
+  role: string;
+  businessUnit: string;
+  /** As stored. `effectivePermissions` turns it into what the caller actually holds. */
+  permissions: string[];
   /** True when the user has no daycare: there is no tenant to be suspended. */
   daycareActive: boolean;
 }
@@ -36,7 +41,14 @@ const inFlight = new Map<string, Promise<PrincipalStatus | null>>();
 async function loadPrincipalStatus(userId: string): Promise<PrincipalStatus | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { isActive: true, daycareId: true, daycare: { select: { isActive: true } } },
+    select: {
+      isActive: true,
+      daycareId: true,
+      role: true,
+      businessUnit: true,
+      permissions: true,
+      daycare: { select: { isActive: true } },
+    },
   });
   // A token naming a user that no longer exists is not a valid session.
   if (!user) return null;
@@ -44,6 +56,9 @@ async function loadPrincipalStatus(userId: string): Promise<PrincipalStatus | nu
   return {
     daycareId: user.daycareId,
     userActive: user.isActive,
+    role: user.role,
+    businessUnit: user.businessUnit,
+    permissions: user.permissions,
     daycareActive: user.daycare ? user.daycare.isActive : true,
   };
 }

@@ -34,4 +34,17 @@ assert.deepEqual(veterinaria?.access, {
   businessUnits: ["VETERINARY"],
 });
 
+// A permission rule naming something outside the catalog must fail at boot, like an unclaimed
+// module does, rather than silently never matching anyone's grants.
+assert.throws(
+  () =>
+    validateBackendModules([
+      {
+        ...backendModules.find((module) => module.id === "clients")!,
+        permissions: [{ permission: "no.such.permission" as never }],
+      },
+    ]),
+  /unknown permission/,
+);
+
 console.log(`✓ backend module registry (${backendModules.length} modules)`);

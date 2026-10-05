@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Plus, Edit2, Trash2, RefreshCw, Search } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 import { PageLoader } from "../../components/ui/Spinner";
 import { RoomForm } from "./RoomForm";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -17,6 +18,8 @@ interface Room {
 }
 
 export function RoomsPage() {
+  // The server refuses the delete without this permission, so the button is not offered.
+  const canDelete = useAuth().can("registros.delete");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -179,7 +182,7 @@ export function RoomsPage() {
                         >
                           <Edit2 size={14} />
                         </button>
-                        {room.isActive && (
+                        {room.isActive && canDelete && (
                           <button
                             onClick={() => deleteRoom(room.id, room.name)}
                             className="btn-ghost btn-sm p-1.5 text-danger hover:bg-danger-soft"

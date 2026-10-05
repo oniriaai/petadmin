@@ -6,6 +6,7 @@ import { ListSkeleton, Spinner } from "../../components/ui/Spinner";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { businessUnitLabel } from "../../modules/shared/contracts";
 import type { BusinessUnit } from "../../modules/shared/contracts";
+import { EquipoSection } from "./EquipoSection";
 
 interface UnitSetting {
   businessUnit: BusinessUnit;
@@ -241,6 +242,8 @@ export function ConfiguracionPage() {
                 </div>
               );
             })}
+
+            <EquipoSection />
 
             {canExport && (
               <div className="card p-5 space-y-4">

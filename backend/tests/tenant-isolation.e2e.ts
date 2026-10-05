@@ -100,7 +100,9 @@ async function run() {
   });
 
   await test("Un módulo no habilitado se deniega con 403 MODULE_DISABLED, no con una lista vacía", async () => {
-    const a = clientFor(principal);
+    // The admin, because the positive half reads finance and inventory, which a unit account
+    // needs a permission for. The negative half is about the tenant, not the user.
+    const a = clientFor(await loginAs("admin_global", "admin123"));
     const b = clientFor(demo);
     // The demo tenant is seeded without finanzas, inventario, informes, cumplimiento or
     // guarderia. Isolation and entitlement are different protections and must not be confused:

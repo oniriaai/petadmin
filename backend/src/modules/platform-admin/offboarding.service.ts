@@ -32,6 +32,7 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
           role: true,
           businessUnit: true,
           isActive: true,
+          permissions: true,
           createdAt: true,
         },
         orderBy: { username: "asc" },
@@ -95,9 +96,25 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
 
   // Passwords are not in here, by design: a hash is not data the customer needs, and handing
   // one over is handing over something to crack offline.
-  const us = sheet("Usuarios", ["Usuario", "Nombre", "Rol", "Unidad", "Activo", "Creado"]);
+  const us = sheet("Usuarios", [
+    "Usuario",
+    "Nombre",
+    "Rol",
+    "Unidad",
+    "Activo",
+    "Permisos",
+    "Creado",
+  ]);
   users.forEach((u) =>
-    us.addRow([u.username, u.name, u.role, u.businessUnit, u.isActive ? "Sí" : "No", u.createdAt]),
+    us.addRow([
+      u.username,
+      u.name,
+      u.role,
+      u.businessUnit,
+      u.isActive ? "Sí" : "No",
+      u.permissions.join(", "),
+      u.createdAt,
+    ]),
   );
 
   const cs = sheet("Tutores", [

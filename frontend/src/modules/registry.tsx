@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
-import { isProductModuleId } from "./shared/contracts";
-import type { BusinessUnit, ProductModuleId, TenantRole } from "./shared/contracts";
+import { isPermissionId, isProductModuleId } from "./shared/contracts";
+import type { BusinessUnit, PermissionId, ProductModuleId, TenantRole } from "./shared/contracts";
 import {
   BarChart3,
   BedDouble,
@@ -72,6 +72,12 @@ export interface ModuleRoute {
    */
   requires?: ProductModuleId[];
   /**
+   * Permissions the user must hold to open the page, ALL of them. Like `requires`, derived from
+   * the endpoints the page cannot work without: a page that only hides a button for lack of a
+   * permission gates that button with `can()` instead.
+   */
+  permissions?: PermissionId[];
+  /**
    * The business unit this route belongs to, mirroring the backend module's
    * `access.businessUnits`. The backend now refuses a module that does not serve the unit the
    * caller narrowed to, so the route has to say the same thing or the page loads and then 403s.
@@ -86,6 +92,7 @@ export interface ModuleNavigationItem {
   roles?: FrontendRole[];
   unit?: FrontendUnit;
   requires?: ProductModuleId[];
+  permissions?: PermissionId[];
   /** Pinned below the scrolling groups: the entries about the workspace rather than the work. */
   placement?: "footer";
 }
@@ -403,9 +410,25 @@ export const frontendModules: readonly FrontendModule[] = [
       { path: "/clientes", component: ClientesPage },
       { path: "/animales", component: AnimalesPage },
       { path: "/operaciones", component: OperacionesPage, requires: ["reservas"] },
-      { path: "/transacciones", component: FinancialPage, requires: ["finanzas"] },
-      { path: "/inventario", component: InventarioPage, requires: ["inventario"] },
-      { path: "/informes", component: InformesPage, requires: ["informes"] },
+      {
+        path: "/transacciones",
+        component: FinancialPage,
+        requires: ["finanzas"],
+        permissions: ["finanzas.read"],
+      },
+      {
+        path: "/inventario",
+        component: InventarioPage,
+        requires: ["inventario"],
+        permissions: ["inventario.read"],
+      },
+      // Every figure on the page is financial (`/reports/incomes`, `/expenses`, `/kpis`).
+      {
+        path: "/informes",
+        component: InformesPage,
+        requires: ["informes"],
+        permissions: ["finanzas.read"],
+      },
       { path: "/herramientas", component: HerramientasPage },
       { path: "/configuracion", component: ConfiguracionPage, roles: ["admin"] },
       { path: "/guia", component: GuidePage },
@@ -427,9 +450,22 @@ export const frontendModules: readonly FrontendModule[] = [
           label: "Finanzas",
           icon: DollarSign,
           requires: ["finanzas"],
+          permissions: ["finanzas.read"],
         },
-        { to: "/inventario", label: "Inventario", icon: Package, requires: ["inventario"] },
-        { to: "/informes", label: "Informes", icon: BarChart3, requires: ["informes"] },
+        {
+          to: "/inventario",
+          label: "Inventario",
+          icon: Package,
+          requires: ["inventario"],
+          permissions: ["inventario.read"],
+        },
+        {
+          to: "/informes",
+          label: "Informes",
+          icon: BarChart3,
+          requires: ["informes"],
+          permissions: ["finanzas.read"],
+        },
         { to: "/herramientas", label: "Herramientas", icon: Wrench },
         {
           to: "/configuracion",
@@ -457,9 +493,11 @@ export function validateFrontendModules(
       if (paths.has(route.path)) throw new Error(`Duplicate frontend route path: ${route.path}`);
       paths.add(route.path);
       assertRequiresAreKnown(route.requires, `route ${route.path}`);
+      assertPermissionsAreKnown(route.permissions, `route ${route.path}`);
     }
     for (const item of module.navigation?.items ?? []) {
       assertRequiresAreKnown(item.requires, `nav item ${item.to}`);
+      assertPermissionsAreKnown(item.permissions, `nav item ${item.to}`);
     }
   }
 }
@@ -473,6 +511,18 @@ function assertRequiresAreKnown(requires: readonly string[] | undefined, where: 
   for (const id of requires ?? []) {
     if (!isProductModuleId(id)) {
       throw new Error(`Unknown product module '${id}' required by ${where}`);
+    }
+  }
+}
+
+/** The same drift, for permissions: an unknown id would hide the route from everyone but admins. */
+function assertPermissionsAreKnown(
+  permissions: readonly string[] | undefined,
+  where: string,
+): void {
+  for (const id of permissions ?? []) {
+    if (!isPermissionId(id)) {
+      throw new Error(`Unknown permission '${id}' on ${where}`);
     }
   }
 }

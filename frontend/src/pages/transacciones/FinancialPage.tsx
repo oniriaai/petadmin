@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { api } from "../../lib/api";
 import { PageLoader } from "../../components/ui/Spinner";
+import { useAuth } from "../../lib/auth-context";
 import { IncomeEntryForm } from "./IncomeEntryForm";
 import { PayableEntryForm } from "./PayableEntryForm";
 import { ProviderForm } from "./ProviderForm";
@@ -89,6 +90,9 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function FinancialPage() {
+  // Reading is what opens the page (see the registry). Without the write permission it is a
+  // ledger to consult: the server refuses every change, so none is offered.
+  const canWrite = useAuth().can("finanzas.write");
   const [activeTab, setActiveTab] = useState<"dashboard" | "income" | "egresos" | "providers">(
     "dashboard",
   );
@@ -208,7 +212,8 @@ export function FinancialPage() {
           </>
         }
         actions={
-          activeTab !== "dashboard" && (
+          activeTab !== "dashboard" &&
+          canWrite && (
             <button
               onClick={() => {
                 if (activeTab === "income") {
@@ -340,6 +345,7 @@ export function FinancialPage() {
               onEdit={setEditingIncome}
               onDelete={deleteIncome}
               onOpenForm={() => setShowIncomeForm(true)}
+              canWrite={canWrite}
             />
           )}
           {activeTab === "egresos" && (
@@ -347,6 +353,7 @@ export function FinancialPage() {
               payables={filteredPayables}
               onPay={setShowPayModal}
               onDelete={deletePayable}
+              canWrite={canWrite}
             />
           )}
           {activeTab === "providers" && (
@@ -357,6 +364,7 @@ export function FinancialPage() {
                 setShowProviderForm(true);
               }}
               load={loadProviders}
+              canWrite={canWrite}
             />
           )}
         </>
@@ -406,7 +414,7 @@ export function FinancialPage() {
   );
 }
 
-function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
+function IncomesTable({ incomes, onEdit, onDelete, onOpenForm, canWrite }: any) {
   return (
     <div className="bg-surface border border-line-subtle rounded-lg overflow-hidden">
       {incomes.length === 0 ? (
@@ -456,23 +464,25 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
                     </td>
                     <td className="table-td text-xs">{fmt(income.date)}</td>
                     <td className="table-td text-right">
-                      <div className="flex gap-2 justify-end">
-                        <button
-                          onClick={() => {
-                            onEdit(income);
-                            onOpenForm();
-                          }}
-                          className="p-1.5 hover:bg-info-soft text-action rounded-sm transition"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => onDelete(income.id, income.concept)}
-                          className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      {canWrite && (
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            onClick={() => {
+                              onEdit(income);
+                              onOpenForm();
+                            }}
+                            className="p-1.5 hover:bg-info-soft text-action rounded-sm transition"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button
+                            onClick={() => onDelete(income.id, income.concept)}
+                            className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -485,7 +495,7 @@ function IncomesTable({ incomes, onEdit, onDelete, onOpenForm }: any) {
   );
 }
 
-function EgresosTable({ payables, onPay, onDelete }: any) {
+function EgresosTable({ payables, onPay, onDelete, canWrite }: any) {
   return (
     <div className="bg-surface border border-line-subtle rounded-lg overflow-hidden">
       {payables.length === 0 ? (
@@ -531,23 +541,25 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
                     </Badge>
                   </td>
                   <td className="table-td text-right">
-                    <div className="flex gap-1 justify-end">
-                      {p.status !== "PAGADO" && (
+                    {canWrite && (
+                      <div className="flex gap-1 justify-end">
+                        {p.status !== "PAGADO" && (
+                          <button
+                            onClick={() => onPay(p)}
+                            className="p-1.5 bg-success-soft text-success rounded-sm hover:bg-success-soft transition"
+                            title="Registrar pago"
+                          >
+                            <CreditCard size={14} />
+                          </button>
+                        )}
                         <button
-                          onClick={() => onPay(p)}
-                          className="p-1.5 bg-success-soft text-success rounded-sm hover:bg-success-soft transition"
-                          title="Registrar pago"
+                          onClick={() => onDelete(p.id)}
+                          className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
                         >
-                          <CreditCard size={14} />
+                          <Trash2 size={14} />
                         </button>
-                      )}
-                      <button
-                        onClick={() => onDelete(p.id)}
-                        className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -559,7 +571,7 @@ function EgresosTable({ payables, onPay, onDelete }: any) {
   );
 }
 
-function ProvidersTable({ providers, onEdit, load }: any) {
+function ProvidersTable({ providers, onEdit, load, canWrite }: any) {
   async function deactivate(id: string) {
     if (!confirm("¿Desactivamos este proveedor? Podrás volver a activarlo después.")) return;
     await api.del(`/providers/${id}`);
@@ -608,24 +620,26 @@ function ProvidersTable({ providers, onEdit, load }: any) {
                     </Badge>
                   </td>
                   <td className="table-td text-right">
-                    <div className="flex gap-1 justify-end">
-                      <button
-                        onClick={() => onEdit(p)}
-                        className="p-1.5 hover:bg-sunken rounded-sm transition text-muted"
-                        aria-label="Editar proveedor"
-                        title="Editar"
-                      >
-                        <Edit2 size={15} aria-hidden="true" />
-                      </button>
-                      {p.isActive && (
+                    {canWrite && (
+                      <div className="flex gap-1 justify-end">
                         <button
-                          onClick={() => deactivate(p.id)}
-                          className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
+                          onClick={() => onEdit(p)}
+                          className="p-1.5 hover:bg-sunken rounded-sm transition text-muted"
+                          aria-label="Editar proveedor"
+                          title="Editar"
                         >
-                          <Trash2 size={13} />
+                          <Edit2 size={15} aria-hidden="true" />
                         </button>
-                      )}
-                    </div>
+                        {p.isActive && (
+                          <button
+                            onClick={() => deactivate(p.id)}
+                            className="p-1.5 hover:bg-danger-soft text-danger rounded-sm transition"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

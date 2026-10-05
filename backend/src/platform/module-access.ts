@@ -8,7 +8,8 @@ import {
   handleAuthzError,
 } from "../middleware/auth";
 import type { BusinessUnit } from "../middleware/auth";
-import type { BackendModule } from "./module";
+import type { PermissionId } from "../core/tenancy/permissions";
+import type { BackendModule, PermissionRule } from "./module";
 import { productModuleForBackendId } from "./product-modules";
 
 /**
@@ -116,6 +117,36 @@ export function moduleServesUnits(module: BackendModule, scope: readonly Busines
   return scope.some((unit) => allowedUnits.includes(unit));
 }
 
+function ruleMatches(rule: PermissionRule, method: string, path: string): boolean {
+  const verb = method.toUpperCase();
+  const isRead = verb === "GET" || verb === "HEAD" || verb === "OPTIONS";
+  if (rule.methods === "read" && !isRead) return false;
+  if (rule.methods === "write" && isRead) return false;
+  if (rule.methods === "delete" && verb !== "DELETE") return false;
+
+  if (rule.path === undefined) return true;
+  if (typeof rule.path !== "string") return rule.path.test(path);
+  return path === rule.path || path.startsWith(`${rule.path}/`);
+}
+
+/**
+ * The permissions a request to a module needs. `path` is the path inside the module, which is
+ * what Express hands a middleware mounted at the module's base path.
+ *
+ * Exported as a pure function so the architecture suite can assert the rules without a server.
+ */
+export function requiredPermissions(
+  module: BackendModule,
+  method: string,
+  path: string,
+): PermissionId[] {
+  const needed = new Set<PermissionId>();
+  for (const rule of module.permissions ?? []) {
+    if (ruleMatches(rule, method, path)) needed.add(rule.permission);
+  }
+  return [...needed];
+}
+
 export function requireModuleAccess(module: BackendModule) {
   const productModule = productModuleForBackendId(module.id);
   const isCore = productModule?.core === true;
@@ -162,7 +193,28 @@ export function requireModuleAccess(module: BackendModule) {
         }
       }
 
+      // Permissions come last, so that a module the tenant has not bought is still reported as
+      // MODULE_DISABLED: "ask your admin for access" is the wrong answer to "this was not sold".
+      // An admin holds every permission, so this only ever refuses the operational roles.
+      const missing =
+        user.role === "admin"
+          ? undefined
+          : requiredPermissions(module, req.method, req.path).find(
+              (permission) => !user.permissions?.includes(permission),
+            );
+      const refusePermission = (): void => {
+        res.status(403).json({
+          message: "No tienes permiso para realizar esta acción",
+          code: "PERMISSION_DENIED",
+          permission: missing,
+        });
+      };
+
       if (isCore) {
+        if (missing) {
+          refusePermission();
+          return;
+        }
         next();
         return;
       }
@@ -180,6 +232,11 @@ export function requireModuleAccess(module: BackendModule) {
           code: "MODULE_DISABLED",
           module: productModule?.id ?? module.id,
         });
+        return;
+      }
+
+      if (missing) {
+        refusePermission();
         return;
       }
 

@@ -190,11 +190,20 @@ async function run() {
     });
     expectStatus(read.status, 404, "Editar un usuario ajeno");
 
+    // Granting permissions is the same write, and the more valuable one to an attacker.
+    const grant = await clientFor(adminToken, "DAYCARE").patch(`/users/${victim.id}`, {
+      permissions: ["finanzas.write", "registros.delete"],
+    });
+    expectStatus(grant.status, 404, "Conceder permisos a un usuario ajeno");
+
     // And it must not have been modified.
     const after = await consoleApi.get("/platform/daycares/daycare_principal");
     const unchanged = after.data.users.find((u: any) => u.id === victim.id);
     if (unchanged.name === "Secuestrado")
       throw new Error("Se modificó un usuario de otra guardería");
+    if (JSON.stringify(unchanged.permissions) !== JSON.stringify(victim.permissions)) {
+      throw new Error("Se modificaron los permisos de un usuario de otra guardería");
+    }
   });
 
   await test("Un admin no puede desactivar su propia cuenta", async () => {

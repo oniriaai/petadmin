@@ -84,6 +84,35 @@ siendo exactamente el objeto que se monta.
    la cabecera en silencio.
 6. Módulo no contratado por la guardería → **403** con
    `{ code: "MODULE_DISABLED", module }`.
+7. Falta un permiso que la petición necesita → **403** con
+   `{ code: "PERMISSION_DENIED", permission }`. Va al final para que un módulo no contratado se
+   siga anunciando como tal, y se comprueba también en los módulos `core`.
+
+### Permisos por usuario
+
+El rol abre módulos; el permiso decide qué puede hacer **una persona** dentro de ellos. El catálogo
+es fijo y vive en `src/core/tenancy/permissions.ts`; cada usuario guarda la lista que se le
+concedió (`users.permissions`).
+
+| Permiso | Abre |
+|---|---|
+| `finanzas.read` | `GET` de `incomes`, `payables` y `providers`; `/reports/{incomes,expenses,kpis}`; `/dashboard/financial/*`; los ingresos de `/dashboard/summary` |
+| `finanzas.write` | Crear, editar y eliminar cobros, cuentas por pagar, pagos y proveedores. Implica `finanzas.read` |
+| `inventario.read` | `GET` de artículos y movimientos |
+| `inventario.write` | Crear, editar y dar de baja artículos y registrar movimientos. Implica `inventario.read` |
+| `datos.export` | `/export/*`. Las hojas de ingresos y gastos piden además `finanzas.read` |
+| `registros.delete` | `DELETE` de un tutor, mascota, reserva, plan, sala, contrato, cita de peluquería o consulta |
+
+- `admin` y `superadmin` tienen todos, diga lo que diga su fila. Un usuario nuevo nace con
+  `inventario.read` y nada más.
+- Las reglas se declaran en el registro (`permissions` de cada `BackendModule`), por verbo y por
+  ruta dentro del módulo; ningún router las comprueba. `tests/permissions.ts` fija el mapa completo.
+- No están detrás de un permiso `/reports/transport` (la ruta del día es trabajo de sala), las
+  líneas de una consulta abierta, ni el cobro o el movimiento de stock que deja cerrar una estancia
+  o dispensar una receta: esos se registran siempre, los haga quien los haga.
+- `requireAuth` relee rol y permisos en cada petición. Conceder o retirar un permiso vale en la
+  petición siguiente, y un token emitido con un rol que el usuario ya no tiene se rechaza con
+  **401**: degradar a un administrador no puede esperar doce horas.
 
 El módulo `auth` es el único `public: true`: se monta sin `requireAuth` porque es de donde sale la
 sesión. `GET /auth/me` aplica `requireAuth` por su cuenta.
@@ -211,8 +240,8 @@ fijado informa los entitlements **reales de ese inquilino**, para ver lo mismo q
 | Método | Endpoint | Descripción |
 |---|---|---|
 | `GET` | `/users` | Personal de la propia guardería. Nunca incluye `passwordHash` |
-| `POST` | `/users` | Provisiona personal: `{ username, password, name, role }` |
-| `PATCH` | `/users/:id` | Renombrar, cambiar rol, restablecer contraseña, activar/desactivar |
+| `POST` | `/users` | Provisiona personal: `{ username, password, name, role, permissions? }`. Sin `permissions`, el mínimo por defecto |
+| `PATCH` | `/users/:id` | Renombrar, cambiar rol, restablecer contraseña, activar/desactivar y **reemplazar** la lista de `permissions` |
 
 Forma parte del **Núcleo**, no es un módulo vendible: que una guardería administre a su propio
 personal no es una función que se venda o se retenga. Sin esto, la consola del proveedor era la
@@ -561,6 +590,7 @@ npm run test:architecture
 npm run test:tenancy         # Aislamiento, MODULE_DISABLED, unidad de negocio y escritura cruzada
 npm run test:platform        # Consola de plataforma
 npm run test:users           # Usuarios por guardería y nombres de usuario por inquilino
+npm run test:permissions     # Permisos por usuario: lo que el personal no alcanza y cómo se concede
 npm run test:offboarding     # Exportación y eliminación de una guardería
 npm run test:suspension      # Desactivación de usuarios y suspensión de inquilinos
 npm run test:ratelimit       # Límite de inicios de sesión y lista blanca de CORS

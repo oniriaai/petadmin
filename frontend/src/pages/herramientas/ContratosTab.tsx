@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileText, Plus, Trash2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 import { clientsApi } from "../../modules/shared/api";
 import type { ClientSummary } from "../../modules/shared/contracts";
 import { Modal } from "../../components/ui/Modal";
@@ -44,6 +45,8 @@ interface Contract {
 }
 
 export function ContratosTab() {
+  // The server refuses the delete without this permission, so the button is not offered.
+  const canDelete = useAuth().can("registros.delete");
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -181,13 +184,15 @@ export function ContratosTab() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    className="btn-ghost btn-sm text-danger"
-                    onClick={() => void remove(contract)}
-                    aria-label={`Eliminar ${contract.name}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {canDelete && (
+                    <button
+                      className="btn-ghost btn-sm text-danger"
+                      onClick={() => void remove(contract)}
+                      aria-label={`Eliminar ${contract.name}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
                 </div>
               </div>
             );

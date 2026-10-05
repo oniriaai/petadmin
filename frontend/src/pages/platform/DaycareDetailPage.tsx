@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, KeyRound, Plus, UserPlus } from "lucide-react";
+import { ArrowLeft, ExternalLink, KeyRound, Plus, ShieldCheck, UserPlus } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import {
   platformApi,
@@ -8,7 +8,9 @@ import {
   type Entitlement,
   type PlatformUser,
 } from "../../lib/platform-api";
-import { businessUnitLabel } from "../../modules/shared/contracts";
+import { PermissionChecklist } from "../../components/access/PermissionChecklist";
+import { DEFAULT_STAFF_PERMISSIONS, businessUnitLabel } from "../../modules/shared/contracts";
+import type { PermissionId } from "../../modules/shared/contracts";
 import { PlatformPage, auditLine, useAsync } from "./shared";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -172,6 +174,7 @@ function UsersSection({
   onChanged: () => void;
 }) {
   const [showNew, setShowNew] = useState(false);
+  const [permissionsFor, setPermissionsFor] = useState<string | null>(null);
   const { run, isLoading, error } = useAsync();
 
   async function toggleActive(user: PlatformUser) {
@@ -233,35 +236,60 @@ function UsersSection({
             </thead>
             <tbody>
               {users.map((user) => (
-                <tr key={user.id} className="border-t border-line">
-                  <td className="table-td font-mono text-xs text-ink">{user.username}</td>
-                  <td className="table-td text-ink">{user.name}</td>
-                  <td className="table-td text-muted">{ROLE_LABELS[user.role] ?? user.role}</td>
-                  <td className="table-td text-muted">{businessUnitLabel(user.businessUnit)}</td>
-                  <td className="table-td">
-                    <span
-                      className={`badge ${user.isActive ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}
-                    >
-                      {user.isActive ? "Activo" : "Inactivo"}
-                    </span>
-                  </td>
-                  <td className="table-td text-right whitespace-nowrap">
-                    <button
-                      className="btn btn-ghost btn-sm text-muted"
-                      disabled={isLoading}
-                      onClick={() => void resetPassword(user)}
-                    >
-                      <KeyRound size={14} /> Contraseña
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm text-muted"
-                      disabled={isLoading}
-                      onClick={() => void toggleActive(user)}
-                    >
-                      {user.isActive ? "Desactivar" : "Activar"}
-                    </button>
-                  </td>
-                </tr>
+                <Fragment key={user.id}>
+                  <tr className="border-t border-line">
+                    <td className="table-td font-mono text-xs text-ink">{user.username}</td>
+                    <td className="table-td text-ink">{user.name}</td>
+                    <td className="table-td text-muted">{ROLE_LABELS[user.role] ?? user.role}</td>
+                    <td className="table-td text-muted">{businessUnitLabel(user.businessUnit)}</td>
+                    <td className="table-td">
+                      <span
+                        className={`badge ${user.isActive ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}
+                      >
+                        {user.isActive ? "Activo" : "Inactivo"}
+                      </span>
+                    </td>
+                    <td className="table-td text-right whitespace-nowrap">
+                      <button
+                        className="btn btn-ghost btn-sm text-muted"
+                        aria-expanded={permissionsFor === user.id}
+                        onClick={() =>
+                          setPermissionsFor(permissionsFor === user.id ? null : user.id)
+                        }
+                      >
+                        <ShieldCheck size={14} /> Permisos
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm text-muted"
+                        disabled={isLoading}
+                        onClick={() => void resetPassword(user)}
+                      >
+                        <KeyRound size={14} /> Contraseña
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm text-muted"
+                        disabled={isLoading}
+                        onClick={() => void toggleActive(user)}
+                      >
+                        {user.isActive ? "Desactivar" : "Activar"}
+                      </button>
+                    </td>
+                  </tr>
+                  {permissionsFor === user.id && (
+                    <tr className="border-t border-line">
+                      <td colSpan={6} className="table-td">
+                        <UserPermissionsForm
+                          daycareId={daycareId}
+                          user={user}
+                          onSaved={() => {
+                            setPermissionsFor(null);
+                            onChanged();
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -271,17 +299,63 @@ function UsersSection({
   );
 }
 
+function UserPermissionsForm({
+  daycareId,
+  user,
+  onSaved,
+}: {
+  daycareId: string;
+  user: PlatformUser;
+  onSaved: () => void;
+}) {
+  const [permissions, setPermissions] = useState<PermissionId[]>(user.permissions ?? []);
+  const { run, isLoading, error } = useAsync();
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const saved = await run(() => platformApi.updateUser(daycareId, user.id, { permissions }));
+    if (saved) onSaved();
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-3 text-left whitespace-normal">
+      {error && (
+        <div
+          className="rounded-lg border border-danger-line bg-danger-soft px-3 py-2 text-sm text-danger"
+          role="alert"
+        >
+          {error}
+        </div>
+      )}
+      <PermissionChecklist
+        idPrefix={`perm-${user.id}`}
+        value={permissions}
+        onChange={setPermissions}
+        isAdmin={user.role === "admin"}
+      />
+      {user.role !== "admin" && (
+        <div className="flex justify-end">
+          <button type="submit" className="btn btn-primary btn-sm" disabled={isLoading}>
+            {isLoading ? "Guardando..." : "Guardar permisos"}
+          </button>
+        </div>
+      )}
+    </form>
+  );
+}
+
 function NewUserForm({ daycareId, onCreated }: { daycareId: string; onCreated: () => void }) {
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("daycare");
+  const [permissions, setPermissions] = useState<PermissionId[]>([...DEFAULT_STAFF_PERMISSIONS]);
   const { run, isLoading, error } = useAsync();
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const created = await run(() =>
-      platformApi.provisionUser(daycareId, { username, name, password, role }),
+      platformApi.provisionUser(daycareId, { username, name, password, role, permissions }),
     );
     if (created) onCreated();
   }
@@ -363,6 +437,14 @@ function NewUserForm({ daycareId, onCreated }: { daycareId: string; onCreated: (
             <option value="veterinary">Veterinaria</option>
           </select>
         </div>
+      </div>
+      <div className="mt-4">
+        <PermissionChecklist
+          idPrefix="nu-perm"
+          value={permissions}
+          onChange={setPermissions}
+          isAdmin={role === "admin"}
+        />
       </div>
       <div className="flex justify-end mt-3">
         <button type="submit" className="btn btn-primary btn-sm" disabled={isLoading}>

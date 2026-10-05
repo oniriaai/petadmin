@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 
-import { BackendModule } from "./module";
+import { isPermissionId } from "../core/tenancy/permissions";
+import { BackendModule, PermissionRule } from "./module";
 import { requireModuleAccess } from "./module-access";
 import { productModuleForBackendId, validateProductModules } from "./product-modules";
 import { requireAuth } from "../middleware/auth";
@@ -25,6 +26,19 @@ import { platformRouter } from "../modules/platform-admin";
 import { usersRouter } from "../modules/admin";
 import { settingsRouter } from "../core/tenancy/settings.router";
 
+const FINANCE_RULES: readonly PermissionRule[] = [
+  { methods: "read", permission: "finanzas.read" },
+  { methods: "write", permission: "finanzas.write" },
+];
+
+/**
+ * Deleting the record itself (`DELETE /:id`), not a line under it: removing a vaccination or a
+ * vital sign from an open visit is editing, and stays with whoever may edit.
+ */
+const DELETE_RECORD_RULES: readonly PermissionRule[] = [
+  { methods: "delete", path: /^\/[^/]+\/?$/, permission: "registros.delete" },
+];
+
 export const backendModules: readonly BackendModule[] = [
   // Public: mounted without requireAuth, since this is where a session comes from. Any
   // authenticated endpoint added here (e.g. GET /auth/me) must apply requireAuth itself.
@@ -40,14 +54,25 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/dashboard",
     router: dashboardRouter,
     description: "Cross-domain dashboard summaries",
+    // The money figures live in a core module, so without this they would be free for every
+    // user of every tenant. `/summary` mixes them with operational counts and leaves them out
+    // in the handler instead.
+    permissions: [{ path: "/financial", permission: "finanzas.read" }],
   },
   {
     id: "clients",
     basePath: "/clients",
     router: clientsRouter,
     description: "Shared client records",
+    permissions: DELETE_RECORD_RULES,
   },
-  { id: "pets", basePath: "/pets", router: petsRouter, description: "Shared pet records" },
+  {
+    id: "pets",
+    basePath: "/pets",
+    router: petsRouter,
+    description: "Shared pet records",
+    permissions: DELETE_RECORD_RULES,
+  },
   {
     id: "storage",
     basePath: "/storage",
@@ -59,6 +84,7 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/reservations",
     router: reservationsRouter,
     description: "Reservation workflows",
+    permissions: DELETE_RECORD_RULES,
     access: {
       roles: ["admin", "daycare", "grooming", "veterinary"],
       businessUnits: ["DAYCARE", "GROOMING", "VETERINARY"],
@@ -69,6 +95,7 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/recurring-plans",
     router: recurringPlansRouter,
     description: "Recurring reservation plans",
+    permissions: DELETE_RECORD_RULES,
     // Not VETERINARY: a clinic books visits one at a time. With three units this list now
     // constrains, where naming both of two units used to constrain nothing.
     access: { roles: ["admin", "daycare", "grooming"], businessUnits: ["DAYCARE", "GROOMING"] },
@@ -104,12 +131,14 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/providers",
     router: providersRouter,
     description: "Provider records",
+    permissions: FINANCE_RULES,
   },
   {
     id: "rooms",
     basePath: "/rooms",
     router: roomsRouter,
     description: "Room and capacity records",
+    permissions: DELETE_RECORD_RULES,
     access: {
       roles: ["admin", "daycare", "grooming", "veterinary"],
       businessUnits: ["DAYCARE", "GROOMING", "VETERINARY"],
@@ -120,19 +149,36 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/payables",
     router: payablesRouter,
     description: "Payables and expenses",
+    permissions: FINANCE_RULES,
   },
-  { id: "incomes", basePath: "/incomes", router: incomesRouter, description: "Income records" },
+  {
+    id: "incomes",
+    basePath: "/incomes",
+    router: incomesRouter,
+    description: "Income records",
+    permissions: FINANCE_RULES,
+  },
   {
     id: "inventory",
     basePath: "/inventory",
     router: inventoryRouter,
     description: "Inventory records",
+    permissions: [
+      { methods: "read", permission: "inventario.read" },
+      { methods: "write", permission: "inventario.write" },
+    ],
   },
   {
     id: "reports",
     basePath: "/reports",
     router: reportsRouter,
     description: "Reports and analytics",
+    // `/transport` is the day's pickup route, which the floor staff work from: not gated.
+    permissions: [
+      { path: "/incomes", permission: "finanzas.read" },
+      { path: "/expenses", permission: "finanzas.read" },
+      { path: "/kpis", permission: "finanzas.read" },
+    ],
   },
   {
     id: "alerts",
@@ -145,12 +191,18 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/contracts",
     router: contractsRouter,
     description: "Client and pet contracts",
+    permissions: DELETE_RECORD_RULES,
   },
   {
     id: "export",
     basePath: "/export",
     router: exportRouter,
     description: "Data export operations",
+    permissions: [
+      { permission: "datos.export" },
+      { path: "/incomes", permission: "finanzas.read" },
+      { path: "/expenses", permission: "finanzas.read" },
+    ],
   },
   {
     id: "guarderia",
@@ -164,6 +216,9 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/peluqueria",
     router: peluqueriaRouter,
     description: "Grooming operations",
+    permissions: [
+      { methods: "delete", path: /^\/appointments\/[^/]+\/?$/, permission: "registros.delete" },
+    ],
     access: { roles: ["admin", "grooming"], businessUnits: ["GROOMING"] },
   },
   {
@@ -171,6 +226,9 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/veterinaria",
     router: veterinariaRouter,
     description: "Veterinary clinic operations",
+    permissions: [
+      { methods: "delete", path: /^\/visits\/[^/]+\/?$/, permission: "registros.delete" },
+    ],
     access: { roles: ["admin", "veterinary"], businessUnits: ["VETERINARY"] },
   },
   {
@@ -196,6 +254,17 @@ export function validateBackendModules(modules: readonly BackendModule[] = backe
       throw new Error(`Backend module path must start with '/': ${module.id}`);
     if (module.access && module.access.roles.length === 0) {
       throw new Error(`Backend module must declare at least one access role: ${module.id}`);
+    }
+
+    for (const rule of module.permissions ?? []) {
+      if (!isPermissionId(rule.permission)) {
+        throw new Error(
+          `Backend module '${module.id}' names an unknown permission: ${String(rule.permission)}`,
+        );
+      }
+      if (typeof rule.path === "string" && !rule.path.startsWith("/")) {
+        throw new Error(`Permission rule path must start with '/': ${module.id}`);
+      }
     }
 
     // Every mounted module must be governed by exactly one product module. Without this,

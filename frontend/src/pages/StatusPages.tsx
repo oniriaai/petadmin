@@ -56,7 +56,7 @@ export function ModuleUnavailable({
   modules,
   unit,
 }: {
-  reason: "module" | "role" | "unit";
+  reason: "module" | "role" | "unit" | "permission";
   modules?: readonly ProductModuleId[];
   unit?: BusinessUnit;
 }) {
@@ -68,6 +68,17 @@ export function ModuleUnavailable({
         <p>
           Tu cuenta no tiene permiso para entrar aquí. Si lo necesitas, pídeselo a un administrador
           de tu negocio y te lo activa.
+        </p>
+      </Shell>
+    );
+  }
+
+  if (reason === "permission") {
+    return (
+      <Shell icon={<Lock size={22} />} title="No tienes acceso a esta sección">
+        <p>
+          Tu negocio tiene esta sección activa, pero tu cuenta no tiene el permiso para verla. Un
+          administrador puede dártelo desde Configuración, en Equipo.
         </p>
       </Shell>
     );

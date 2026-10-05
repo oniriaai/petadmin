@@ -175,6 +175,10 @@ jobs:
         working-directory: backend
         run: npm run test:users
 
+      - name: Per-user permissions
+        working-directory: backend
+        run: npm run test:permissions
+
       - name: Offboarding (export and delete)
         working-directory: backend
         run: npm run test:offboarding

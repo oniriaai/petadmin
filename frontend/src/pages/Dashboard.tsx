@@ -32,8 +32,9 @@ interface Summary {
   activas: number;
   entradas: number;
   salidas: number;
-  ingresosHoy: number;
-  ingresosMes: number;
+  /** null when the session may not read the finances: the server leaves the figures out. */
+  ingresosHoy: number | null;
+  ingresosMes: number | null;
   totalClientes: number;
   alertas: Array<{ id: string; severity: string; title: string; pet?: string }>;
   proximasReservas: Array<{
@@ -187,11 +188,13 @@ export function Dashboard() {
           }
           hint="Registradas hoy"
         />
-        <Stat
-          label="Ingresos del día"
-          value={fmtCurrency(summary.ingresosHoy)}
-          hint={`En el mes: ${fmtCurrency(summary.ingresosMes)}`}
-        />
+        {summary.ingresosHoy !== null && (
+          <Stat
+            label="Ingresos del día"
+            value={fmtCurrency(summary.ingresosHoy)}
+            hint={`En el mes: ${fmtCurrency(summary.ingresosMes ?? 0)}`}
+          />
+        )}
         <Stat label="Clientes activos" value={summary.totalClientes} />
       </StatStrip>
 

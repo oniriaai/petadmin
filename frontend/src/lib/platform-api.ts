@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { ProductModuleId } from "../modules/shared/contracts";
+import type { PermissionId, ProductModuleId } from "../modules/shared/contracts";
 
 /**
  * Typed client for the vendor console (`/platform`).
@@ -38,6 +38,7 @@ export interface PlatformUser {
   role: string;
   businessUnit: string;
   isActive: boolean;
+  permissions: PermissionId[];
   createdAt?: string;
 }
 
@@ -110,12 +111,24 @@ export const platformApi = {
     api.put<Entitlement[]>(`/platform/daycares/${id}/modules`, { modules }),
   provisionUser: (
     id: string,
-    payload: { username: string; password: string; name: string; role: string },
+    payload: {
+      username: string;
+      password: string;
+      name: string;
+      role: string;
+      permissions?: PermissionId[];
+    },
   ) => api.post<PlatformUser>(`/platform/daycares/${id}/users`, payload),
   updateUser: (
     id: string,
     userId: string,
-    payload: { name?: string; role?: string; password?: string; isActive?: boolean },
+    payload: {
+      name?: string;
+      role?: string;
+      password?: string;
+      isActive?: boolean;
+      permissions?: PermissionId[];
+    },
   ) => api.patch<PlatformUser>(`/platform/daycares/${id}/users/${userId}`, payload),
   audit: (limit = 50) => api.get<AuditEntry[]>(`/platform/audit?limit=${limit}`),
 };

@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { Download, TrendingUp, TrendingDown } from "lucide-react";
 import { api, downloadFile } from "../../lib/api";
+import { useAuth } from "../../lib/auth-context";
 import { fmtCurrency } from "../../lib/utils";
 import { CHART_COLORS, CHART_GRID } from "../../lib/chart-theme";
 import { PageLoader } from "../../components/ui/Spinner";
@@ -66,6 +67,8 @@ export function InformesPage() {
   const [expense, setExpense] = useState<ExpenseReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  // Opening the page already takes `finanzas.read`, which the two financial sheets also need.
+  const canExport = useAuth().can("datos.export");
 
   useEffect(() => {
     Promise.all([
@@ -118,29 +121,31 @@ export function InformesPage() {
         title="Informes y Gráficos"
         subtitle="Análisis financiero y KPIs"
         actions={
-          <div className="flex gap-2">
-            <button
-              onClick={() => exportFile("/export/incomes", "ingresos.xlsx")}
-              disabled={downloading}
-              className="btn-secondary btn-sm"
-            >
-              <Download size={14} /> Ingresos Excel
-            </button>
-            <button
-              onClick={() => exportFile("/export/expenses", "gastos.xlsx")}
-              disabled={downloading}
-              className="btn-secondary btn-sm"
-            >
-              <Download size={14} /> Gastos Excel
-            </button>
-            <button
-              onClick={() => exportFile("/export/clients", "clientes.xlsx")}
-              disabled={downloading}
-              className="btn-secondary btn-sm"
-            >
-              <Download size={14} /> Clientes Excel
-            </button>
-          </div>
+          canExport && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => exportFile("/export/incomes", "ingresos.xlsx")}
+                disabled={downloading}
+                className="btn-secondary btn-sm"
+              >
+                <Download size={14} /> Ingresos Excel
+              </button>
+              <button
+                onClick={() => exportFile("/export/expenses", "gastos.xlsx")}
+                disabled={downloading}
+                className="btn-secondary btn-sm"
+              >
+                <Download size={14} /> Gastos Excel
+              </button>
+              <button
+                onClick={() => exportFile("/export/clients", "clientes.xlsx")}
+                disabled={downloading}
+                className="btn-secondary btn-sm"
+              >
+                <Download size={14} /> Clientes Excel
+              </button>
+            </div>
+          )
         }
       />
 

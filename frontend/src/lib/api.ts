@@ -10,6 +10,7 @@ import { normalizeBusinessUnit } from "../modules/shared/contracts";
 
 let onUnauthorized: (() => void) | null = null;
 let onModuleDisabled: ((moduleId: string | undefined) => void) | null = null;
+let onPermissionDenied: (() => void) | null = null;
 
 /**
  * An HTTP failure that keeps the status and the server's `code`.
@@ -34,6 +35,11 @@ export class ApiError extends Error {
   /** The daycare does not have this product module enabled. */
   get isModuleDisabled(): boolean {
     return this.code === "MODULE_DISABLED";
+  }
+
+  /** The module is enabled, but this user was not granted what the action needs. */
+  get isPermissionDenied(): boolean {
+    return this.code === "PERMISSION_DENIED";
   }
 
   /**
@@ -81,6 +87,15 @@ export function setModuleDisabledHandler(handler: ((moduleId: string | undefined
   onModuleDisabled = handler;
 }
 
+/**
+ * Called when the server refuses an action for lack of a permission. The interface hides what
+ * the session may not do, so reaching this means the permission was withdrawn while the page was
+ * open: re-reading the session lets the controls catch up.
+ */
+export function setPermissionDeniedHandler(handler: (() => void) | null) {
+  onPermissionDenied = handler;
+}
+
 /** The one endpoint whose 401 is an answer rather than an expiry. */
 function isAuthenticationAttempt(path: string): boolean {
   return path === "/auth/login";
@@ -118,6 +133,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       err.errors,
     );
     if (error.isModuleDisabled) onModuleDisabled?.(err.module);
+    if (error.isPermissionDenied) onPermissionDenied?.();
     // A deactivated user or a suspended daycare ends the session. Without this the browser
     // would keep a dead token and show an error on every screen instead of returning to login.
     if (error.isSessionRevoked) onUnauthorized?.();

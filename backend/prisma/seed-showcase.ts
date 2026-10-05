@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { localDatePartsInTimezone, localDateTimeToUtc } from "../src/core/tenancy/local-time";
+import { DEFAULT_STAFF_PERMISSIONS } from "../src/core/tenancy/permissions";
 import { DEFAULT_GROOMING_SERVICES } from "../src/modules/peluqueria";
 
 /**
@@ -506,6 +507,9 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
 
   // ---- Staff ------------------------------------------------------------------------------
   const hash = (password: string) => bcrypt.hashSync(password, 10);
+  // The unit accounts start where any new staff user does, so the demo shows the boundary: the
+  // admin grants finance, export and delete from Configuración.
+  const STAFF_PERMISSIONS = [...DEFAULT_STAFF_PERMISSIONS];
   await prisma.user.createMany({
     data: [
       {
@@ -521,6 +525,7 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
         name: "Andrés Molina",
         businessUnit: BU.DAYCARE,
         role: "daycare",
+        permissions: STAFF_PERMISSIONS,
       },
       {
         username: "peluqueria_admin",
@@ -528,6 +533,7 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
         name: "Sofía Lara",
         businessUnit: BU.GROOMING,
         role: "grooming",
+        permissions: STAFF_PERMISSIONS,
       },
     ].map((user) => ({ ...user, daycareId })),
   });

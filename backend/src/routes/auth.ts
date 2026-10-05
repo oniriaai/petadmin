@@ -245,6 +245,8 @@ authRouter.get("/me", requireAuth, async (req, res) => {
             .map((u) => u.trim())
             .filter(Boolean)
         : [],
+      // Effective, and read live by requireAuth: an admin and a superadmin hold all of them.
+      permissions: req.user!.permissions,
       fullAccess: isSuperadmin,
     });
   } catch (error) {

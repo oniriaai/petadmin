@@ -5,11 +5,22 @@ import {
   getPinnedDaycareId,
   setPinnedDaycareId as persistPinnedDaycareId,
   setModuleDisabledHandler,
+  setPermissionDeniedHandler,
   setUnauthorizedHandler,
 } from "./api";
 import { normalizeBusinessUnit, normalizeUserRole } from "../modules/shared/contracts";
-import type { BusinessUnit, ProductModuleId, UserRole } from "../modules/shared/contracts";
-export type { BusinessUnit, ProductModuleId, UserRole } from "../modules/shared/contracts";
+import type {
+  BusinessUnit,
+  PermissionId,
+  ProductModuleId,
+  UserRole,
+} from "../modules/shared/contracts";
+export type {
+  BusinessUnit,
+  PermissionId,
+  ProductModuleId,
+  UserRole,
+} from "../modules/shared/contracts";
 
 interface User {
   id: string;
@@ -36,6 +47,7 @@ interface SessionResponse {
   user: User;
   daycare: Daycare | null;
   enabledModules: string[];
+  permissions?: string[];
   units: string[];
   fullAccess: boolean;
 }
@@ -50,6 +62,12 @@ interface AuthCtx {
   fullAccess: boolean;
   hasModule: (id: ProductModuleId | undefined) => boolean;
   hasModules: (ids: readonly ProductModuleId[] | undefined) => boolean;
+  /** Permissions this session holds: every one for an admin. Empty until the session loads. */
+  permissions: PermissionId[];
+  /** Whether the session may do something. True for a superadmin, as on the server. */
+  can: (id: PermissionId | undefined) => boolean;
+  /** `can` for a list, ALL of them. */
+  canAll: (ids: readonly PermissionId[] | undefined) => boolean;
   login: (
     businessUnit: BusinessUnit | null,
     username: string,
@@ -92,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [daycare, setDaycare] = useState<Daycare | null>(null);
   const [enabledModules, setEnabledModules] = useState<ProductModuleId[]>([]);
+  const [permissions, setPermissions] = useState<PermissionId[]>([]);
   const [units, setUnits] = useState<BusinessUnit[]>([]);
   const [fullAccess, setFullAccess] = useState(false);
   const [activeBusinessUnit, setActiveBusinessUnitState] = useState<BusinessUnit | null>(null);
@@ -117,6 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setDaycare(null);
     setEnabledModules([]);
+    setPermissions([]);
     setUnits([]);
     setFullAccess(false);
     setActiveBusinessUnitState(null);
@@ -138,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("user", JSON.stringify(normalized));
     setDaycare(data.daycare);
     setEnabledModules((data.enabledModules ?? []) as ProductModuleId[]);
+    setPermissions((data.permissions ?? []) as PermissionId[]);
     setUnits(
       (data.units ?? []).map(normalizeBusinessUnit).filter((u): u is BusinessUnit => u !== null),
     );
@@ -212,9 +233,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setModuleDisabledHandler(() => {
       void refreshSession();
     });
+    // Likewise a permission withdrawn mid-session.
+    setPermissionDeniedHandler(() => {
+      void refreshSession();
+    });
     return () => {
       setUnauthorizedHandler(null);
       setModuleDisabledHandler(null);
+      setPermissionDeniedHandler(null);
     };
   }, [refreshSession]);
 
@@ -284,6 +310,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [enabledModules],
   );
 
+  const can = useCallback(
+    (id: PermissionId | undefined) => !id || fullAccess || permissions.includes(id),
+    [permissions, fullAccess],
+  );
+
+  const canAll = useCallback(
+    (ids: readonly PermissionId[] | undefined) =>
+      !ids || fullAccess || ids.every((id) => permissions.includes(id)),
+    [permissions, fullAccess],
+  );
+
   return (
     <AuthContext.Provider
       value={{
@@ -294,6 +331,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         fullAccess,
         hasModule,
         hasModules,
+        permissions,
+        can,
+        canAll,
         login,
         logout,
         clearSession,

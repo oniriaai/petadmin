@@ -253,9 +253,11 @@ async function run() {
     if (!res.data.checkOutTime) throw new Error("checkOutTime no registrado");
 
     // Verificar que el ingreso de guardería quedó en la unidad de guardería
+    // Read as the admin: the charge is recorded whoever closes the stay, but reading the
+    // income list takes `finanzas.read`.
     const incClient = axios.create({
       baseURL: BASE_URL,
-      headers: { Authorization: `Bearer ${daycareToken}` },
+      headers: { Authorization: `Bearer ${adminToken}` },
     });
     const incRes = await incClient.get("/incomes");
     const foundIncome = incRes.data.find((inc: any) => inc.concept?.includes("Toby Modular"));

@@ -99,6 +99,9 @@ model User {
   role          String                       @default("owner")
   businessUnit  String
   isActive      Boolean                      @default(true)
+  /// Granted permission ids (src/core/tenancy/permissions.ts). Ignored for an admin, which
+  /// holds every permission.
+  permissions   String[]                     @default([])
   createdAt     DateTime                     @default(now())
   checkInOuts   CheckInOut[]
   veterinarian  Veterinarian?

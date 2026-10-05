@@ -17,12 +17,12 @@ export function findRoute(pathname: string): ModuleRoute | undefined {
 /**
  * Whether a link to `path` would open the page or a "not available" notice.
  *
- * The same three rules as `GuardedRoute` (role, unit, entitlement), for a page that links to
+ * The same four rules as `GuardedRoute` (role, unit, entitlement, permission), for a page that links to
  * another section from its own content: a link the guard would refuse is a dead end, so it is
  * not offered. The sidebar keeps its own filter, since its items carry unit rules routes do not.
  */
 export function useCanOpen(): (path: string) => boolean {
-  const { user, hasModules, fullAccess, activeBusinessUnit } = useAuth();
+  const { user, hasModules, canAll, fullAccess, activeBusinessUnit } = useAuth();
   return useCallback(
     (path: string) => {
       const route = findRoute(path);
@@ -31,8 +31,9 @@ export function useCanOpen(): (path: string) => boolean {
       if (!fullAccess && route.unit && activeBusinessUnit && route.unit !== activeBusinessUnit) {
         return false;
       }
-      return fullAccess || hasModules(route.requires);
+      if (!fullAccess && !hasModules(route.requires)) return false;
+      return canAll(route.permissions);
     },
-    [user, hasModules, fullAccess, activeBusinessUnit],
+    [user, hasModules, canAll, fullAccess, activeBusinessUnit],
   );
 }
