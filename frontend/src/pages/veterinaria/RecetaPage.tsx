@@ -1,18 +1,21 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, Printer } from "lucide-react";
 import { PageLoader } from "../../components/ui/Spinner";
 import { useAuth } from "../../lib/auth-context";
+import { useGoBack } from "../../lib/use-go-back";
 import { fmt } from "../../lib/utils";
 import { errorMessage, petAge, veterinariaApi, type PrintablePrescription } from "./api";
 
 /** One prescription laid out for paper. The app's navigation is hidden when printing. */
 export function RecetaPage() {
   const { id = "" } = useParams();
-  const navigate = useNavigate();
   const { daycare } = useAuth();
   const [prescription, setPrescription] = useState<PrintablePrescription | null>(null);
   const [error, setError] = useState("");
+  const goBack = useGoBack(
+    prescription ? `/veterinaria/pacientes/${prescription.pet.id}` : "/veterinaria/pacientes",
+  );
 
   useEffect(() => {
     veterinariaApi
@@ -23,9 +26,14 @@ export function RecetaPage() {
 
   if (error) {
     return (
-      <p className="p-6 text-sm text-danger" role="alert">
-        {error}
-      </p>
+      <div className="p-6">
+        <p className="text-sm text-danger" role="alert">
+          {error}
+        </p>
+        <Link to="/veterinaria/pacientes" className="btn-secondary mt-4 inline-flex">
+          Volver a historias clínicas
+        </Link>
+      </div>
     );
   }
   if (!prescription) return <PageLoader />;
@@ -35,7 +43,7 @@ export function RecetaPage() {
   return (
     <div className="p-4 sm:p-6 max-w-3xl space-y-4">
       <div className="flex justify-between print:hidden">
-        <button className="btn-secondary" onClick={() => navigate(-1)}>
+        <button className="btn-secondary" onClick={goBack}>
           <ArrowLeft size={16} /> Volver
         </button>
         <button className="btn-primary" onClick={() => window.print()}>

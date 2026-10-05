@@ -50,6 +50,12 @@ describe("login", () => {
     expect(screen.getByRole("img", { name: "Argos Suite" })).toBeInTheDocument();
   });
 
+  it("links back to the product page", () => {
+    renderLogin();
+    // A real navigation, not a router link: the page is chosen at load (see main.tsx).
+    expect(screen.getByRole("link", { name: /página de inicio/ })).toHaveAttribute("href", "/");
+  });
+
   it("never sends a business unit, so the server decides the scope", async () => {
     login.mockResolvedValue({ role: "grooming" });
     renderLogin();

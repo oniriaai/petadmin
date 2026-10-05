@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth-context";
+import { useCanOpen } from "../modules/access";
 import { ClinicRemindersCard } from "./veterinaria/ClinicRemindersCard";
 import { normalizeBusinessUnit } from "../modules/shared/contracts";
 import { fmtCurrency, fmt, fmtTime, fmtDayLabel, STATUSES } from "../lib/utils";
@@ -80,7 +81,12 @@ function ServiceIcon({ servicio }: { servicio: string }) {
 }
 
 export function Dashboard() {
-  const { user, activeBusinessUnit, hasModule } = useAuth();
+  const { user, activeBusinessUnit, hasModule, fullAccess } = useAuth();
+  // A link the route guard would refuse is a dead end, so each one is offered only when it opens.
+  const canOpen = useCanOpen();
+  const canBook = canOpen("/operaciones");
+  // Without `cumplimiento` Herramientas opens on the estimator, not on the alerts.
+  const canSeeAlerts = canOpen("/herramientas") && (fullAccess || hasModule("cumplimiento"));
   // The clinic's module is gated in place: it has no dashboard of its own.
   const showClinic =
     hasModule("veterinaria") &&
@@ -142,18 +148,24 @@ export function Dashboard() {
         }
         actions={
           <>
-            <Link to="/informes" className="btn-ghost no-underline">
-              <BarChart3 size={16} aria-hidden="true" /> Informes
-            </Link>
-            <Link to="/transacciones" className="btn-ghost no-underline">
-              <BriefcaseBusiness size={16} aria-hidden="true" /> Finanzas
-            </Link>
+            {canOpen("/informes") && (
+              <Link to="/informes" className="btn-ghost no-underline">
+                <BarChart3 size={16} aria-hidden="true" /> Informes
+              </Link>
+            )}
+            {canOpen("/transacciones") && (
+              <Link to="/transacciones" className="btn-ghost no-underline">
+                <BriefcaseBusiness size={16} aria-hidden="true" /> Finanzas
+              </Link>
+            )}
             <Link to="/clientes" className="btn-secondary no-underline">
               <UserPlus size={16} aria-hidden="true" /> Nuevo cliente
             </Link>
-            <Link to="/operaciones" className="btn-primary no-underline">
-              <CalendarPlus size={16} aria-hidden="true" /> Nueva reserva
-            </Link>
+            {canBook && (
+              <Link to="/operaciones" className="btn-primary no-underline">
+                <CalendarPlus size={16} aria-hidden="true" /> Nueva reserva
+              </Link>
+            )}
           </>
         }
       />
@@ -188,21 +200,25 @@ export function Dashboard() {
           className="lg:col-span-2"
           title="Próximas reservas"
           action={
-            <Link
-              to="/operaciones"
-              className="flex items-center gap-1 text-action hover:text-action-hover"
-            >
-              Ver todas <ArrowRight size={14} aria-hidden="true" />
-            </Link>
+            canBook ? (
+              <Link
+                to="/operaciones"
+                className="flex items-center gap-1 text-action hover:text-action-hover"
+              >
+                Ver todas <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            ) : undefined
           }
         >
           {days.length === 0 ? (
             <EmptyState
               title="Todavía no hay reservas programadas."
               action={
-                <Link to="/operaciones" className="btn-secondary btn-sm no-underline">
-                  Agendar la primera
-                </Link>
+                canBook ? (
+                  <Link to="/operaciones" className="btn-secondary btn-sm no-underline">
+                    Agendar la primera
+                  </Link>
+                ) : undefined
               }
             />
           ) : (
@@ -261,14 +277,16 @@ export function Dashboard() {
               ))}
             </ul>
           )}
-          <div className="border-t border-line-subtle px-4 py-3 sm:px-5">
-            <Link
-              to="/herramientas"
-              className="flex items-center gap-1 text-sm text-action hover:text-action-hover"
-            >
-              Ver todas las alertas <ArrowRight size={14} aria-hidden="true" />
-            </Link>
-          </div>
+          {canSeeAlerts && (
+            <div className="border-t border-line-subtle px-4 py-3 sm:px-5">
+              <Link
+                to="/herramientas"
+                className="flex items-center gap-1 text-sm text-action hover:text-action-hover"
+              >
+                Ver todas las alertas <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </div>
+          )}
         </SectionCard>
       </div>
 
