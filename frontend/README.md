@@ -147,9 +147,9 @@ Ruta `/peluqueria`, roles `admin` y `grooming`:
 
 ### Navegación
 
-El Sidebar agrupa en Guardería, Peluquería y Gestión Transversal. Un `admin` dispone de un selector
-de workspace (Consolidado / Guardería / Peluquería); los roles `daycare` y `grooming` solo ven su
-sección y la gestión transversal.
+El Sidebar agrupa en Guardería, Peluquería, Veterinaria y Gestión; cada grupo se pliega y recuerda
+la preferencia. Un `admin` dispone, en la cabecera del Sidebar, de un selector de unidad
+(Consolidado y las unidades contratadas); los roles de unidad solo ven su sección y la de gestión.
 
 Los contratos compartidos viven en `src/modules/shared/contracts.ts` y las operaciones compartidas
 de clientes y mascotas en `src/modules/shared/api.ts`. Consulta
@@ -204,11 +204,11 @@ guardería aparezca **solo** ante `DAYCARE_REQUIRED`), `module-registry` y `shar
 
 `src/components/layout/AppShell.tsx` compone la navegación, la topbar y la página:
 
-- **Topbar** con el nombre de la guardería, el selector de unidad y el menú de usuario. Antes no
-  había cabecera alguna.
+- **Topbar** con el nombre de la guardería y el menú de usuario. Antes no había cabecera alguna.
 - **Sidebar colapsable** en escritorio (se reduce a iconos y recuerda la preferencia) y **cajón
   lateral** por debajo de `lg`. Antes era un `w-64` fijo sin clases responsivas, así que la
-  aplicación no se podía usar por debajo de ~768px.
+  aplicación no se podía usar por debajo de ~768px. Lleva el selector de unidad y su propio botón
+  de colapso.
 - El banner de modo plataforma vive dentro de la topbar fija, para que no se pueda dejar atrás al
   hacer scroll.
 

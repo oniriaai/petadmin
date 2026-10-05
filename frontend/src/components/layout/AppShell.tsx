@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ChevronsLeft, ChevronsRight, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";
 import { Sidebar } from "./Sidebar";
 import { PlatformBanner } from "./PlatformBanner";
-import { UnitSwitcher } from "./UnitSwitcher";
 import { UserMenu } from "./UserMenu";
 import { UnitBadge } from "../ui/UnitBadge";
 import { normalizeBusinessUnit } from "../../modules/shared/contracts";
@@ -17,12 +16,14 @@ const COLLAPSE_KEY = "sidebarCollapsed";
  *
  * Before this there was no header at all and the sidebar was a fixed `w-64` with no responsive
  * classes, so the application could not be used below roughly 768px. The sidebar now collapses to
- * icons on desktop and becomes an off-canvas drawer on small screens.
+ * icons on desktop and becomes an off-canvas drawer on small screens. It owns the controls that
+ * scope and shape the workspace (the unit switcher and its own collapse button); the topbar names
+ * the daycare and holds the account.
  */
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { daycare, user } = useAuth();
+  const { daycare, user, activeBusinessUnit } = useAuth();
   const location = useLocation();
-  const ownUnit = normalizeBusinessUnit(user?.businessUnit);
+  const unit = activeBusinessUnit ?? normalizeBusinessUnit(user?.businessUnit);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     // A per-viewer convenience. Storage can throw in a private window, and the shell must still
@@ -72,7 +73,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           isCollapsed ? "w-sidebar-collapsed" : "w-sidebar",
         )}
       >
-        <Sidebar isCollapsed={isCollapsed} />
+        <Sidebar isCollapsed={isCollapsed} onToggleCollapsed={toggleCollapsed} />
       </aside>
 
       {/* Mobile drawer. */}
@@ -101,14 +102,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               <Menu size={20} />
             </button>
-            <button
-              className="icon-button hidden lg:inline-flex text-muted"
-              onClick={toggleCollapsed}
-              aria-label={isCollapsed ? "Expandir menú" : "Contraer menú"}
-            >
-              {isCollapsed ? <ChevronsRight size={18} /> : <ChevronsLeft size={18} />}
-            </button>
-
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-ink truncate leading-tight">
                 {daycare?.name ?? "Argos Suite"}
@@ -118,9 +111,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
-            {/* A unit-scoped role has no switcher, so the topbar says which unit this is. */}
-            {ownUnit && <UnitBadge unit={ownUnit} className="hidden sm:inline-flex" />}
-            <UnitSwitcher />
+            {/* The sidebar says which unit this is; below lg it is a closed drawer, so this does. */}
+            {unit && <UnitBadge unit={unit} className="lg:hidden" />}
             <UserMenu />
           </div>
           {/* Inside the topbar so it cannot be scrolled away while the vendor is operating. */}

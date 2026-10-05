@@ -86,6 +86,8 @@ export interface ModuleNavigationItem {
   roles?: FrontendRole[];
   unit?: FrontendUnit;
   requires?: ProductModuleId[];
+  /** Pinned below the scrolling groups: the entries about the workspace rather than the work. */
+  placement?: "footer";
 }
 
 export interface FrontendModule {
@@ -144,7 +146,7 @@ export const frontendModules: readonly FrontendModule[] = [
       items: [
         {
           to: "/guarderia",
-          label: "Control Guardería",
+          label: "Control de guardería",
           icon: Home,
           roles: ["admin", "daycare"],
           unit: "DAYCARE",
@@ -152,7 +154,7 @@ export const frontendModules: readonly FrontendModule[] = [
         },
         {
           to: "/salas",
-          label: "Salas & Cupos",
+          label: "Salas y cupos",
           icon: Grid3X3,
           roles: ["admin", "daycare"],
           unit: "DAYCARE",
@@ -160,7 +162,7 @@ export const frontendModules: readonly FrontendModule[] = [
         },
         {
           to: "/planes",
-          label: "Planes Recurrentes",
+          label: "Planes recurrentes",
           icon: Repeat,
           roles: ["admin", "daycare"],
           unit: "DAYCARE",
@@ -203,7 +205,7 @@ export const frontendModules: readonly FrontendModule[] = [
       items: [
         {
           to: "/peluqueria",
-          label: "Agenda Peluquería",
+          label: "Agenda de peluquería",
           icon: Scissors,
           roles: ["admin", "grooming"],
           unit: "GROOMING",
@@ -316,7 +318,7 @@ export const frontendModules: readonly FrontendModule[] = [
       items: [
         {
           to: "/veterinaria",
-          label: "Agenda Veterinaria",
+          label: "Agenda veterinaria",
           icon: Stethoscope,
           roles: ["admin", "veterinary"],
           unit: "VETERINARY",
@@ -324,7 +326,7 @@ export const frontendModules: readonly FrontendModule[] = [
         },
         {
           to: "/veterinaria/pacientes",
-          label: "Historias Clínicas",
+          label: "Historias clínicas",
           icon: ClipboardList,
           roles: ["admin", "veterinary"],
           unit: "VETERINARY",
@@ -367,7 +369,7 @@ export const frontendModules: readonly FrontendModule[] = [
         // The clinic's own figures, served by its module so they do not depend on `informes`.
         {
           to: "/veterinaria/informe",
-          label: "Informe Clínico",
+          label: "Informe clínico",
           icon: BarChart3,
           roles: ["admin"],
           unit: "VETERINARY",
@@ -377,7 +379,7 @@ export const frontendModules: readonly FrontendModule[] = [
         // hidden while working in Veterinaria, and consulting rooms have to be managed somewhere.
         {
           to: "/salas",
-          label: "Salas de la Clínica",
+          label: "Salas de la clínica",
           icon: Grid3X3,
           roles: ["admin"],
           unit: "VETERINARY",
@@ -385,7 +387,7 @@ export const frontendModules: readonly FrontendModule[] = [
         },
         {
           to: "/veterinaria/catalogo",
-          label: "Catálogo Clínico",
+          label: "Catálogo clínico",
           icon: Wrench,
           roles: ["admin"],
           unit: "VETERINARY",
@@ -396,7 +398,7 @@ export const frontendModules: readonly FrontendModule[] = [
   },
   {
     id: "shared",
-    label: "Gestión Transversal",
+    label: "Gestión",
     routes: [
       { path: "/clientes", component: ClientesPage },
       { path: "/animales", component: AnimalesPage },
@@ -409,28 +411,34 @@ export const frontendModules: readonly FrontendModule[] = [
       { path: "/guia", component: GuidePage },
     ],
     navigation: {
-      label: "Gestión Transversal",
+      label: "Gestión",
       icon: Users,
       items: [
         {
           to: "/operaciones",
-          label: "Operaciones (General)",
+          label: "Operaciones",
           icon: CalendarDays,
           requires: ["reservas"],
         },
-        { to: "/clientes", label: "Perfil del Cliente", icon: Users },
+        { to: "/clientes", label: "Clientes", icon: Users },
         { to: "/animales", label: "Animales", icon: PawPrint },
         {
           to: "/transacciones",
-          label: "Gestión Financiera",
+          label: "Finanzas",
           icon: DollarSign,
           requires: ["finanzas"],
         },
         { to: "/inventario", label: "Inventario", icon: Package, requires: ["inventario"] },
-        { to: "/informes", label: "Informes y Gráficos", icon: BarChart3, requires: ["informes"] },
+        { to: "/informes", label: "Informes", icon: BarChart3, requires: ["informes"] },
         { to: "/herramientas", label: "Herramientas", icon: Wrench },
-        { to: "/configuracion", label: "Configuración", icon: Settings, roles: ["admin"] },
-        { to: "/guia", label: "Guía de Uso", icon: BookOpen },
+        {
+          to: "/configuracion",
+          label: "Configuración",
+          icon: Settings,
+          roles: ["admin"],
+          placement: "footer",
+        },
+        { to: "/guia", label: "Guía de uso", icon: BookOpen, placement: "footer" },
       ],
     },
   },
