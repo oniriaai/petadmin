@@ -1,0 +1,214 @@
+name: Deploy demo
+
+# Continuous deployment of the hosted DEMO (render.yaml, docs/demo-hosting.md). Production is
+# not involved: that is release.yml, and it stops at publishing images.
+#
+# Render's own auto-deploy is off. It would build every push to main without waiting for CI and
+# without checking the result, and both demo outages so far were configuration the build cannot
+# see (CORS_ORIGINS, VITE_API_URL). Instead: CI passes on main → this workflow asks Render to
+# build that exact commit → waits until the live services report it → smoke-tests them.
+on:
+  # Fires for CI runs on main only. The CI that release.yml calls through workflow_call is part
+  # of the Release run and does not trigger this.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Redeploy main by hand: both services, whatever changed.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time, and never cancel one half way: the hook has already been called by then,
+# so cancelling would only lose the verification.
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy and verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    environment:
+      name: demo
+      url: ${{ vars.DEMO_SITE_URL }}
+    env:
+      # The commit CI verified, not whatever main points at by the time this runs.
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      DEMO_API_URL: ${{ vars.DEMO_API_URL }}
+      DEMO_SITE_URL: ${{ vars.DEMO_SITE_URL }}
+    steps:
+      - name: Require configuration
+        env:
+          HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+          HOOK_SITE: ${{ secrets.RENDER_DEPLOY_HOOK_SITE }}
+        run: |
+          missing=""
+          [ -n "$HOOK_API" ] || missing="$missing RENDER_DEPLOY_HOOK_API(secreto)"
+          [ -n "$HOOK_SITE" ] || missing="$missing RENDER_DEPLOY_HOOK_SITE(secreto)"
+          [ -n "$DEMO_API_URL" ] || missing="$missing DEMO_API_URL(variable)"
+          [ -n "$DEMO_SITE_URL" ] || missing="$missing DEMO_SITE_URL(variable)"
+          if [ -n "$missing" ]; then
+            echo "::error::Falta configuración del despliegue de la demo:$missing"
+            echo "Defínela en Settings → Secrets and variables → Actions."
+            echo "Paso a paso: docs/demo-hosting.md, sección «Despliegue continuo»."
+            exit 1
+          fi
+          # The smoke test looks for this exact string in the bundle, and the frontend appends
+          # paths to it, so a wrong shape here would fail far from its cause.
+          case "$DEMO_API_URL" in
+            https://*/api/v1) ;;
+            *) echo "::error::DEMO_API_URL debe ser https://…/api/v1, sin barra final"; exit 1 ;;
+          esac
+          case "$DEMO_SITE_URL" in
+            https://*/) echo "::error::DEMO_SITE_URL no debe terminar en barra"; exit 1 ;;
+            https://*) ;;
+            *) echo "::error::DEMO_SITE_URL debe empezar por https://"; exit 1 ;;
+          esac
+
+      # Full history: the next step diffs against whatever commit is live, which may be several
+      # pushes behind.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+
+      # Compared against what each service is running, not against the previous push: a deploy
+      # that failed or was skipped is picked up by the next run instead of being lost. Render's
+      # free plan has a monthly budget of build minutes, so an untouched service is left alone.
+      - name: Decide what to deploy
+        id: plan
+        env:
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          # The API sleeps after 15 idle minutes and takes about a minute to wake.
+          live_api=$(curl -sS --max-time 30 --retry 8 --retry-delay 15 --retry-all-errors \
+            "$DEMO_API_URL/health" | jq -r '.commit // empty' 2>/dev/null || true)
+          live_site=$(curl -fsS --max-time 30 --retry 3 --retry-delay 5 \
+            "$DEMO_SITE_URL/version.txt" 2>/dev/null | tr -d '[:space:]' || true)
+          echo "en vivo: api=${live_api:-desconocido} sitio=${live_site:-desconocido} objetivo=$SHA"
+
+          # $1 = live commit, rest = paths that service is built from.
+          needs_deploy() {
+            live="$1"; shift
+            [ "$MANUAL" = "true" ] && return 0
+            [ "$live" = "$SHA" ] && return 1
+            # Unknown, or not a commit of this repository: cannot diff, so deploy.
+            echo "$live" | grep -Eq '^[0-9a-f]{40}$' || return 0
+            git cat-file -e "$live^{commit}" 2>/dev/null || return 0
+            ! git diff --quiet "$live" "$SHA" -- "$@"
+          }
+
+          if needs_deploy "$live_api" backend render.yaml; then api=true; else api=false; fi
+          if needs_deploy "$live_site" frontend render.yaml; then site=true; else site=false; fi
+          echo "api=$api" >> "$GITHUB_OUTPUT"
+          echo "site=$site" >> "$GITHUB_OUTPUT"
+          echo "desplegar: api=$api sitio=$site"
+
+      # The hook URL is the credential, so it is never echoed. `ref` pins the build to the
+      # verified commit.
+      - name: Trigger API deploy
+        if: steps.plan.outputs.api == 'true'
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: curl -fsS -o /dev/null -X POST "${HOOK}&ref=${SHA}"
+
+      - name: Trigger site deploy
+        if: steps.plan.outputs.site == 'true'
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_SITE }}
+        run: curl -fsS -o /dev/null -X POST "${HOOK}&ref=${SHA}"
+
+      # A deploy hook answers as soon as the build is queued, and there is no Render API key
+      # here to ask how it went. So a failed build shows up as this timeout; the reason is in
+      # the service's deploy log on Render.
+      - name: Wait for the site
+        if: steps.plan.outputs.site == 'true'
+        run: |
+          for i in $(seq 1 60); do
+            live=$(curl -fsS --max-time 20 "$DEMO_SITE_URL/version.txt" 2>/dev/null | tr -d '[:space:]' || true)
+            if [ "$live" = "$SHA" ]; then echo "sitio desplegado tras $((i * 15))s"; exit 0; fi
+            sleep 15
+          done
+          echo "::error::El sitio no llegó a servir $SHA en 15 minutos. Revisa el deploy en Render."
+          exit 1
+
+      # Longer than the site: a Docker build, then migrations and the seed before the server
+      # listens, and Render keeps the old instance answering until the new one is healthy.
+      - name: Wait for the API
+        if: steps.plan.outputs.api == 'true'
+        run: |
+          for i in $(seq 1 100); do
+            live=$(curl -sS --max-time 20 "$DEMO_API_URL/health" 2>/dev/null | jq -r '.commit // empty' 2>/dev/null || true)
+            if [ "$live" = "$SHA" ]; then echo "API desplegada tras $((i * 15))s"; exit 0; fi
+            sleep 15
+          done
+          echo "::error::La API no llegó a servir $SHA en 25 minutos. Revisa el deploy en Render."
+          exit 1
+
+      # Run against both services even when only one was deployed: what breaks the demo is the
+      # pair disagreeing, and that is configuration on Render, not code in this repository.
+      - name: Smoke test
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          retry="--retry 8 --retry-delay 15 --retry-all-errors --max-time 30"
+
+          # shellcheck disable=SC2086
+          health=$(curl -sS $retry "$DEMO_API_URL/health") || fail "La API no responde"
+          echo "$health"
+          [ "$(echo "$health" | jq -r '.ok')" = "true" ] || fail "La API no está sana"
+          [ "$(echo "$health" | jq -r '.migrations.pending')" = "0" ] || fail "Quedan migraciones pendientes"
+
+          # Public demo credentials (docs/demo-hosting.md). A token proves the seed ran.
+          # shellcheck disable=SC2086
+          token=$(curl -sS $retry -H 'Content-Type: application/json' \
+            -d '{"username":"admin_global","password":"admin123"}' \
+            "$DEMO_API_URL/auth/login" | jq -r '.token // empty')
+          [ -n "$token" ] || fail "El inicio de sesión de la cuenta de demo falló: ¿se sembraron los datos?"
+          echo "inicio de sesión correcto"
+
+          allowed=$(curl -sS -o /dev/null -D - -X OPTIONS \
+            -H "Origin: $DEMO_SITE_URL" \
+            -H 'Access-Control-Request-Method: POST' \
+            -H 'Access-Control-Request-Headers: content-type' \
+            "$DEMO_API_URL/auth/login" \
+            | tr -d '\r' | awk -F': ' 'tolower($1) == "access-control-allow-origin" { print $2 }')
+          [ "$allowed" = "$DEMO_SITE_URL" ] \
+            || fail "CORS_ORIGINS de la API no permite $DEMO_SITE_URL (permite: ${allowed:-nada})"
+          echo "CORS correcto"
+
+          index=$(curl -fsS --max-time 30 "$DEMO_SITE_URL/") || fail "El sitio no responde"
+          scripts=$(echo "$index" | grep -oE '(src|href)="[^"]+\.js"' | cut -d'"' -f2)
+          [ -n "$scripts" ] || fail "index.html no referencia ningún script"
+          found=false
+          for path in $scripts; do
+            case "$path" in
+              http*) url="$path" ;;
+              *) url="$DEMO_SITE_URL/${path#/}" ;;
+            esac
+            if curl -fsS --max-time 60 "$url" | grep -qF "$DEMO_API_URL"; then found=true; break; fi
+          done
+          [ "$found" = "true" ] \
+            || fail "El bundle no contiene $DEMO_API_URL: corrige VITE_API_URL en el sitio estático y vuelve a desplegarlo"
+          echo "el bundle apunta a la API correcta"
+
+      - name: Summary
+        if: always()
+        env:
+          API: ${{ steps.plan.outputs.api }}
+          SITE: ${{ steps.plan.outputs.site }}
+          STATUS: ${{ job.status }}
+        run: |
+          {
+            echo "## Demo: $STATUS"
+            echo ""
+            echo "- Commit: \`$SHA\`"
+            echo "- API desplegada: ${API:-no evaluado} — $DEMO_API_URL/health"
+            echo "- Sitio desplegado: ${SITE:-no evaluado} — $DEMO_SITE_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
