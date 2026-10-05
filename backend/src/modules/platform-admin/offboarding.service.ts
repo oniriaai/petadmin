@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "../../db";
 import { AuthzError } from "../../middleware/auth";
 import { deleteDaycarePrefix, type PrefixDeletionResult } from "../../core/storage/bulk-delete";
+import { daycarePrefix } from "../../core/storage/object-keys";
 import { invalidate } from "../../platform/module-access";
 import { invalidatePrincipalsForDaycare } from "../../core/tenancy/principal";
 import { invalidateUnitSettings } from "../../core/tenancy/unit-settings";
@@ -552,10 +553,14 @@ export interface DeletionSummary {
  *
  * The audit entry survives: `PlatformAuditLog.daycareId` is a plain column with no foreign key,
  * precisely so the record of a deletion outlives what it deleted.
+ *
+ * `purgeStorage: false` leaves the tenant's files in the bucket. Only the demo reset in the seed
+ * asks for that; offboarding a client always removes them.
  */
 export async function deleteDaycare(
   daycareId: string,
   confirmSlug: string,
+  options: { purgeStorage?: boolean } = {},
 ): Promise<DeletionSummary> {
   const daycare = await prisma.daycare.findUnique({
     where: { id: daycareId },
@@ -657,7 +662,10 @@ export async function deleteDaycare(
    * which the caller still has: a storage failure is retryable and is reported rather than
    * swallowed. The other order would risk destroying the files of a tenant that still exists.
    */
-  const storage = await deleteDaycarePrefix(daycareId);
+  const storage =
+    options.purgeStorage === false
+      ? { prefix: daycarePrefix(daycareId), deleted: 0 }
+      : await deleteDaycarePrefix(daycareId);
 
   return { slug: daycare.slug, name: daycare.name, rows, storage };
 }
