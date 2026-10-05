@@ -184,15 +184,22 @@ jobs:
           echo "CORS correcto"
 
           index=$(curl -fsS --max-time 30 "$DEMO_SITE_URL/") || fail "El sitio no responde"
-          scripts=$(echo "$index" | grep -oE '(src|href)="[^"]+\.js"' | cut -d'"' -f2)
-          [ -n "$scripts" ] || fail "index.html no referencia ningún script"
+          entries=$(echo "$index" | grep -oE 'src="[^"]+\.js"' | cut -d'"' -f2 || true)
+          [ -n "$entries" ] || fail "index.html no referencia ningún script"
+          # The API client is not in the entry script: the app shell is a lazily loaded chunk.
+          # So look in the entry and in every chunk it names.
+          paths="$entries"
+          for entry in $entries; do
+            chunks=$(curl -fsS --max-time 60 "$DEMO_SITE_URL/${entry#/}" \
+              | grep -oE 'assets/[A-Za-z0-9_.-]+\.js' | sort -u || true)
+            paths="$paths $chunks"
+          done
           found=false
-          for path in $scripts; do
-            case "$path" in
-              http*) url="$path" ;;
-              *) url="$DEMO_SITE_URL/${path#/}" ;;
-            esac
-            if curl -fsS --max-time 60 "$url" | grep -qF "$DEMO_API_URL"; then found=true; break; fi
+          # Downloaded to a file first: `grep -q` stops reading at the first match, curl then
+          # fails on the closed pipe, and under pipefail a match would count as a failure.
+          for path in $paths; do
+            curl -fsS --max-time 60 -o "$RUNNER_TEMP/chunk.js" "$DEMO_SITE_URL/${path#/}" || continue
+            if grep -qF "$DEMO_API_URL" "$RUNNER_TEMP/chunk.js"; then found=true; break; fi
           done
           [ "$found" = "true" ] \
             || fail "El bundle no contiene $DEMO_API_URL: corrige VITE_API_URL en el sitio estático y vuelve a desplegarlo"
