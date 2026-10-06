@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { backendModules, validateBackendModules } from "../src/platform/module-registry";
+import {
+  PUBLIC_MODULE_IDS,
+  backendModules,
+  validateBackendModules,
+} from "../src/platform/module-registry";
 
 validateBackendModules();
 
@@ -46,5 +50,24 @@ assert.throws(
     ]),
   /unknown permission/,
 );
+
+// Mounting without authentication is allowlisted by id: a module cannot opt itself out of
+// `requireAuth` by setting a flag.
+assert.deepEqual(
+  backendModules.filter((module) => module.public).map((module) => module.id),
+  [...PUBLIC_MODULE_IDS],
+);
+assert.throws(
+  () =>
+    validateBackendModules([
+      { ...backendModules.find((module) => module.id === "clients")!, public: true },
+    ]),
+  /may be public/,
+);
+
+// The account holder pays; nobody else sees the subscription.
+assert.deepEqual(backendModules.find((module) => module.id === "billing")?.access, {
+  roles: ["admin"],
+});
 
 console.log(`✓ backend module registry (${backendModules.length} modules)`);

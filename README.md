@@ -187,8 +187,13 @@ cada una falla de forma silenciosa y peligrosa si se deja por defecto:
 
 Opcionales, con valores por defecto seguros: `TRUST_PROXY` (número de saltos de proxy inverso
 en los que confiar para resolver la IP real; sin definir, los límites por IP comparten contador),
-`RATE_LIMIT_GLOBAL`, `RATE_LIMIT_LOGIN`, `RATE_LIMIT_STORAGE`, `SEED_DEMO_DATA` (inactivo en
-producción) y `RUN_SCHEDULER_IN_PROCESS` (inactivo en producción).
+`RATE_LIMIT_GLOBAL`, `RATE_LIMIT_LOGIN`, `RATE_LIMIT_STORAGE`, `RATE_LIMIT_SIGNUP`,
+`SEED_DEMO_DATA` (inactivo en producción) y `RUN_SCHEDULER_IN_PROCESS` (inactivo en producción).
+
+Para vender desde la página pública hacen falta `PAYPHONE_TOKEN`, `PAYPHONE_STORE_ID`,
+`BILLING_ENCRYPTION_KEY` y `PUBLIC_SITE_URL`; con la primera definida, el backend no arranca en
+producción sin las dos últimas. Sin `PAYPHONE_TOKEN` la página no ofrece contratar en línea. Las
+reglas, los pasos en PayPhone y el job de cobro están en `docs/suscripciones.md`.
 
 Para que los recordatorios lleguen de verdad hacen falta `WHATSAPP_PHONE_NUMBER_ID` y
 `WHATSAPP_ACCESS_TOKEN` (WhatsApp) y `SMTP_URL` y `MAIL_FROM` (correo). Sin ellas el backend

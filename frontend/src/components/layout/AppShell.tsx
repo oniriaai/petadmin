@@ -5,6 +5,7 @@ import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";
 import { Sidebar } from "./Sidebar";
 import { PlatformBanner } from "./PlatformBanner";
+import { SubscriptionBanner } from "./SubscriptionBanner";
 import { UserMenu } from "./UserMenu";
 import { UnitBadge } from "../ui/UnitBadge";
 import { normalizeBusinessUnit } from "../../modules/shared/contracts";
@@ -117,6 +118,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           {/* Inside the topbar so it cannot be scrolled away while the vendor is operating. */}
           <PlatformBanner />
+          <SubscriptionBanner />
         </header>
 
         <main className="flex-1 min-w-0" key={user?.id}>

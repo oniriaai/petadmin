@@ -1,12 +1,10 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../db";
 import {
-  JWT_SECRET,
-  TOKEN_VERSION,
   handleAuthzError,
+  issueSessionToken,
   normalizeBusinessUnit,
   normalizeUserRole,
   requireAuth,
@@ -15,6 +13,7 @@ import { loginLimiter } from "../middleware/security";
 import { resolveDaycareScope } from "../core/tenancy/scope";
 import { getEnabledProductModules } from "../platform/module-access";
 import { PRODUCT_MODULES, TOGGLEABLE_PRODUCT_MODULES } from "../platform/product-modules";
+import { getSubscriptionSummary } from "../modules/suscripciones";
 
 export const authRouter = Router();
 
@@ -125,18 +124,13 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
   // "GLOBAL" is not a business unit and is preserved as-is.
   const emittedUnit = normalizeBusinessUnit(user.businessUnit) ?? user.businessUnit;
 
-  const token = jwt.sign(
-    {
-      userId: user.id,
-      username: user.username,
-      businessUnit: emittedUnit,
-      role,
-      daycareId: user.daycareId,
-      tv: TOKEN_VERSION,
-    },
-    JWT_SECRET,
-    { expiresIn: "12h" },
-  );
+  const token = issueSessionToken({
+    id: user.id,
+    username: user.username,
+    businessUnit: emittedUnit,
+    role,
+    daycareId: user.daycareId,
+  });
 
   res.json({
     token,
@@ -220,6 +214,9 @@ authRouter.get("/me", requireAuth, async (req, res) => {
       enabledModules = [...CORE_PRODUCT_MODULE_IDS, ...[...enabled].sort()];
     }
 
+    // Null for a daycare the vendor manages from the console: nothing bills it.
+    const subscription = daycareId ? await getSubscriptionSummary(daycareId) : null;
+
     res.json({
       user: {
         id: user.id,
@@ -247,6 +244,7 @@ authRouter.get("/me", requireAuth, async (req, res) => {
         : [],
       // Effective, and read live by requireAuth: an admin and a superadmin hold all of them.
       permissions: req.user!.permissions,
+      subscription,
       fullAccess: isSuperadmin,
     });
   } catch (error) {

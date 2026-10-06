@@ -194,3 +194,21 @@ export interface PetSummary {
 export interface ClientWithPets extends ClientSummary {
   pets: PetSummary[];
 }
+
+/**
+ * A daycare's subscription as `GET /auth/me` reports it. Null for a daycare the vendor manages
+ * from the console: nothing bills it and nothing here applies to it.
+ */
+export type SubscriptionStatus = "TRIALING" | "ACTIVE" | "PAST_DUE" | "SUSPENDED" | "CANCELED";
+
+export interface SubscriptionSummary {
+  status: SubscriptionStatus;
+  planId: string;
+  planLabel: string;
+  period: "MONTHLY" | "ANNUAL";
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  /** When access stops unless a payment arrives. Null while nothing is owed. */
+  suspendsAt: string | null;
+  hasCard: boolean;
+}

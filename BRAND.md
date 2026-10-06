@@ -146,7 +146,7 @@ The veterinary unit carries one message of its own: **one record for each pet ac
 | Veterinary line | Una sola ficha para cada mascota: de la consulta a la peluquería y la guardería. |
 | Elevator pitch | Argos Suite acompaña a las guarderías, peluquerías y veterinarias de mascotas de Ecuador para que administren su negocio con tranquilidad. Reservas, cupos, citas, fichas clínicas, personal, cobros e inventario en un solo lugar, con las cuentas de cada unidad por separado. Tú dedicas tu tiempo a las mascotas; nosotros te ayudamos con el resto. Contratas solo los módulos que usas. |
 
-**Claims the brand does not make.** Nothing that has not shipped: SRI electronic invoicing, a printable vaccination card or file attachments on lab results and consents. Automatic reminders by WhatsApp and email have shipped as their own module, so they may be claimed, but only as what they are: a message the business's tutors receive, sent with Argos Suite. Do not promise delivery or read receipts, or replies from the tutor inside the product. No medical advice in product copy, and no invented customer numbers, testimonials, time savings or prices (see `PRODUCT.md`).
+**Claims the brand does not make.** Nothing that has not shipped: SRI electronic invoicing, a printable vaccination card or file attachments on lab results and consents. Automatic reminders by WhatsApp and email have shipped as their own module, so they may be claimed, but only as what they are: a message the business's tutors receive, sent with Argos Suite. Do not promise delivery or read receipts, or replies from the tutor inside the product. No medical advice in product copy, and no invented customer numbers, testimonials or time savings (see `PRODUCT.md`). Prices are the ones in the plan catalog and nothing else.
 
 ## Name and architecture
 
@@ -289,4 +289,4 @@ Contrast ratios are WCAG 2 values computed from the hex codes. Check the ratio o
 
 - Name availability: SENADI registration, .com and .ec domains, social handles. Not checked yet.
 - Final logo artwork and asset exports from a designer.
-- Pricing per module; nothing in the repository sets it. The pricing proposal covers the veterinary unit separately.
+- Pricing is set in `docs/argos-suite-pricing-proposal.md` and sold from the public page (`docs/suscripciones.md`). The page reads its prices from the catalog the checkout charges from; never write one into copy.

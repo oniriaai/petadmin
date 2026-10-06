@@ -25,6 +25,7 @@ import { guarderiaRouter } from "../modules/guarderia";
 import { recordatoriosRouter } from "../modules/recordatorios";
 import { platformRouter } from "../modules/platform-admin";
 import { usersRouter } from "../modules/admin";
+import { billingRouter, signupRouter } from "../modules/suscripciones";
 import { settingsRouter } from "../core/tenancy/settings.router";
 
 const FINANCE_RULES: readonly PermissionRule[] = [
@@ -40,6 +41,14 @@ const DELETE_RECORD_RULES: readonly PermissionRule[] = [
   { methods: "delete", path: /^\/[^/]+\/?$/, permission: "registros.delete" },
 ];
 
+/**
+ * The modules mounted with no authentication in front, named one by one: `public` skips
+ * `requireAuth` and the entitlement gate entirely, so it is not left to whoever adds the next
+ * module. `auth` is where a session comes from; `signup` is how somebody with no account yet
+ * gets one.
+ */
+export const PUBLIC_MODULE_IDS: readonly string[] = ["auth", "signup"];
+
 export const backendModules: readonly BackendModule[] = [
   // Public: mounted without requireAuth, since this is where a session comes from. Any
   // authenticated endpoint added here (e.g. GET /auth/me) must apply requireAuth itself.
@@ -49,6 +58,21 @@ export const backendModules: readonly BackendModule[] = [
     router: authRouter,
     description: "Authentication and session management",
     public: true,
+  },
+  {
+    id: "signup",
+    basePath: "/signup",
+    router: signupRouter,
+    description: "Self-service signup from the public page",
+    public: true,
+  },
+  {
+    id: "billing",
+    basePath: "/billing",
+    router: billingRouter,
+    description: "The daycare's own subscription and its payments",
+    // Whoever holds the account pays for it. The operational roles never see a price.
+    access: { roles: ["admin"] },
   },
   {
     id: "dashboard",
@@ -291,10 +315,8 @@ export function validateBackendModules(modules: readonly BackendModule[] = backe
       );
     }
 
-    // `public` skips authentication entirely, so it is allowlisted by id rather than left
-    // to whoever adds the next module.
-    if (module.public && module.id !== "auth") {
-      throw new Error(`Only the auth module may be public: ${module.id}`);
+    if (module.public && !PUBLIC_MODULE_IDS.includes(module.id)) {
+      throw new Error(`Only ${PUBLIC_MODULE_IDS.join(" and ")} may be public, not '${module.id}'`);
     }
 
     ids.add(module.id);

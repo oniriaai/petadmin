@@ -20,10 +20,11 @@
     "test:financial": "tsx tests/financial.e2e.ts",
     "test:checkin": "tsx tests/check-in-out.e2e.ts",
     "test:modular": "tsx tests/modular-domains.e2e.ts",
-    "test:architecture": "tsx tests/module-registry.ts && tsx tests/reservas-module.ts && tsx tests/operaciones-module.ts && tsx tests/veterinaria-module.ts && tsx tests/reminders-module.ts && tsx tests/storage-keys.ts && tsx tests/product-modules.ts && tsx tests/module-access.ts && tsx tests/permissions.ts && tsx tests/platform-admin-module.ts && tsx tests/security-config.ts && tsx tests/demo-accounts.ts && tsx tests/observability.ts && tsx tests/pagination.ts && tsx tests/local-time.ts",
+    "test:architecture": "tsx tests/module-registry.ts && tsx tests/reservas-module.ts && tsx tests/operaciones-module.ts && tsx tests/veterinaria-module.ts && tsx tests/reminders-module.ts && tsx tests/billing-plans.ts && tsx tests/storage-keys.ts && tsx tests/product-modules.ts && tsx tests/module-access.ts && tsx tests/permissions.ts && tsx tests/platform-admin-module.ts && tsx tests/security-config.ts && tsx tests/demo-accounts.ts && tsx tests/observability.ts && tsx tests/pagination.ts && tsx tests/local-time.ts",
     "db:migrate": "prisma migrate deploy",
     "job:recurring-plans": "tsx src/jobs/run-recurring-plans.ts",
     "job:reminders": "tsx src/jobs/run-reminders.ts",
+    "job:billing": "tsx src/jobs/run-billing.ts",
     "mail:test": "tsx scripts/send-test-reminder.ts",
     "db:migrate:dev": "prisma migrate dev",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.seed.json",
@@ -41,7 +42,8 @@
     "test:permissions": "tsx tests/permissions.e2e.ts",
     "test:offboarding": "tsx tests/offboarding.e2e.ts",
     "test:veterinaria": "tsx tests/veterinaria.e2e.ts",
-    "test:reminders": "tsx tests/reminders.e2e.ts"
+    "test:reminders": "tsx tests/reminders.e2e.ts",
+    "test:signup": "tsx tests/signup.e2e.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1040.0",

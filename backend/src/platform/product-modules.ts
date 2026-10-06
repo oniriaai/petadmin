@@ -32,7 +32,19 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
       "Autenticación, dashboard, ajustes de la guardería y los registros compartidos de tutores y mascotas.",
     // `users` is core on purpose: a daycare administering its own staff is not a feature to
     // be sold or withheld. Without it every password reset is a vendor support ticket.
-    backendModuleIds: ["auth", "dashboard", "clients", "pets", "storage", "settings", "users"],
+    // `signup` and `billing` are how a daycare comes to exist and keeps paying: neither can sit
+    // behind something it has to buy first.
+    backendModuleIds: [
+      "auth",
+      "signup",
+      "billing",
+      "dashboard",
+      "clients",
+      "pets",
+      "storage",
+      "settings",
+      "users",
+    ],
     core: true,
   },
   {

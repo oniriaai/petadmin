@@ -54,6 +54,9 @@ services:
       B2_ENDPOINT: ${B2_ENDPOINT}
       B2_REGION: ${B2_REGION}
       NODE_ENV: development
+      # test:signup starts several signups per run from one address; the default of 20 an hour
+      # is for a public form, not for a suite run three times in a row.
+      RATE_LIMIT_SIGNUP: ${RATE_LIMIT_SIGNUP:-1000}
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     volumes:

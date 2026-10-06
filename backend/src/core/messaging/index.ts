@@ -15,6 +15,16 @@ export type { Channel, DeliveryResult } from "./types";
 export type { EmailMessage } from "./email";
 export type { WhatsAppTemplateMessage } from "./whatsapp";
 export { sanitizeTemplateParam } from "./whatsapp";
+export {
+  EMAIL_COLORS,
+  EMAIL_SANS,
+  EMAIL_SERIF,
+  escapeHtml,
+  logoUrl,
+  publicSiteUrl,
+  renderEmailShell,
+} from "./email-shell";
+export type { EmailShell } from "./email-shell";
 
 /**
  * Outbound messages to people outside the product: the platform's WhatsApp number and its mail

@@ -33,12 +33,14 @@ import { Lockup } from "../components/brand/Logo";
 import { Meander } from "../components/brand/Meander";
 import { cls } from "../lib/cls";
 import marbleUrl from "../assets/landing/marble.webp";
+import { Pricing } from "./LandingPricing";
 
 /**
  * The public product page (BRAND.md is the source for its copy, colours and type).
  *
- * It claims only what has shipped: no prices, customer figures, testimonials, electronic
- * invoicing, or delivery receipts for reminders. The product views are screenshots of the seeded dev stack
+ * It claims only what has shipped: no customer figures, testimonials, electronic invoicing, or
+ * delivery receipts for reminders. The prices are not written here: `LandingPricing` reads them
+ * from the catalog the checkout charges from. The product views are screenshots of the seeded dev stack
  * under `src/assets/landing/`, not mock-ups.
  *
  * Icons here are Phosphor; the application itself still uses Lucide.
@@ -293,6 +295,7 @@ function Header() {
           {[
             ["#unidades", "Unidades"],
             ["#modulos", "Módulos"],
+            ["#precios", "Precios"],
             ["#historia", "Historia"],
           ].map(([href, label]) => (
             <a
@@ -686,6 +689,7 @@ export default function Landing() {
             <Units />
             <OneRecord />
             <Modules />
+            <Pricing />
             <Story />
             <Closing />
           </main>

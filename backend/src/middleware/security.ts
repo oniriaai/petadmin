@@ -91,6 +91,24 @@ export const loginLimiter = rateLimit({
 });
 
 /**
+ * Signups from the public page, keyed by IP.
+ *
+ * Each one hashes a password, writes a row and either opens a payment at the gateway or sends
+ * an email to an address nobody has verified yet, so an open form is a way to spend the
+ * platform's money and to mail strangers. Nobody signs a business up this often.
+ */
+export const signupLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  limit: Number(process.env.RATE_LIMIT_SIGNUP ?? 20),
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  keyGenerator(req) {
+    return ipKeyGenerator(req.ip ?? "");
+  },
+  handler: tooMany("Demasiados registros desde esta conexión. Inténtalo más tarde."),
+});
+
+/**
  * Object-storage operations, keyed by tenant rather than by IP.
  *
  * Every one of these costs money at the storage provider, and the unit that should bear the
@@ -132,6 +150,19 @@ export function assertSecureConfig(): void {
   }
   if (!process.env.DATABASE_URL) {
     problems.push("DATABASE_URL no está definido");
+  }
+  // Only when the gateway is on: a deployment that does not sell from the page needs neither.
+  if (process.env.PAYPHONE_TOKEN?.trim()) {
+    if ((process.env.BILLING_ENCRYPTION_KEY?.trim().length ?? 0) < 32) {
+      problems.push(
+        "BILLING_ENCRYPTION_KEY debe tener al menos 32 caracteres cuando PAYPHONE_TOKEN está definido",
+      );
+    }
+    if (!process.env.PUBLIC_SITE_URL?.trim()) {
+      problems.push(
+        "PUBLIC_SITE_URL debe indicar la dirección del sitio: PayPhone devuelve ahí al cliente",
+      );
+    }
   }
 
   if (problems.length > 0) {

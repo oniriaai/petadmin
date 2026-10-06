@@ -6,9 +6,9 @@ import "@fontsource/cinzel/latin-700.css";
 import "./styles.css";
 
 /**
- * The public product page and the application are separate chunks, chosen before either loads:
- * a visitor never downloads the operator's code or starts a session check, and an operator never
- * downloads the page.
+ * The public product page, the signup and the application are separate chunks, chosen before any
+ * of them loads: a visitor never downloads the operator's code or starts a session check, and an
+ * operator never downloads the page.
  *
  * The page is what the bare address opens. A browser that holds a session goes straight to the
  * workspace instead, so `/` stays the operator's dashboard; a session that has lapsed is caught
@@ -24,10 +24,15 @@ function hasSession() {
 
 const path = window.location.pathname.replace(/\/+$/, "");
 const isLanding = path === "/bienvenida" || (path === "" && !hasSession());
+// Signing up belongs to the visitor's side too: `/registro`, the return from the payment and the
+// link a trial is confirmed with.
+const isSignup = path === "/registro" || path.startsWith("/registro/");
 const Root = lazy(() =>
   isLanding
     ? import("./pages/Landing")
-    : import("./App").then((module) => ({ default: module.App })),
+    : isSignup
+      ? import("./pages/signup/SignupApp")
+      : import("./App").then((module) => ({ default: module.App })),
 );
 
 createRoot(document.getElementById("root")!).render(

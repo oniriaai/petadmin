@@ -6,12 +6,89 @@ import {
   platformApi,
   type DaycareDetail,
   type Entitlement,
+  type PlatformSubscription,
   type PlatformUser,
 } from "../../lib/platform-api";
+import { formatLongDate, formatMoney } from "../../lib/billing";
 import { PermissionChecklist } from "../../components/access/PermissionChecklist";
 import { DEFAULT_STAFF_PERMISSIONS, businessUnitLabel } from "../../modules/shared/contracts";
 import type { PermissionId } from "../../modules/shared/contracts";
 import { PlatformPage, auditLine, useAsync } from "./shared";
+
+const SUBSCRIPTION_STATUS: Record<string, string> = {
+  TRIALING: "En prueba",
+  ACTIVE: "Al día",
+  PAST_DUE: "Pago pendiente",
+  SUSPENDED: "Suspendida",
+  CANCELED: "Cancelada",
+};
+
+/**
+ * What a daycare that signed up online is paying, read-only. Absent for one created from this
+ * console, which has no subscription. Changing it is `PATCH /billing/tenants/:id`
+ * (docs/suscripciones.md); there is no form for it yet.
+ */
+function SubscriptionSection({ daycareId }: { daycareId: string }) {
+  const [subscription, setSubscription] = useState<PlatformSubscription | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    platformApi
+      .getSubscription(daycareId)
+      .then((data) => alive && setSubscription(data.subscription))
+      // Informational: the rest of the page does not depend on it.
+      .catch(() => alive && setSubscription(null));
+    return () => {
+      alive = false;
+    };
+  }, [daycareId]);
+
+  if (!subscription) return null;
+  const until =
+    subscription.status === "TRIALING" ? subscription.trialEndsAt : subscription.currentPeriodEnd;
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-sm font-semibold uppercase tracking-wider mb-3 text-muted">
+        Suscripción en línea
+      </h2>
+      <dl className="card grid grid-cols-2 gap-x-6 gap-y-4 p-4 text-sm sm:grid-cols-4">
+        <div>
+          <dt className="text-muted">Plan</dt>
+          <dd className="text-ink font-medium">
+            {subscription.planLabel} · {subscription.period === "ANNUAL" ? "anual" : "mensual"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted">Estado</dt>
+          <dd className="text-ink font-medium">
+            {SUBSCRIPTION_STATUS[subscription.status] ?? subscription.status}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted">
+            {subscription.status === "TRIALING" ? "Prueba hasta" : "Pagado hasta"}
+          </dt>
+          <dd className="text-ink font-medium">{formatLongDate(until) || "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">Precio de lista</dt>
+          <dd className="text-ink font-medium tabular-nums">
+            {formatMoney(subscription.priceCents)}
+            {subscription.founderNumber !== null && ` · fundador n.º ${subscription.founderNumber}`}
+          </dd>
+        </div>
+        <div className="col-span-2 sm:col-span-4">
+          <dt className="text-muted">Correo de facturación</dt>
+          <dd className="text-ink">
+            {subscription.billingEmail} ·{" "}
+            {subscription.hasCard ? "con tarjeta guardada" : "sin tarjeta guardada"}
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
@@ -100,6 +177,7 @@ export function DaycareDetailPage() {
     >
       {detail && (
         <>
+          <SubscriptionSection daycareId={id} />
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider mb-3 text-muted">
               Módulos contratados

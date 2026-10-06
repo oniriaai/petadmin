@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import { prisma } from "../../db";
@@ -137,10 +138,20 @@ export interface CreateDaycareInput {
   timezone?: string;
   units: string[];
   modules?: string[];
-  admin: { username: string; password: string; name: string };
+  /**
+   * `passwordHash` is for a caller that hashed the password earlier and no longer has it (the
+   * public signup, which waits for a payment in between). Exactly one of the two is given.
+   */
+  admin: { username: string; name: string } & (
+    { password: string; passwordHash?: undefined } | { passwordHash: string; password?: undefined }
+  );
 }
 
-export async function createDaycare(input: CreateDaycareInput) {
+/**
+ * `tx` lets a caller create the daycare inside its own transaction, so that what it writes
+ * beside it (a subscription) exists if and only if the daycare does.
+ */
+export async function createDaycare(input: CreateDaycareInput, tx?: Prisma.TransactionClient) {
   const units = assertUnitsValid(input.units);
   const entitlements = initialEntitlements(input.modules);
   const timezone = input.timezone?.trim() || DEFAULT_TIMEZONE;
@@ -154,7 +165,7 @@ export async function createDaycare(input: CreateDaycareInput) {
   // so its first admin cannot collide with anything. What used to be here was a global
   // uniqueness check that had to suggest renaming the user after another customer's.
 
-  return prisma.$transaction(async (tx) => {
+  const create = async (tx: Prisma.TransactionClient) => {
     const daycare = await tx.daycare.create({
       data: {
         slug,
@@ -177,7 +188,8 @@ export async function createDaycare(input: CreateDaycareInput) {
         // and "superadmin" must not be reachable through this path at all.
         role: "admin",
         businessUnit: businessUnitForRole("admin"),
-        passwordHash: bcrypt.hashSync(input.admin.password, BCRYPT_ROUNDS),
+        passwordHash:
+          input.admin.passwordHash ?? bcrypt.hashSync(input.admin.password, BCRYPT_ROUNDS),
         isActive: true,
       },
       select: {
@@ -191,7 +203,9 @@ export async function createDaycare(input: CreateDaycareInput) {
     });
 
     return { daycare, admin };
-  });
+  };
+
+  return tx ? create(tx) : prisma.$transaction(create);
 }
 
 export interface UpdateDaycareInput {

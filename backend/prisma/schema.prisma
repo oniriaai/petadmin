@@ -53,6 +53,8 @@ model Daycare {
   vetLabOrders         VetLabOrder[]
   vetLabResultValues   VetLabResultValue[]
   vetConsents          VetConsent[]
+  subscription         Subscription?
+  subscriptionPayments SubscriptionPayment[]
 
   @@map("daycares")
 }
@@ -1038,4 +1040,140 @@ model ReminderMessage {
   @@index([daycareId, createdAt])
   @@index([daycareId, sourceKey])
   @@map("reminder_messages")
+}
+
+/// A visitor signing up from the public page, before a daycare exists for them. Becomes a
+/// daycare when the payment is confirmed (PAID) or the email is verified (TRIAL).
+model SignupIntent {
+  id                    String    @id @default(cuid())
+  /// PAID or TRIAL.
+  kind                  String
+  /// PENDING, PROVISIONED, EXPIRED or FAILED.
+  status                String    @default("PENDING")
+  email                 String
+  businessName          String
+  slug                  String
+  legalName             String?
+  /// RUC or cédula: who the charge is billed to.
+  taxId                 String
+  phone                 String
+  adminName             String
+  adminUsername         String
+  /// Hashed when the form is submitted, so the password never waits here in the clear.
+  passwordHash          String
+  planId                String
+  /// Comma-separated, like `Daycare.units`.
+  units                 String
+  /// MONTHLY or ANNUAL.
+  period                String
+  /// Whether the founder price was quoted, and is therefore owed if the payment goes through.
+  founder               Boolean   @default(false)
+  /// The buyer agreed to keep the card for automatic renewals.
+  saveCard              Boolean   @default(false)
+  /// SHA-256 of the token mailed to a trial signup. Null for a paid one.
+  verificationTokenHash String?   @unique
+  /// Plain column, no foreign key: the intent is the record of how the daycare came to be.
+  daycareId             String?
+  error                 String?
+  createdAt             DateTime  @default(now())
+  expiresAt             DateTime
+  completedAt           DateTime?
+
+  payments SubscriptionPayment[]
+
+  @@index([slug])
+  @@index([email])
+  @@index([taxId])
+  @@map("signup_intents")
+}
+
+/// What a self-service daycare pays for. A daycare with no row here is managed by the vendor
+/// from the console and is never billed or suspended by the system.
+model Subscription {
+  id                 String    @id @default(cuid())
+  daycareId          String    @unique
+  planId             String
+  /// MONTHLY or ANNUAL.
+  period             String
+  /// TRIALING, ACTIVE, PAST_DUE, SUSPENDED or CANCELED.
+  status             String
+  trialEndsAt        DateTime?
+  /// Null until the first payment.
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  /// The list price of one period in cents, before the founder discount and before IVA.
+  priceCents         Int
+  /// 1..FOUNDER_SLOTS for a tenant that got the founder price.
+  founderNumber      Int?      @unique
+  founderUntil       DateTime?
+  billingEmail       String
+  taxId              String?
+  phone              String?
+  /// The card saved on the last payment, when PayPhone tokenizes for this merchant. The token
+  /// and the cardholder's name are encrypted at rest.
+  cardToken          String?
+  cardHolder         String?
+  cardBrand          String?
+  cardLastDigits     String?
+  /// The cardholder's own data from the last confirmation: PayPhone wants it on every charge.
+  payerEmail         String?
+  payerPhone         String?
+  payerDocument      String?
+  failedAttempts     Int       @default(0)
+  nextAttemptAt      DateTime?
+  pastDueSince       DateTime?
+  /// The last notice mailed, e.g. "TRIAL_7:<trialEndsAt>", so the job does not repeat it.
+  lastNotice         String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  daycare  Daycare               @relation(fields: [daycareId], references: [id])
+  payments SubscriptionPayment[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+/// One charge attempted through PayPhone: at signup, when a trial converts, on renewal.
+model SubscriptionPayment {
+  id                    String    @id @default(cuid())
+  /// Null only while a signup is still waiting for its payment.
+  daycareId             String?
+  subscriptionId        String?
+  signupIntentId        String?
+  /// Ours, sent to PayPhone with the charge.
+  clientTransactionId   String    @unique
+  /// Set on automatic renewals only, where it is what stops two runs charging twice.
+  dedupeKey             String?   @unique
+  /// SIGNUP, CONVERSION, RENEWAL (automatic) or MANUAL (paid by the admin from inside).
+  kind                  String
+  planId                String
+  units                 String
+  period                String
+  periodStart           DateTime?
+  periodEnd             DateTime?
+  subtotalCents         Int
+  discountCents         Int       @default(0)
+  taxCents              Int
+  totalCents            Int
+  /// The payer agreed to keep the card used here for automatic renewals.
+  saveCard              Boolean   @default(false)
+  /// PENDING, APPROVED, DECLINED or REVERSED.
+  status                String    @default("PENDING")
+  payphoneTransactionId String?
+  authorizationCode     String?
+  cardBrand             String?
+  cardLastDigits        String?
+  error                 String?
+  createdAt             DateTime  @default(now())
+  confirmedAt           DateTime?
+
+  daycare      Daycare?      @relation(fields: [daycareId], references: [id])
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id])
+  signupIntent SignupIntent? @relation(fields: [signupIntentId], references: [id])
+
+  @@index([daycareId, createdAt])
+  @@index([subscriptionId])
+  @@index([signupIntentId])
+  @@map("subscription_payments")
 }

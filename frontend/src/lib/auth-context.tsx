@@ -6,6 +6,7 @@ import {
   setPinnedDaycareId as persistPinnedDaycareId,
   setModuleDisabledHandler,
   setPermissionDeniedHandler,
+  setSubscriptionInactiveHandler,
   setUnauthorizedHandler,
 } from "./api";
 import { normalizeBusinessUnit, normalizeUserRole } from "../modules/shared/contracts";
@@ -13,6 +14,7 @@ import type {
   BusinessUnit,
   PermissionId,
   ProductModuleId,
+  SubscriptionSummary,
   UserRole,
 } from "../modules/shared/contracts";
 export type {
@@ -49,6 +51,7 @@ interface SessionResponse {
   enabledModules: string[];
   permissions?: string[];
   units: string[];
+  subscription?: SubscriptionSummary | null;
   fullAccess: boolean;
 }
 
@@ -58,6 +61,8 @@ interface AuthCtx {
   /** Product modules this session may reach. Empty until the session has been fetched. */
   enabledModules: ProductModuleId[];
   units: BusinessUnit[];
+  /** Null for a daycare the vendor manages by hand, and until the session has been fetched. */
+  subscription: SubscriptionSummary | null;
   /** True for a superadmin: the backend gate does not restrict it, whatever enabledModules says. */
   fullAccess: boolean;
   hasModule: (id: ProductModuleId | undefined) => boolean;
@@ -113,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [permissions, setPermissions] = useState<PermissionId[]>([]);
   const [units, setUnits] = useState<BusinessUnit[]>([]);
   const [fullAccess, setFullAccess] = useState(false);
+  const [subscription, setSubscription] = useState<SubscriptionSummary | null>(null);
   const [activeBusinessUnit, setActiveBusinessUnitState] = useState<BusinessUnit | null>(null);
   const [pinnedDaycareId, setPinnedDaycareIdState] = useState<string | null>(getPinnedDaycareId());
   const [isLoading, setIsLoading] = useState(true);
@@ -139,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPermissions([]);
     setUnits([]);
     setFullAccess(false);
+    setSubscription(null);
     setActiveBusinessUnitState(null);
     setPinnedDaycareIdState(null);
   }, []);
@@ -163,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (data.units ?? []).map(normalizeBusinessUnit).filter((u): u is BusinessUnit => u !== null),
     );
     setFullAccess(Boolean(data.fullAccess));
+    setSubscription(data.subscription ?? null);
     return normalized;
   }, []);
 
@@ -237,10 +245,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPermissionDeniedHandler(() => {
       void refreshSession();
     });
+    // And a subscription that lapsed while someone was working: the workspace reads the new
+    // status and gives way to the page where it is paid.
+    setSubscriptionInactiveHandler(() => {
+      void refreshSession();
+    });
     return () => {
       setUnauthorizedHandler(null);
       setModuleDisabledHandler(null);
       setPermissionDeniedHandler(null);
+      setSubscriptionInactiveHandler(null);
     };
   }, [refreshSession]);
 
@@ -328,6 +342,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         daycare,
         enabledModules,
         units,
+        subscription,
         fullAccess,
         hasModule,
         hasModules,
