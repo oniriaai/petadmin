@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
 import {
   AnimatePresence,
@@ -10,9 +10,9 @@ import {
   useSpring,
 } from "motion/react";
 import {
-  ArrowRightBold,
   ArrowsClockwise,
   Bed,
+  Bell,
   CalendarBlank,
   CalendarCheck,
   ChartBar,
@@ -31,8 +31,12 @@ import {
 import type { Icon } from "../components/icons/PublicIcons";
 import { Lockup } from "../components/brand/Logo";
 import { Meander } from "../components/brand/Meander";
+import type { Catalog } from "../lib/billing";
 import { cls } from "../lib/cls";
 import marbleUrl from "../assets/landing/marble.webp";
+import { FAQ_STYLES, Faq } from "./LandingFaq";
+import type { Offer } from "./LandingFaq";
+import { ContactButton, Header } from "./LandingHeader";
 import { Pricing } from "./LandingPricing";
 import { EASE, REVEAL_STYLES, Reveal, useSlidingPill } from "./LandingReveal";
 
@@ -41,8 +45,9 @@ import { EASE, REVEAL_STYLES, Reveal, useSlidingPill } from "./LandingReveal";
  *
  * It claims only what has shipped: no customer figures, testimonials, electronic invoicing, or
  * delivery receipts for reminders. The prices are not written here: `LandingPricing` reads them
- * from the catalog the checkout charges from. The product views are screenshots of the seeded dev stack
- * under `src/assets/landing/`, not mock-ups.
+ * from the catalog the checkout charges from. The product views under `src/assets/landing/` are
+ * screenshots of the main demo tenant, not mock-ups. Take them from a database seeded for the
+ * purpose: one the e2e suites have run against shows their test rooms and tutors.
  *
  * Icons here are Phosphor, drawn inline (`components/icons/PublicIcons.tsx`); the application
  * itself still uses Lucide.
@@ -50,9 +55,6 @@ import { EASE, REVEAL_STYLES, Reveal, useSlidingPill } from "./LandingReveal";
  * `main.tsx` mounts this page on its own, outside the application's router and session, so it
  * links to the application with plain anchors.
  */
-
-/** Where "Escríbenos" leads. No address is registered yet, so the deployment provides it. */
-const CONTACT_HREF = (import.meta.env.VITE_CONTACT_URL as string | undefined) ?? "mailto:";
 
 /**
  * Motion's animation engine arrives in its own chunk, after the page has painted. Until then an
@@ -89,25 +91,29 @@ function shotSources(name: string) {
  * headline and the screenshot only rise: an element that starts transparent is not counted as
  * the page's largest paint, and those two are it.
  *
- * The marble is one seamless tile of veins stored as transparency and used as a mask over the
- * ink colour, so the same file veins the light canvas dark and the dark canvas light. It lies
- * on the canvas only: the sunken bands and the surfaces stay flat.
+ * The marble is one seamless tile of veins (`assets/landing/build-marble.py` draws it), white
+ * where the stone is marked and used as a luminance mask over the ink colour, so the same file
+ * veins the light canvas dark and the dark canvas light. It lies on the canvas only: the sunken
+ * bands and the surfaces stay flat. A browser that cannot read a mask by luminance would lay
+ * the ink over the whole canvas, so it gets no marble at all.
  */
 const PAGE_STYLES = `
 .landing {
   position: relative;
   isolation: isolate;
 }
-.landing::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--color-ink);
-  opacity: 0.11;
-  -webkit-mask: url(${marbleUrl}) top center / 1400px repeat;
-  mask: url(${marbleUrl}) top center / 1400px repeat;
+@supports (mask-mode: luminance) {
+  .landing::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--color-ink);
+    opacity: 0.16;
+    mask: url(${marbleUrl}) top center / clamp(1600px, 110vw, 2400px) repeat;
+    mask-mode: luminance;
+  }
 }
 @media (prefers-color-scheme: dark) {
   .landing {
@@ -120,6 +126,10 @@ const PAGE_STYLES = `
     --color-muted: #a8a29e;
     --color-border: color-mix(in srgb, #fafaf9 24%, #1c1917);
     --color-border-subtle: color-mix(in srgb, #fafaf9 13%, #1c1917);
+  }
+  /* Light veins on ink carry further than dark ones on marble. */
+  .landing::before {
+    opacity: 0.13;
   }
 }
 @keyframes landing-rise {
@@ -138,7 +148,7 @@ const PAGE_STYLES = `
     animation-name: landing-rise-solid;
   }
 }
-${REVEAL_STYLES}`;
+${REVEAL_STYLES}${FAQ_STYLES}`;
 
 type UnitId = "guarderia" | "peluqueria" | "veterinaria";
 
@@ -235,6 +245,7 @@ function Shot({
   alt,
   sizes,
   eager = false,
+  bare = false,
   className,
 }: {
   name: string;
@@ -242,6 +253,8 @@ function Shot({
   /** The width the image is laid out at, so the browser can pick a file before layout. */
   sizes: string;
   eager?: boolean;
+  /** Inside a frame that already draws the card. */
+  bare?: boolean;
   className?: string;
 }) {
   return (
@@ -256,53 +269,11 @@ function Shot({
       // Lower case on purpose: React 18 does not know the camel-cased prop.
       {...(eager ? { fetchpriority: "high" } : {})}
       className={cls(
-        "block w-full h-auto rounded-xl border border-line-subtle bg-surface shadow-raised",
+        "block h-auto w-full bg-surface",
+        !bare && "rounded-xl border border-line-subtle shadow-raised",
         className,
       )}
     />
-  );
-}
-
-function ContactButton({ className }: { className?: string }) {
-  return (
-    <a href={CONTACT_HREF} className={cls("btn-primary whitespace-nowrap", className)}>
-      Escríbenos
-      <ArrowRightBold size={16} aria-hidden="true" />
-    </a>
-  );
-}
-
-function Header() {
-  return (
-    <header className="sticky top-0 z-shell border-b border-line-subtle bg-canvas">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-        <a href="#inicio" className="text-ink">
-          <Lockup tone="auto" className="w-36" />
-        </a>
-        <nav aria-label="Secciones" className="hidden items-center gap-8 md:flex">
-          {[
-            ["#unidades", "Unidades"],
-            ["#modulos", "Módulos"],
-            ["#precios", "Precios"],
-            ["#historia", "Historia"],
-          ].map(([href, label]) => (
-            <a
-              key={href}
-              href={href}
-              className="text-sm font-medium text-muted transition-colors hover:text-ink"
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          <a href="/login" className="btn-ghost hidden whitespace-nowrap sm:inline-flex">
-            Iniciar sesión
-          </a>
-          <ContactButton />
-        </div>
-      </div>
-    </header>
   );
 }
 
@@ -339,9 +310,22 @@ function Hero() {
             </a>
           </div>
         </div>
-        <div style={rise(3)} className="landing-rise-solid">
+        {/* A window around the screenshot, so it reads as the product and not as a picture. */}
+        <div
+          style={rise(3)}
+          className="landing-rise-solid overflow-hidden rounded-xl border border-line bg-surface shadow-overlay"
+        >
+          <div
+            aria-hidden="true"
+            className="flex h-9 items-center gap-1.5 border-b border-line-subtle bg-sunken px-3.5"
+          >
+            <span className="h-2.5 w-2.5 rounded-full bg-line" />
+            <span className="h-2.5 w-2.5 rounded-full bg-line" />
+            <span className="h-2.5 w-2.5 rounded-full bg-line" />
+          </div>
           <Shot
             eager
+            bare
             name="panel"
             sizes="(min-width: 1024px) min(62vw, 780px), 100vw"
             alt="Panel de inicio de Argos Suite con el resumen del día"
@@ -513,8 +497,35 @@ function ModuleText({ Icon, name, line }: { Icon: Icon; name: string; line: stri
   );
 }
 
+/** The vaccine reminder registered as a WhatsApp template, filled with its example values. */
+const REMINDER_EXAMPLE = {
+  body: "Hola Ana, te escribimos de Clínica Veterinaria Sur. Max tiene pendiente el refuerzo de Antirrábica, previsto para el 12 de octubre. Para agendar su cita, escríbenos al 099 123 4567.",
+  footer: "Enviado con Argos Suite. Este número no recibe respuestas.",
+};
+
+function ModuleShot({ name, alt }: { name: string; alt: string }) {
+  return (
+    <div className="mt-auto pl-6 sm:pl-8">
+      <img
+        {...shotSources(name)}
+        sizes="(min-width: 1280px) 580px, (min-width: 768px) 46vw, calc(100vw - 3.5rem)"
+        alt={alt}
+        width={1440}
+        height={900}
+        loading="lazy"
+        decoding="async"
+        className="block h-56 w-full rounded-tl-xl border-l border-t border-line-subtle object-cover object-left-top"
+      />
+    </div>
+  );
+}
+
 function Modules() {
-  const tile = "overflow-hidden rounded-xl border border-line-subtle";
+  // The entrance is on the cell and the hover on the tile inside it: both are transitions,
+  // and one element cannot carry two.
+  const cell = "flex";
+  const tile =
+    "flex w-full flex-col overflow-hidden rounded-xl border border-line-subtle transition-[border-color,box-shadow] duration-300 hover:border-line hover:shadow-raised";
   return (
     <section id="modulos" className="scroll-mt-16 border-t border-line-subtle">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
@@ -528,73 +539,77 @@ function Modules() {
           </p>
         </Reveal>
 
-        {/* Four modules, four cells: 4 + 2 over 2 + 4 on desktop, one column on a phone. */}
-        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-6">
-          <Reveal className={cls(tile, "bg-surface md:col-span-4")}>
-            <div className="p-6 sm:p-8">
-              <ModuleText
-                Icon={Wallet}
-                name="Argos Finanzas"
-                line="Cobros, cuentas por pagar y proveedores, con las cuentas de cada unidad por separado."
-              />
-            </div>
-            <div className="pl-6 sm:pl-8">
-              <img
-                {...shotSources("finanzas")}
-                sizes="(min-width: 768px) min(62vw, 775px), calc(100vw - 3.5rem)"
+        {/* Five modules: the two with a screen to show side by side, then the reminder, two
+            rows tall beside the last two. One column on a phone. */}
+        <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <Reveal className={cell}>
+            <div className={cls(tile, "bg-surface")}>
+              <div className="p-6 sm:p-8">
+                <ModuleText
+                  Icon={Wallet}
+                  name="Argos Finanzas"
+                  line="Cobros, cuentas por pagar y proveedores, con las cuentas de cada unidad por separado."
+                />
+              </div>
+              <ModuleShot
+                name="finanzas"
                 alt="Pantalla de gestión financiera con los cobros del periodo"
-                width={1440}
-                height={900}
-                loading="lazy"
-                decoding="async"
-                className="block h-56 w-full rounded-tl-xl border-l border-t border-line-subtle object-cover object-left-top"
               />
             </div>
           </Reveal>
 
-          <Reveal delay={0.08} className={cls(tile, "bg-sunken p-6 sm:p-8 md:col-span-2")}>
-            <ModuleText
-              Icon={Package}
-              name="Argos Inventario"
-              line="Artículos, movimientos de entrada y salida, y un aviso cuando el stock llega al mínimo."
-            />
-          </Reveal>
-
-          <Reveal
-            className={cls(
-              tile,
-              "flex flex-col justify-between gap-10 bg-sunken p-6 sm:p-8 md:col-span-2",
-            )}
-          >
-            <ModuleText
-              Icon={FileText}
-              name="Argos Contratos"
-              line="Contratos de estancia por tutor y mascota, junto a las alertas operativas y sanitarias."
-            />
-            <div className="text-action dark:text-oro">
-              <Meander />
+          <Reveal delay={0.08} className={cell}>
+            <div className={cls(tile, "bg-surface")}>
+              <div className="p-6 sm:p-8">
+                <ModuleText
+                  Icon={ChartBar}
+                  name="Argos Informes"
+                  line="Informes y gráficos del periodo, con exportación a Excel."
+                />
+              </div>
+              <ModuleShot name="informes" alt="Pantalla de informes con los gráficos del periodo" />
             </div>
           </Reveal>
 
-          <Reveal delay={0.08} className={cls(tile, "bg-surface md:col-span-4")}>
-            <div className="p-6 sm:p-8">
+          <Reveal className={cls(cell, "md:row-span-2")}>
+            <div className={cls(tile, "justify-between gap-8 bg-sunken p-6 sm:p-8")}>
               <ModuleText
-                Icon={ChartBar}
-                name="Argos Informes"
-                line="Informes y gráficos del periodo, con exportación a Excel."
+                Icon={Bell}
+                name="Argos Recordatorios"
+                line="Citas, vacunas y controles pendientes: un mensaje que tus tutores reciben por WhatsApp o por correo, a nombre de tu negocio."
+              />
+              <figure>
+                <blockquote className="max-w-[46ch] rounded-xl rounded-bl-sm border border-line-subtle bg-surface p-4 text-sm leading-relaxed text-ink shadow-raised">
+                  <p>{REMINDER_EXAMPLE.body}</p>
+                  <p className="mt-2 text-xs text-muted">{REMINDER_EXAMPLE.footer}</p>
+                </blockquote>
+                <figcaption className="mt-3 text-xs text-muted">
+                  Un recordatorio de vacuna, como lo recibe un tutor.
+                </figcaption>
+              </figure>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.08} className={cell}>
+            <div className={cls(tile, "bg-sunken p-6 sm:p-8")}>
+              <ModuleText
+                Icon={Package}
+                name="Argos Inventario"
+                line="Artículos, movimientos de entrada y salida, y un aviso cuando el stock llega al mínimo."
               />
             </div>
-            <div className="pl-6 sm:pl-8">
-              <img
-                {...shotSources("informes")}
-                sizes="(min-width: 768px) min(62vw, 775px), calc(100vw - 3.5rem)"
-                alt="Pantalla de informes con los gráficos del periodo"
-                width={1440}
-                height={900}
-                loading="lazy"
-                decoding="async"
-                className="block h-56 w-full rounded-tl-xl border-l border-t border-line-subtle object-cover object-left-top"
+          </Reveal>
+
+          <Reveal delay={0.16} className={cell}>
+            <div className={cls(tile, "justify-between gap-10 bg-sunken p-6 sm:p-8")}>
+              <ModuleText
+                Icon={FileText}
+                name="Argos Contratos"
+                line="Contratos de estancia por tutor y mascota, junto a las alertas operativas y sanitarias."
               />
+              <div className="text-action dark:text-oro">
+                <Meander />
+              </div>
             </div>
           </Reveal>
         </div>
@@ -663,6 +678,14 @@ function Footer() {
 }
 
 export default function Landing() {
+  // Until the price list says otherwise, the answers assume what a deployment normally offers.
+  const [offer, setOffer] = useState<Offer>({ trial: true, checkout: true });
+  const onCatalog = useCallback((catalog: Catalog | null) => {
+    setOffer({
+      trial: catalog?.trial.available ?? false,
+      checkout: catalog?.checkoutAvailable ?? false,
+    });
+  }, []);
   return (
     <MotionConfig reducedMotion="user">
       <LazyMotion features={loadMotionFeatures}>
@@ -674,7 +697,8 @@ export default function Landing() {
             <Units />
             <OneRecord />
             <Modules />
-            <Pricing />
+            <Pricing onCatalog={onCatalog} />
+            <Faq offer={offer} />
             <Story />
             <Closing />
           </main>
