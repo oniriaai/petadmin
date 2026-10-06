@@ -24,6 +24,7 @@
     "db:migrate": "prisma migrate deploy",
     "job:recurring-plans": "tsx src/jobs/run-recurring-plans.ts",
     "job:reminders": "tsx src/jobs/run-reminders.ts",
+    "mail:test": "tsx scripts/send-test-reminder.ts",
     "db:migrate:dev": "prisma migrate dev",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.seed.json",
     "typecheck:aux": "tsc -p tsconfig.seed.json",

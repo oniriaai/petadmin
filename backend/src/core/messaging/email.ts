@@ -48,7 +48,17 @@ export async function sendEmail(message: EmailMessage): Promise<DeliveryResult> 
     });
     return { transport: "smtp", providerMessageId: info.messageId ?? null };
   } catch (error) {
-    const code = (error as { code?: string; responseCode?: number })?.responseCode;
-    throw new DeliveryError(`El servidor de correo rechazó el mensaje${code ? ` (${code})` : ""}`);
+    // Three different things to fix, so three different sentences: the address of the server,
+    // the key, or the message itself.
+    const { code, responseCode } = (error ?? {}) as { code?: string; responseCode?: number };
+    if (code === "EAUTH") {
+      throw new DeliveryError("El servidor de correo rechazó las credenciales");
+    }
+    if (code && ["ECONNECTION", "ETIMEDOUT", "ESOCKET", "EDNS", "ECONNREFUSED"].includes(code)) {
+      throw new DeliveryError("No se pudo conectar con el servidor de correo");
+    }
+    throw new DeliveryError(
+      `El servidor de correo rechazó el mensaje${responseCode ? ` (${responseCode})` : ""}`,
+    );
   }
 }

@@ -150,12 +150,47 @@ Un negocio solo puede iniciar una conversación con una plantilla aprobada, por 
 es editable desde la aplicación: cambiarlo es cambiar `templates.ts` **y** la plantilla en Meta.
 `tests/reminders-module.ts` comprueba que cada cuerpo use `{{1}}…{{n}}` en orden.
 
-### Correo (SMTP)
+### Correo (SMTP con Resend)
 
-1. Contratar un servicio de correo transaccional y verificar el dominio de envío con SPF y DKIM.
-2. Definir `SMTP_URL` y `MAIL_FROM` (por ejemplo `Argos Suite <recordatorios@tudominio.com>`).
-3. Definir `PUBLIC_SITE_URL` en el backend para que el correo muestre el logo
+El código habla SMTP y sirve con cualquier proveedor; el elegido es [Resend](https://resend.com).
+El plan gratuito (3.000 correos al mes, 100 al día) alcanza para desarrollo y los primeros
+clientes.
+
+1. Crear la cuenta en Resend.
+2. **Dominio**: en *Domains → Add Domain*, añadir `avisos.oniriasolutions.com`. Es un
+   **subdominio** dedicado al envío, no el dominio raíz, para aislar su reputación. Resend
+   muestra los registros de SPF y DKIM que hay que crear; el DNS de `oniriasolutions.com` está
+   en **Cloudflare**, y ahí se crean en modo **DNS only** (nube gris, sin proxy). Añadir además
+   un registro DMARC en `_dmarc.avisos`. Esperar a que el dominio figure como verificado.
+3. **API key**: en *API Keys*, crear una con permiso **Sending access** limitada a ese dominio.
+   Es la contraseña SMTP; se muestra una sola vez.
+4. Definir las variables en el host (servicios `backend` y `reminders`):
+
+   ```bash
+   SMTP_URL=smtps://resend:LA_API_KEY@smtp.resend.com:465
+   MAIL_FROM=Argos Suite <recordatorios@avisos.oniriasolutions.com>
+   ```
+
+   La dirección `recordatorios@` no necesita buzón: nadie le escribe, porque las respuestas van
+   al correo de contacto de cada unidad (`Reply-To`).
+
+   El usuario SMTP es siempre `resend`. El puerto 465 es TLS implícito (`smtps://`); con 587
+   sería `smtp://` y STARTTLS.
+5. Definir `PUBLIC_SITE_URL` en el backend para que el correo muestre el logo
    (`/brand/argos-suite-lockup.png`, servido por el frontend). Sin ella, el nombre va en texto.
+6. Comprobarlo sin tocar ningún dato: envía un recordatorio de muestra a la dirección que digas.
+
+   ```bash
+   cd backend
+   SMTP_URL=... MAIL_FROM=... npm run mail:test -- tu@correo.com
+   ```
+
+Antes de tener un dominio verificado, Resend solo deja enviar desde `onboarding@resend.dev` y
+solo a la dirección de la propia cuenta. Sirve para una primera prueba con `mail:test`, no para
+escribir a tutores.
+
+Resend ofrece webhooks de entrega y rebote en todos los planes. Hoy no se usan: "Enviado" sigue
+significando que el proveedor aceptó el mensaje (ver "Lo que todavía no hace").
 
 Las respuestas a un correo llegan al **correo de contacto** de la unidad (`Reply-To`).
 
