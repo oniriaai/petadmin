@@ -225,7 +225,12 @@ function PricingPlaceholder() {
   );
 }
 
-export function Pricing() {
+export function Pricing({
+  onCatalog,
+}: {
+  /** Told what the deployment offers once it is known: the catalog, or null when there is none. */
+  onCatalog?: (catalog: Catalog | null) => void;
+}) {
   // null while the catalog is on its way; "absent" once it is known there is none to show.
   const [catalog, setCatalog] = useState<Catalog | "absent" | null>(null);
   const [period, setPeriod] = useState<BillingPeriod>("MONTHLY");
@@ -235,16 +240,20 @@ export function Pricing() {
     signupApi
       .catalog()
       .then((data) => {
-        if (alive) setCatalog(data.plans.length > 0 ? data : "absent");
+        if (!alive) return;
+        setCatalog(data.plans.length > 0 ? data : "absent");
+        onCatalog?.(data.plans.length > 0 ? data : null);
       })
       .catch(() => {
         // No catalog, no prices: the rest of the page still offers a way to get in touch.
-        if (alive) setCatalog("absent");
+        if (!alive) return;
+        setCatalog("absent");
+        onCatalog?.(null);
       });
     return () => {
       alive = false;
     };
-  }, []);
+  }, [onCatalog]);
 
   // What the section last measured, to tell by how much it has just changed. Watched and not
   // only read when the catalog lands: the rows go on settling after that render (text wraps
