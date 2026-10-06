@@ -35,6 +35,9 @@ import {
  * `main.tsx` mounts this on its own, outside the application's router and session, as it does
  * the landing: somebody who is not a customer yet has no use for the operator's code. It hands
  * over to the application by storing the session the server returns and loading `/`.
+ *
+ * Unlike the landing this page is light only, so the lockup is the light one: following the
+ * visitor's colour scheme drew a white wordmark on the light canvas.
  */
 
 type Mode = "PAID" | "TRIAL";
@@ -45,7 +48,7 @@ function Frame({ children }: { children: ReactNode }) {
       <header className="border-b border-line-subtle">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
           <a href="/bienvenida" className="text-ink" aria-label="Argos Suite, página de inicio">
-            <Lockup tone="auto" className="w-36" />
+            <Lockup tone="light" className="w-36" />
           </a>
           <a href="/login" className="btn-ghost whitespace-nowrap">
             Ya tengo cuenta
