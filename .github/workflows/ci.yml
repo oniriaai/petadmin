@@ -262,7 +262,9 @@ jobs:
           context: ./frontend
           tags: petadmin-frontend
           load: true
-          build-args: VITE_API_URL=https://example.invalid/api/v1
+          build-args: |
+            VITE_API_URL=https://example.invalid/api/v1
+            VITE_SITE_URL=https://example.invalid
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,scope=frontend,mode=max
 

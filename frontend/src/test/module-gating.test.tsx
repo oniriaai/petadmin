@@ -164,7 +164,14 @@ describe("permission gating", () => {
         {
           id: "x",
           label: "X",
-          routes: [{ path: "/x", component: () => null, permissions: ["finanzas.todo" as never] }],
+          routes: [
+            {
+              path: "/x",
+              title: "X",
+              component: () => null,
+              permissions: ["finanzas.todo" as never],
+            },
+          ],
         },
       ]),
     ).toThrow(/Unknown permission/);
@@ -425,7 +432,12 @@ describe("registry", () => {
           id: "x",
           label: "X",
           routes: [
-            { path: "/x", component: () => null, requires: ["no-such-module" as ProductModuleId] },
+            {
+              path: "/x",
+              title: "X",
+              component: () => null,
+              requires: ["no-such-module" as ProductModuleId],
+            },
           ],
         },
       ]),

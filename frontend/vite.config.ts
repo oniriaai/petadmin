@@ -1,5 +1,5 @@
-import { defineConfig } from "vite";
-import type { Plugin } from "vite";
+import { defineConfig, loadEnv } from "vite";
+import type { HtmlTagDescriptor, Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -49,8 +49,98 @@ function publishCommit(): Plugin {
   };
 }
 
-export default defineConfig({
-  plugins: [react(), tailwindcss(), preloadFonts(), publishCommit()],
+const DESCRIPTION =
+  "Software de gestión para guarderías caninas, peluquerías y clínicas veterinarias: reservas, " +
+  "cupos, citas, fichas clínicas, cobros e inventario en un solo lugar.";
+
+/**
+ * What a crawler reads: robots.txt, the sitemap, the canonical link and the structured data.
+ *
+ * All of them need the address the site is published at, which only the deployment knows, so it
+ * comes from VITE_SITE_URL. A build that does not say where it lives is kept out of search
+ * instead: that is every local build, CI, and the demo until someone opts it in.
+ *
+ * Only the landing is listed. Every other route is the application, which marks itself noindex
+ * (src/App.tsx); robots.txt does not disallow those routes, because a page a crawler may not
+ * fetch is a page whose noindex it never sees.
+ */
+function seo(siteUrl: string | undefined): Plugin {
+  const site = siteUrl?.trim().replace(/\/+$/, "") || undefined;
+
+  const graph = [
+    {
+      "@type": "Organization",
+      "@id": `${site ?? ""}/#organization`,
+      name: "Argos Suite",
+      ...(site && { url: `${site}/`, logo: `${site}/android-chrome-512x512.png` }),
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${site ?? ""}/#website`,
+      name: "Argos Suite",
+      inLanguage: "es",
+      publisher: { "@id": `${site ?? ""}/#organization` },
+      ...(site && { url: `${site}/` }),
+    },
+    {
+      "@type": "SoftwareApplication",
+      name: "Argos Suite",
+      description: DESCRIPTION,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      inLanguage: "es",
+      publisher: { "@id": `${site ?? ""}/#organization` },
+      ...(site && { url: `${site}/` }),
+    },
+  ];
+
+  return {
+    name: "seo",
+    generateBundle() {
+      const robots = site
+        ? `User-agent: *\nAllow: /\n\nSitemap: ${site}/sitemap.xml\n`
+        : "User-agent: *\nDisallow: /\n";
+      this.emitFile({ type: "asset", fileName: "robots.txt", source: robots });
+      if (!site) return;
+      this.emitFile({
+        type: "asset",
+        fileName: "sitemap.xml",
+        source:
+          '<?xml version="1.0" encoding="UTF-8"?>\n' +
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+          `  <url><loc>${site}/</loc></url>\n` +
+          "</urlset>\n",
+      });
+    },
+    transformIndexHtml(): HtmlTagDescriptor[] {
+      return [
+        { tag: "meta", attrs: { name: "description", content: DESCRIPTION }, injectTo: "head" },
+        site
+          ? { tag: "link", attrs: { rel: "canonical", href: `${site}/` }, injectTo: "head" }
+          : { tag: "meta", attrs: { name: "robots", content: "noindex" }, injectTo: "head" },
+        {
+          tag: "script",
+          attrs: { type: "application/ld+json" },
+          // "<" is escaped so that no value can close the script element.
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": graph,
+          }).replace(/</g, "\\u003c"),
+          injectTo: "head",
+        },
+      ];
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    react(),
+    tailwindcss(),
+    preloadFonts(),
+    publishCommit(),
+    seo(loadEnv(mode, process.cwd(), "VITE_").VITE_SITE_URL),
+  ],
   server: {
     host: "0.0.0.0",
     port: 5174,
@@ -60,4 +150,4 @@ export default defineConfig({
     setupFiles: "./src/test/setup.ts",
     globals: true,
   },
-});
+}));

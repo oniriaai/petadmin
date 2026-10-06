@@ -59,6 +59,8 @@ export type FrontendUnit = BusinessUnit;
 
 export interface ModuleRoute {
   path: string;
+  /** What the browser tab says while the page is open, in the user's language. */
+  title: string;
   component: ComponentType;
   roles?: FrontendRole[];
   /**
@@ -113,7 +115,7 @@ export const frontendModules: readonly FrontendModule[] = [
   {
     id: "dashboard",
     label: "Dashboard",
-    routes: [{ path: "/", component: Dashboard }],
+    routes: [{ path: "/", title: "Inicio", component: Dashboard }],
   },
   {
     id: "guarderia",
@@ -121,20 +123,29 @@ export const frontendModules: readonly FrontendModule[] = [
     routes: [
       {
         path: "/guarderia",
+        title: "Control de guardería",
         component: ControlGuarderiaPage,
         roles: ["admin", "daycare"],
         requires: ["guarderia"],
         unit: "DAYCARE",
       },
-      { path: "/salas", component: RoomsPage, roles: ["admin", "daycare"], requires: ["reservas"] },
+      {
+        path: "/salas",
+        title: "Salas y cupos",
+        component: RoomsPage,
+        roles: ["admin", "daycare"],
+        requires: ["reservas"],
+      },
       {
         path: "/planes",
+        title: "Planes recurrentes",
         component: RecurringPlansPage,
         roles: ["admin", "daycare"],
         requires: ["reservas"],
       },
       {
         path: "/transporte",
+        title: "Transporte",
         component: TransportePage,
         roles: ["admin", "daycare"],
         requires: ["guarderia", "informes"],
@@ -142,6 +153,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/disponibilidad",
+        title: "Disponibilidad",
         component: DisponibilidadPage,
         roles: ["admin", "daycare"],
         requires: ["reservas"],
@@ -200,6 +212,7 @@ export const frontendModules: readonly FrontendModule[] = [
     routes: [
       {
         path: "/peluqueria",
+        title: "Agenda de peluquería",
         component: AgendaPeluqueriaPage,
         roles: ["admin", "grooming"],
         requires: ["peluqueria"],
@@ -229,6 +242,7 @@ export const frontendModules: readonly FrontendModule[] = [
     routes: [
       {
         path: "/veterinaria",
+        title: "Agenda veterinaria",
         component: AgendaVeterinariaPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria", "reservas"],
@@ -236,6 +250,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/consultas/:id",
+        title: "Consulta",
         component: ConsultaPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -243,6 +258,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/pacientes",
+        title: "Historias clínicas",
         component: PacientesPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -250,6 +266,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/pacientes/:petId",
+        title: "Historia clínica",
         component: HistoriaClinicaPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria", "reservas"],
@@ -257,6 +274,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/farmacia",
+        title: "Farmacia",
         component: FarmaciaPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -264,6 +282,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/recetas/:id",
+        title: "Receta",
         component: RecetaPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -271,6 +290,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/hospitalizacion",
+        title: "Hospitalización",
         component: HospitalizacionPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -278,6 +298,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/hospitalizacion/:id",
+        title: "Alta hospitalaria",
         component: AltaPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -285,6 +306,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/laboratorio",
+        title: "Laboratorio",
         component: LaboratorioPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -292,6 +314,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/consentimientos/:id",
+        title: "Consentimiento",
         component: ConsentimientoPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -299,6 +322,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/recordatorios",
+        title: "Recordatorios",
         component: RecordatoriosPage,
         roles: ["admin", "veterinary"],
         requires: ["veterinaria"],
@@ -306,6 +330,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/informe",
+        title: "Informe clínico",
         component: InformeClinicaPage,
         roles: ["admin"],
         requires: ["veterinaria"],
@@ -313,6 +338,7 @@ export const frontendModules: readonly FrontendModule[] = [
       },
       {
         path: "/veterinaria/catalogo",
+        title: "Catálogo clínico",
         component: CatalogoVeterinariaPage,
         roles: ["admin"],
         requires: ["veterinaria"],
@@ -407,17 +433,24 @@ export const frontendModules: readonly FrontendModule[] = [
     id: "shared",
     label: "Gestión",
     routes: [
-      { path: "/clientes", component: ClientesPage },
-      { path: "/animales", component: AnimalesPage },
-      { path: "/operaciones", component: OperacionesPage, requires: ["reservas"] },
+      { path: "/clientes", title: "Clientes", component: ClientesPage },
+      { path: "/animales", title: "Animales", component: AnimalesPage },
+      {
+        path: "/operaciones",
+        title: "Operaciones",
+        component: OperacionesPage,
+        requires: ["reservas"],
+      },
       {
         path: "/transacciones",
+        title: "Finanzas",
         component: FinancialPage,
         requires: ["finanzas"],
         permissions: ["finanzas.read"],
       },
       {
         path: "/inventario",
+        title: "Inventario",
         component: InventarioPage,
         requires: ["inventario"],
         permissions: ["inventario.read"],
@@ -425,13 +458,19 @@ export const frontendModules: readonly FrontendModule[] = [
       // Every figure on the page is financial (`/reports/incomes`, `/expenses`, `/kpis`).
       {
         path: "/informes",
+        title: "Informes",
         component: InformesPage,
         requires: ["informes"],
         permissions: ["finanzas.read"],
       },
-      { path: "/herramientas", component: HerramientasPage },
-      { path: "/configuracion", component: ConfiguracionPage, roles: ["admin"] },
-      { path: "/guia", component: GuidePage },
+      { path: "/herramientas", title: "Herramientas", component: HerramientasPage },
+      {
+        path: "/configuracion",
+        title: "Configuración",
+        component: ConfiguracionPage,
+        roles: ["admin"],
+      },
+      { path: "/guia", title: "Guía de uso", component: GuidePage },
     ],
     navigation: {
       label: "Gestión",

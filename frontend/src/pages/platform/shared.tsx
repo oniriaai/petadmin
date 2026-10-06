@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { ApiError } from "../../lib/api";
 import type { AuditEntry } from "../../lib/platform-api";
 import { ListSkeleton } from "../../components/ui/Spinner";
+import { useDocumentTitle } from "../../lib/document-title";
 
 /**
  * Runs an async console action, keeping its loading and error state.
@@ -50,6 +51,7 @@ export function PlatformPage({
   error?: string | null;
   children: React.ReactNode;
 }) {
+  useDocumentTitle(`${title} · Consola`);
   return (
     <div className="p-6 sm:p-8 max-w-6xl">
       <header className="flex flex-wrap items-start justify-between gap-3 mb-6">

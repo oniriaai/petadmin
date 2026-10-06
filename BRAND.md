@@ -112,11 +112,41 @@ components:
     rounded: "{rounded.full}"
 ---
 
-# Brand identity: Argos Suite
+# Brand brief: Argos Suite
 
-This file is the source of truth for branding this repository as **Argos Suite**. The frontmatter holds machine-readable tokens; the sections below explain how to apply them. `PRODUCT.md` stays the source of truth for what the product does.
+This file is the source of truth for the **Argos Suite** brand: who it is for, what it promises, how it sounds and how it looks. The frontmatter holds machine-readable tokens; the sections below say what they mean and how to use them. `PRODUCT.md` stays the source of truth for what the product does.
 
-Decided on 4 Oct 2026, and extended the same day for the veterinary unit (Argos Veterinaria), which shipped in PR #14. The full rationale lives in the project's rebranding guide; this file keeps only what an implementer needs.
+## The brand in brief
+
+| | |
+| --- | --- |
+| What it is | Business management software for pet daycares, grooming salons and veterinary clinics in Ecuador |
+| Who it is for | The owner or administrator of the business |
+| Promise | Cuidamos tu negocio, para que tú cuides de ellos. |
+| Personality | Cercana, cálida, clara, honesta: a trusted colleague who loves animals and knows the business |
+| Look | Warm marble and black-figure ink, Aegean blue for action, one accent color per business unit |
+| Mark | Argos the hound in Tinta on a terracotta disc |
+
+## The story
+
+Argos, Odysseus's dog, waited 20 years and was the only one to recognize him when he came home. Argus, the hundred-eyed watchman, never stopped watching. Argos Suite watches over the business and keeps every record faithfully, so owners can spend their time with the animals. That faithful record follows each pet from the clinic to the groomer and the daycare.
+
+The story gives the brand its two qualities, loyalty and attention, and its Greek visual world: marble, black-figure pottery, the meander, carved capitals. Never word the "hundred eyes" as surveillance of staff or clients.
+
+## Positioning
+
+Argos Suite is business management software for pet daycares, grooming salons and veterinary clinics in Ecuador. The buyer is the owner or administrator. It puts reservations, capacity, grooming, clinical records, staff, finances, inventory and reports in one place, with each business unit's books kept apart. Customers contract only the modules they use.
+
+The veterinary unit carries one message of its own: **one record for each pet across the clinic, the grooming salon and the daycare.** It speaks most to businesses that run a clinic alongside grooming or boarding. Lead with management, not medicine: Argos Suite runs the clinic as a business, from the agenda and the clinical record to the pharmacy and the bill, with its books kept apart from grooming and daycare.
+
+| Level | Spanish copy |
+| --- | --- |
+| Tagline | Cuidamos tu negocio, para que tú cuides de ellos. |
+| Brand line | Todo tu negocio, a la vista y en buenas manos. |
+| Veterinary line | Una sola ficha para cada mascota: de la consulta a la peluquería y la guardería. |
+| Elevator pitch | Argos Suite acompaña a las guarderías, peluquerías y veterinarias de mascotas de Ecuador para que administren su negocio con tranquilidad. Reservas, cupos, citas, fichas clínicas, personal, cobros e inventario en un solo lugar, con las cuentas de cada unidad por separado. Tú dedicas tu tiempo a las mascotas; nosotros te ayudamos con el resto. Contratas solo los módulos que usas. |
+
+**Claims the brand does not make.** Nothing that has not shipped: SRI electronic invoicing, automatic reminders (the clinic still sends them by hand from its own WhatsApp), a printable vaccination card or file attachments on lab results and consents. No medical advice in product copy, and no invented customer numbers, testimonials, time savings or prices (see `PRODUCT.md`).
 
 ## Name and architecture
 
@@ -127,29 +157,12 @@ Decided on 4 Oct 2026, and extended the same day for the veterinary unit (Argos 
 | Descriptor | Argos Suite · Gestión de guarderías, peluquerías y veterinarias | Login screen, website header |
 | Business units | Argos Guardería, Argos Peluquería, Argos Veterinaria | Pricing pages, unit selector, unit badges |
 | Modules | Argos Finanzas, Argos Inventario, Argos Informes, Argos Contratos | Pricing pages, module badges |
-| Tenant brands | Each customer's own name | Inside the app shell, which already shows the tenant's name |
+| Tenant brands | Each customer's own name | Inside the app shell, which shows the tenant's name |
 
 - Write "Argos Suite" with a normal A everywhere in text. The Greek lambda (Λ) belongs only to the drawn logo.
-- A tenant's brand is never the product's. Do not rename the `DAYCARE` / `GROOMING` / `VETERINARY` identifiers.
-- Keep the interface vocabulary: "Mascotas" for pets, "Tutor", "Cupos", "Guardería", "Peluquería", and "Veterinaria" for the third unit.
+- A tenant's brand is never the product's. The `DAYCARE` / `GROOMING` / `VETERINARY` identifiers are not brand names and are not renamed.
+- The interface vocabulary is "Mascotas" for pets, "Tutor", "Cupos", and "Guardería", "Peluquería" and "Veterinaria" for the three units.
 - **Argos Veterinaria** is the third business unit (`VETERINARY`, role `veterinary`, module `veterinaria`), next to Guardería and Peluquería, with its own books. It covers the consultation agenda and waiting room, the clinical record and patient history, vaccines and preventive care, prescriptions and pharmacy, hospitalization, procedures with consent, laboratory and imaging, and collection when the visit closes.
-
-**The story.** Argos, Odysseus's dog, waited 20 years and was the only one to recognize him when he came home. Argus, the hundred-eyed watchman, never stopped watching. Argos Suite watches over the business and keeps every record faithfully, so owners can spend their time with the animals. With the veterinary unit, that faithful record follows each pet from the clinic to the groomer and the daycare.
-
-## Positioning
-
-Argos Suite is business management software for pet daycares, grooming salons and veterinary clinics in Ecuador. The buyer is the owner or administrator. It puts reservations, capacity, grooming, clinical records, staff, finances, inventory and reports in one place, with each business unit's books kept apart.
-
-The veterinary unit adds one message: **one record for each pet across the clinic, the grooming salon and the daycare.** It speaks most to businesses that run a clinic alongside grooming or boarding. Lead with management, not medicine: Argos Suite runs the clinic as a business, from the agenda and the clinical record to the pharmacy and the bill, with its books kept apart from grooming and daycare.
-
-| Level | Spanish copy |
-| --- | --- |
-| Tagline | Cuidamos tu negocio, para que tú cuides de ellos. |
-| Brand line | Todo tu negocio, a la vista y en buenas manos. |
-| Veterinary line | Una sola ficha para cada mascota: de la consulta a la peluquería y la guardería. |
-| Elevator pitch | Argos Suite acompaña a las guarderías, peluquerías y veterinarias de mascotas de Ecuador para que administren su negocio con tranquilidad. Reservas, cupos, citas, fichas clínicas, personal, cobros e inventario en un solo lugar, con las cuentas de cada unidad por separado. Tú dedicas tu tiempo a las mascotas; nosotros te ayudamos con el resto. Contratas solo los módulos que usas. |
-
-Do not claim what has not shipped: SRI electronic invoicing, automatic reminders (the clinic still sends them by hand from its own WhatsApp), a printable vaccination card or file attachments on lab results and consents. Do not give medical advice in product copy, or invent customer numbers, testimonials, time savings or prices (see `PRODUCT.md`).
 
 ## Voice
 
@@ -160,7 +173,7 @@ Warm and close: a trusted colleague who loves animals and knows the business. Ne
 - **Clara:** every message says what happened and what to do next.
 - **Honesta:** no invented figures or promises.
 - In the clinic, warmth never softens facts: diagnoses, doses and dates are written plainly and exactly.
-- Not cutesy: no baby talk, at most one exclamation mark, an emoji only in a celebration and never in an error. Never word the "hundred eyes" as surveillance of staff or clients.
+- Not cutesy: no baby talk, at most one exclamation mark, an emoji only in a celebration and never in an error.
 
 | Moment | Write | Avoid |
 | --- | --- | --- |
@@ -176,19 +189,20 @@ Names and numbers in these examples are illustrative; real copy reads them from 
 
 ## Logo
 
-The logo combines Greek styling with Argos the hound. Final artwork is pending from a designer; until it exists, the drawn marks below are direction, not assets to ship.
+The logo is the Vasija de figuras negras: Argos the hound in Tinta on a terracotta disc, like black-figure vase painting.
 
 | Mark | What it is | Use it for | Minimum size |
 | --- | --- | --- | --- |
-| Argos griego (lockup) | Geometric hound in profile beside a ΛRGOS wordmark, SUITE below, meander band underneath | Login screen, website, contracts, invoices | 120 px wide |
-| Sello griego (icon) | The hound inside a square seal with a small meander strip | Favicon, app icon, sidebar, social avatars | 16 px |
-| Vasija de figuras negras | Tinta hound on a terracotta disc, like black-figure vase painting | Signage, merchandise | 48 px |
+| Lockup | The disc beside a ΛRGOS wordmark, SUITE below, meander band underneath | Login screen, sidebar, website, contracts, invoices | 120 px wide |
+| Mark | The disc and hound alone | Avatars, signage, merchandise, tight headers | 48 px |
+| Small mark | The hound enlarged inside the disc, eye dropped | Favicon, app icon, collapsed sidebar | 16 px |
 
-- On light backgrounds the hound and wordmark are Tinta and the meander is Azul Egeo; on the dark shell, use Mármol and Oro.
-- Keep clear space around the logo at least as tall as the Λ.
-- Inside a unit's screens the meander may take that unit's color; never more than one unit color in one logo.
+- The logo's colors are fixed: Terracota disc, SUITE and meander; Tinta hound. The wordmark is Tinta on light backgrounds (`color`) and Mármol on the dark shell and the platform console (`on-dark`).
+- The logo does not take a unit's color, and no second meander goes beside it. A unit's color shows in the interface around it.
+- One-color printing uses `mono-black` or `mono-white`, with the hound cut out of the disc.
+- Keep clear space around the logo at least as tall as the Λ. The lockup file carries less than that, so the layout supplies it.
 - Do not redraw the hound, stretch or rotate the lockup, or add shadows or gradients.
-- Store final assets under `frontend/src/assets/brand/` (SVG source, PNG exports, favicon set).
+- The hound is the only brand mark. The paw emoji and the Lucide PawPrint never stand in for it.
 
 ## Colors
 
@@ -198,9 +212,9 @@ Warm marble and black-figure ink, with Aegean blue as the brand color and one ac
 - **Azul Egeo** (#1d4ed8): primary buttons, links, focus, the meander band. 6.7 : 1 on white. Hover is **Azul Egeo hondo** (#1e3a8a).
 
 ### Business units
-- **Terracota** (Guardería): 500 #ea580c for fills, bars and the vase disc; 600 #c2410c and darker for text (4.9 : 1 on Mármol). Replaces the amber `daycare` ramp.
-- **Púrpura de Tiro** (Peluquería): 500 #a855f7 for fills; 600 #9333ea and darker for text (5.1 : 1 on Mármol). Replaces the violet `grooming` ramp.
-- **Verde Olivo** (Veterinaria): the olive tree of Athena, and a calm green that reads as health. 500 #84cc16 and 600 #65a30d for fills only; 700 #4d7c0f and darker for text (4.7 : 1 on Mármol, 5.0 : 1 on white). Replaces the teal `veterinary` ramp the unit shipped with, which sat too close to Azul Egeo and read as cool next to the warm palette. Keep it apart from success green: olive marks the unit, never a status.
+- **Terracota** (Guardería): 500 #ea580c for fills, bars and the vase disc; 600 #c2410c and darker for text (4.9 : 1 on Mármol).
+- **Púrpura de Tiro** (Peluquería): 500 #a855f7 for fills; 600 #9333ea and darker for text (5.1 : 1 on Mármol).
+- **Verde Olivo** (Veterinaria): the olive tree of Athena, and a calm green that reads as health. 500 #84cc16 and 600 #65a30d for fills only; 700 #4d7c0f and darker for text (4.7 : 1 on Mármol, 5.0 : 1 on white). It is a warm green on purpose: a cooler one sits too close to Azul Egeo and reads as cold next to the rest of the palette. Keep it apart from success green: olive marks the unit, never a status.
 
 ### Neutral
 - **Mármol** (#faf8f5): page canvas. Surfaces and cards stay white.
@@ -211,16 +225,16 @@ Warm marble and black-figure ink, with Aegean blue as the brand color and one ac
 
 ### Accent and special
 - **Oro** (#ca8a04): decorative only, such as the meander on the dark shell (6.0 : 1 on Tinta). Never text on light backgrounds.
-- **Índigo consola** (#6366f1): the vendor console only, via `[data-theme="platform"]`, so it never looks like a tenant screen. Unchanged.
-- Danger red (#b91c1c) and success green are unchanged.
+- **Índigo consola** (#6366f1): the vendor console only, via `[data-theme="platform"]`, so it never looks like a tenant screen.
+- **Peligro** (#b91c1c) for danger; success is a plain green, distinct from Verde Olivo.
 
 ### Named rules
 **The Text Shade Rule.** A unit's 500 shade is never text on a light background. Text starts at 600 for terracotta and purple, and at 700 for olive, whose 600 is only 2.9 : 1.
 **The One Unit Rule.** A screen shows one unit color. The consolidated admin view stays neutral, with small terracotta, purple and olive badges.
-**The Warm Neutral Rule.** Stone grays replace slate and gray everywhere, so screens match the marble and ink of the logo.
+**The Warm Neutral Rule.** Neutrals are stone grays, never slate or cool gray, so screens match the marble and ink of the logo.
 **The Brand-Not-UI Rule.** Black-figure styling (Tinta on terracotta) is for signage and merchandise, not for app screens.
 
-Contrast ratios are WCAG 2 values computed from the hex codes.
+Contrast ratios are WCAG 2 values computed from the hex codes. Check the ratio of any new color pairing before using it.
 
 ## Typography
 
@@ -244,7 +258,7 @@ Contrast ratios are WCAG 2 values computed from the hex codes.
 
 ## Shapes
 
-Keep the current shape language: 8 px radius (`rounded-lg`) for buttons and inputs, 12 px (`rounded-xl`) for cards and the logo tile, fully rounded badges. The meander is drawn as an SVG shape (divider or border), never built from text characters.
+8 px radius (`rounded-lg`) for buttons and inputs, 12 px (`rounded-xl`) for cards and the logo tile, fully rounded badges. The meander is drawn as an SVG shape (divider or border), never built from text characters.
 
 ## Do's and Don'ts
 
@@ -254,57 +268,19 @@ Keep the current shape language: 8 px radius (`rounded-lg`) for buttons and inpu
 - **Don't** put the Λ, Cinzel or Marcellus in running text or small UI.
 - **Don't** mix unit colors (terracotta, purple, olive) in one component.
 - **Don't** use clinical imagery (syringes, crosses, pills) in the logo or app chrome; the hound stays the only mark.
-- **Don't** reuse the paw emoji or the Lucide PawPrint as the brand mark once the Sello griego exists.
 
-## Implementation map
+## Where the brand lives in the code
 
-Every in-app change lives in a handful of files. Token **names** stay the same, so components do not change; only values do.
-
-### CSS variables (`frontend/src/styles.css`, `:root`)
-
-| Variable | Current | New |
-| --- | --- | --- |
-| `--color-canvas` | #f8fafc | #faf8f5 |
-| `--color-surface` | #ffffff | #ffffff |
-| `--color-raised` | #ffffff | #ffffff |
-| `--color-shell` | #111827 | #1c1917 |
-| `--color-shell-ink` | #f9fafb | #fafaf9 |
-| `--color-shell-muted` | #9ca3af | #a8a29e |
-| `--color-ink` | #0f172a | #1c1917 |
-| `--color-muted` | #475569 | #57534e |
-| `--color-border` | #cbd5e1 | #d6d3d1 |
-| `--color-border-subtle` | #e2e8f0 | #e7e5e4 |
-| `--color-action` | #1d4ed8 | #1d4ed8 |
-| `--color-action-hover` | #1e40af | #1e3a8a |
-| `--color-focus` | #2563eb | #2563eb |
-| `--shadow-raised`, `--shadow-overlay` | `rgb(15 23 42 / …)` | `rgb(28 25 23 / …)` |
-
-Leave `[data-theme="platform"]` as it is.
-
-### Tailwind ramps (`frontend/tailwind.config.js`)
-
-| Key | 50 | 100 | 200 | 500 | 600 | 700 | 800 | 900 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `daycare` | #fff7ed | #ffedd5 | #fed7aa | #ea580c | #c2410c | #9a3412 | #7c2d12 | #431407 |
-| `grooming` | #faf5ff | #f3e8ff | #e9d5ff | #a855f7 | #9333ea | #7e22ce | #6b21a8 | #581c87 |
-| `veterinary` | #f7fee7 | #ecfccb | #d9f99d | #84cc16 | #65a30d | #4d7c0f | #3f6212 | #365314 |
-
-The ramps add a 200 shade because `ConsultaInpatientPanels.tsx` already uses `border-veterinary-200`, which the current config does not define, so that border renders with no color today.
-
-### Everything else
-
-| Touchpoint | Change | File |
-| --- | --- | --- |
-| Product name | "Argos Suite" everywhere | `frontend/src/pages/Login.tsx`, `frontend/src/components/layout/AppShell.tsx`, `frontend/src/pages/GuidePage.tsx`, `README.md`, `PRODUCT.md`, `CLAUDE.md` |
-| Browser title and favicon | "Argos Suite"; Sello griego replaces the paw emoji | `frontend/index.html` |
-| Login screen | Lockup, descriptor, Marcellus headline, warm welcome line | `frontend/src/pages/Login.tsx` |
-| Fonts | Self-host Cinzel, Marcellus, Inter; body font becomes Inter | `frontend/src/styles.css` and new font files |
-| Component classes | `gray-*` utilities in `.sidebar-link`, `.input:disabled`, `.label`, `.card`, `.page-title`, `.table-*` become stone or tokens; `#f1f5f9` hovers become #f5f5f4 | `frontend/src/styles.css` |
-| Raw palette classes | `text-blue-*`, `bg-amber-*`, `text-violet-*`, `text-indigo-*` in pages become `action`, `daycare`, `grooming` tokens | `frontend/src/pages/`, `frontend/src/components/` |
-| Veterinaria unit | Swap the teal `veterinary` ramp for Verde Olivo; check the unit's active sidebar item, calendar legend and inpatient panel | `frontend/tailwind.config.js`, `frontend/src/components/layout/Sidebar.tsx`, `frontend/src/components/operational/UnifiedCalendarView.tsx`, `frontend/src/pages/veterinaria/` |
-| Interface copy | Errors, empty states, confirmations and greetings in the warm voice | `frontend/src/` |
-
-Check that `npm run lint`, `npm run typecheck` and the frontend tests pass after the change, and re-check contrast for any new color pairing.
+| What | Where |
+| --- | --- |
+| Color and shadow tokens | `frontend/src/styles.css` (`:root`; the vendor console overrides them under `[data-theme="platform"]`) |
+| Unit color ramps and font families | `frontend/tailwind.config.js` (`daycare`, `grooming`, `veterinary`) |
+| Fonts | Self-hosted through the `@fontsource` packages imported in `frontend/src/main.tsx` |
+| Logo and meander components | `Lockup` and `Mark` in `frontend/src/components/brand/Logo.tsx`; `frontend/src/components/brand/Meander.tsx` |
+| Logo artwork | `frontend/src/assets/brand/` (SVG, PDF and PNG exports and the script that builds them) |
+| Favicon set | The root of `frontend/public/` |
+| Chart colors | `frontend/src/lib/chart-theme.ts` |
+| Token check | `frontend/src/test/design-tokens.test.ts` fails on raw Tailwind palette classes |
 
 ## Open items
 

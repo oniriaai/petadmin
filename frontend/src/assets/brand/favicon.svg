@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Stand-in for the Sello griego until the designer's artwork lands (see BRAND.md, Logo). -->
-  <rect width="64" height="64" rx="12" fill="#1c1917" />
-  <text x="32" y="43" text-anchor="middle" font-family="Cinzel, 'Times New Roman', Georgia, serif" font-weight="700" font-size="38" fill="#faf8f5">A</text>
-  <path d="M12 54h4v-3h6v2h-3M22 54h4v-3h6v2h-3M32 54h4v-3h6v2h-3M42 54h4v-3h6v2h-3M12 54h40" fill="none" stroke="#ca8a04" stroke-width="1.2" />
-</svg>

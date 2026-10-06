@@ -340,6 +340,11 @@ el build, y `lib/api.ts` sólo tiene fallback para `undefined` con `??`, así qu
 publicaría un bundle con URL base vacía que falla en el navegador sin dejar rastro en el
 servidor. El workflow se niega a publicar si falta.
 
+Lo mismo con **`PUBLIC_SITE_URL`**, la dirección pública del sitio sin barra final (p. ej.
+`https://app.tudominio.com`). El build la usa para `robots.txt`, `sitemap.xml`, el enlace
+canónico y los datos estructurados de la página de presentación. Sin ella el sitio se publica
+cerrado a los buscadores, que es lo que se quiere en la demo y en local pero no en producción.
+
 **Reversión:** apuntar `APP_VERSION` a la etiqueta anterior y repetir los dos comandos. Esto
 **no** revierte las migraciones; si la versión que se retira cambió el esquema de forma
 incompatible hace falta `scripts/restore.sh`.
