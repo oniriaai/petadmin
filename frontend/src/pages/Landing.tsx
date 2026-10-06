@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent } from "react";
 import {
   AnimatePresence,
   LazyMotion,
@@ -34,6 +34,7 @@ import { Meander } from "../components/brand/Meander";
 import { cls } from "../lib/cls";
 import marbleUrl from "../assets/landing/marble.webp";
 import { Pricing } from "./LandingPricing";
+import { EASE, Reveal } from "./LandingReveal";
 
 /**
  * The public product page (BRAND.md is the source for its copy, colours and type).
@@ -51,8 +52,6 @@ import { Pricing } from "./LandingPricing";
 
 /** Where "Escríbenos" leads. No address is registered yet, so the deployment provides it. */
 const CONTACT_HREF = (import.meta.env.VITE_CONTACT_URL as string | undefined) ?? "mailto:";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 /**
  * Motion's animation engine arrives in its own chunk, after the page has painted. Until then an
@@ -249,29 +248,6 @@ function Shot({
         className,
       )}
     />
-  );
-}
-
-/** Content arrives once as its section enters the viewport, so the page reads in order. */
-function Reveal({
-  children,
-  delay = 0,
-  className,
-}: {
-  children: ReactNode;
-  delay?: number;
-  className?: string;
-}) {
-  return (
-    <m.div
-      className={className}
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.6, delay, ease: EASE }}
-    >
-      {children}
-    </m.div>
   );
 }
 
