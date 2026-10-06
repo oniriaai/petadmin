@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { localDatePartsInTimezone } from "../src/core/tenancy/local-time";
 import { DEFAULT_STAFF_PERMISSIONS } from "../src/core/tenancy/permissions";
+import { assertDemoPasswords, hashDemoPassword, syncDemoPasswords } from "./demo-accounts";
 import { deleteDaycare } from "../src/modules/platform-admin/offboarding.service";
 import { TOGGLEABLE_PRODUCT_MODULES } from "../src/platform/product-modules";
 import { seedShowcaseTenant } from "./seed-showcase";
@@ -27,12 +28,23 @@ const DEMO_ID = "daycare_demo";
  */
 const LEGACY_MAIN_ID = "daycare_pethijos";
 
+/** Which tenant each demo login belongs to: usernames are only unique within one. */
+const DEMO_ACCOUNT_TENANTS = {
+  admin_global: MAIN_ID,
+  guarderia_admin: MAIN_ID,
+  peluqueria_admin: MAIN_ID,
+  vet_admin: MAIN_ID,
+  demo_admin: DEMO_ID,
+};
+
 /**
  * Whether to create the demo tenants and their sample data.
  *
- * The `principal` and `demo` tenants carry well-known passwords (`admin123`, `demo123`) and
- * exist for development and for the isolation suites. They must never reach a customer-facing
- * database, so outside development this is off unless asked for explicitly. With it off the
+ * The `principal` and `demo` tenants exist for development, for the isolation suites and for
+ * the public demo. In development they carry well-known passwords (`admin123`, `demo123`); a
+ * production process must be given its own (`demo-accounts.ts`). Either way they must never
+ * reach a customer-facing database, so outside development this is off unless asked for
+ * explicitly. With it off the
  * seed still provisions the platform superadmin, which is what a fresh production database
  * actually needs.
  */
@@ -172,7 +184,7 @@ async function ensureDaycares() {
       data: {
         username: "demo_admin",
         name: "Admin Demo",
-        passwordHash: bcrypt.hashSync("demo123", 10),
+        passwordHash: hashDemoPassword("demo_admin"),
         role: "admin",
         businessUnit: BU.GROOMING,
         daycareId: DEMO_ID,
@@ -214,7 +226,7 @@ async function ensureVeterinaryClinic() {
       daycareId: MAIN_ID,
       username: "vet_admin",
       name: "Dra. Camila Rivas",
-      passwordHash: bcrypt.hashSync("vet12345", 10),
+      passwordHash: hashDemoPassword("vet_admin"),
       role: "veterinary",
       businessUnit: BU.VETERINARY,
       permissions: [...DEFAULT_STAFF_PERMISSIONS],
@@ -334,6 +346,10 @@ async function main() {
     return;
   }
 
+  // Before anything is created or deleted: a seeded production stack with a public password
+  // is worse than one that does not start.
+  assertDemoPasswords();
+
   if (SEED_DEMO_RESET) await resetStaleDemoTenant();
 
   await ensureDaycares();
@@ -342,6 +358,7 @@ async function main() {
   if (existing > 0) {
     // A database seeded before the clinic existed still gets it.
     await ensureVeterinaryClinic();
+    await syncDemoPasswords(prisma, DEMO_ACCOUNT_TENANTS);
     console.log("DB already seeded, skipping.");
     return;
   }
@@ -351,6 +368,9 @@ async function main() {
     timezone: MAIN_TIMEZONE,
     ensureClinic: ensureVeterinaryClinic,
   });
+  // The main tenant was just created with the right passwords; this is for the restricted
+  // one, which a daily reset leaves alone.
+  await syncDemoPasswords(prisma, DEMO_ACCOUNT_TENANTS);
 
   console.log("Seed completed successfully.");
   console.log(summary);

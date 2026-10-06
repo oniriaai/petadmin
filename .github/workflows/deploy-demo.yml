@@ -48,8 +48,10 @@ jobs:
         env:
           HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
           HOOK_SITE: ${{ secrets.RENDER_DEPLOY_HOOK_SITE }}
+          DEMO_ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}
         run: |
           missing=""
+          [ -n "$DEMO_ADMIN_PASSWORD" ] || missing="$missing DEMO_ADMIN_PASSWORD(secreto)"
           [ -n "$HOOK_API" ] || missing="$missing RENDER_DEPLOY_HOOK_API(secreto)"
           [ -n "$HOOK_SITE" ] || missing="$missing RENDER_DEPLOY_HOOK_SITE(secreto)"
           [ -n "$DEMO_API_URL" ] || missing="$missing DEMO_API_URL(variable)"
@@ -155,6 +157,8 @@ jobs:
       # Run against both services even when only one was deployed: what breaks the demo is the
       # pair disagreeing, and that is configuration on Render, not code in this repository.
       - name: Smoke test
+        env:
+          DEMO_ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}
         run: |
           fail() { echo "::error::$1"; exit 1; }
           retry="--retry 8 --retry-delay 15 --retry-all-errors --max-time 30"
@@ -165,12 +169,16 @@ jobs:
           [ "$(echo "$health" | jq -r '.ok')" = "true" ] || fail "La API no está sana"
           [ "$(echo "$health" | jq -r '.migrations.pending')" = "0" ] || fail "Quedan migraciones pendientes"
 
-          # Public demo credentials (docs/demo-hosting.md). A token proves the seed ran.
+          # The demo admin's password, as Render generated it (docs/demo-hosting.md). A token
+          # proves the seed ran. Built with jq so no character in the password can break the JSON.
+          [ -n "$DEMO_ADMIN_PASSWORD" ] || fail "Falta el secreto DEMO_ADMIN_PASSWORD"
+          credentials=$(jq -n --arg password "$DEMO_ADMIN_PASSWORD" \
+            '{username: "admin_global", password: $password}')
           # shellcheck disable=SC2086
           token=$(curl -sS $retry -H 'Content-Type: application/json' \
-            -d '{"username":"admin_global","password":"admin123"}' \
+            -d "$credentials" \
             "$DEMO_API_URL/auth/login" | jq -r '.token // empty')
-          [ -n "$token" ] || fail "El inicio de sesión de la cuenta de demo falló: ¿se sembraron los datos?"
+          [ -n "$token" ] || fail "El inicio de sesión de la cuenta de demo falló: ¿se sembraron los datos, y coincide DEMO_ADMIN_PASSWORD con DEMO_PASSWORD_ADMIN_GLOBAL en Render?"
           echo "inicio de sesión correcto"
 
           allowed=$(curl -sS -o /dev/null -D - -X OPTIONS \

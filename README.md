@@ -455,6 +455,10 @@ El seed provisiona **dos inquilinos**. El segundo existe a propósito con módul
 base de datos de un solo inquilino oculta exactamente los fallos que el aislamiento y la
 contratación deben evitar.
 
+Las contraseñas de estas tablas son las de **desarrollo y CI**, y son públicas. Un stack sembrado
+con `NODE_ENV=production`, como la demo, no las acepta: cada cuenta toma la suya de una variable
+`DEMO_PASSWORD_*` y el seed se niega a ejecutarse sin ellas (`docs/demo-hosting.md`).
+
 ### Guardería `principal` — todos los módulos activos
 
 Se muestra como **Huellas Felices**, un negocio ficticio de Quito con las tres unidades y un mes
