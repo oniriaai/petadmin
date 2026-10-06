@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { m } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { ArrowRightIcon as ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { CheckIcon as Check } from "@phosphor-icons/react/dist/csr/Check";
 import { cls } from "../lib/cls";
@@ -13,6 +13,7 @@ import {
   type Catalog,
   type CatalogPlan,
 } from "../lib/billing";
+import { EASE, Reveal } from "./LandingReveal";
 
 /**
  * The price list on the public page.
@@ -28,8 +29,6 @@ import {
  * Set as a list, not a row of cards: five plans read as one ladder, each step adding to the one
  * above, and the eye compares the prices down a single column.
  */
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 function unitsLine(plan: CatalogPlan): string {
   if (plan.unitCount >= 3) return "Guardería, Peluquería y Veterinaria";
@@ -66,21 +65,31 @@ function PeriodToggle({
       aria-label="Forma de pago"
       className="inline-flex rounded-lg border border-line bg-surface p-1"
     >
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          role="radio"
-          aria-checked={period === option.id}
-          onClick={() => onChange(option.id)}
-          className={cls(
-            "rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors",
-            period === option.id ? "bg-ink text-canvas" : "text-muted hover:text-ink",
-          )}
-        >
-          {option.label}
-        </button>
-      ))}
+      {options.map((option) => {
+        const selected = period === option.id;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(option.id)}
+            className={cls(
+              "relative rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors",
+              selected ? "text-canvas" : "text-muted hover:text-ink",
+            )}
+          >
+            {selected && (
+              <m.span
+                layoutId="period-pill"
+                className="absolute inset-0 rounded-md bg-ink"
+                transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              />
+            )}
+            <span className="relative">{option.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -142,30 +151,38 @@ function PlanRow({
       </ul>
 
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 lg:flex-col lg:items-end lg:justify-center">
-        <p className="lg:text-right">
-          {founder && (
-            <s className="mr-2 text-base text-muted tabular-nums">
-              <span className="sr-only">Precio normal </span>
-              {formatMoney(listCents)}
-            </s>
-          )}
-          <span className="font-display text-4xl leading-none text-ink tabular-nums">
-            {formatMoney(cents)}
-          </span>
-          <span className="ml-1.5 text-sm text-muted">
-            {period === "ANNUAL" ? "al año" : "al mes"}
-          </span>
-          {plan.veterinarySurcharge && (
-            <span className="mt-1.5 block text-xs text-muted">
-              {formatMoney(
-                period === "ANNUAL"
-                  ? plan.veterinarySurcharge.annualCents
-                  : plan.veterinarySurcharge.monthlyCents,
-              )}{" "}
-              más si la unidad es Veterinaria
+        <AnimatePresence initial={false}>
+          <m.p
+            key={period}
+            className="lg:text-right"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: EASE }}
+          >
+            {founder && (
+              <s className="mr-2 text-base text-muted tabular-nums">
+                <span className="sr-only">Precio normal </span>
+                {formatMoney(listCents)}
+              </s>
+            )}
+            <span className="font-display text-4xl leading-none text-ink tabular-nums">
+              {formatMoney(cents)}
             </span>
-          )}
-        </p>
+            <span className="ml-1.5 text-sm text-muted">
+              {period === "ANNUAL" ? "al año" : "al mes"}
+            </span>
+            {plan.veterinarySurcharge && (
+              <span className="mt-1.5 block text-xs text-muted">
+                {formatMoney(
+                  period === "ANNUAL"
+                    ? plan.veterinarySurcharge.annualCents
+                    : plan.veterinarySurcharge.monthlyCents,
+                )}{" "}
+                más si la unidad es Veterinaria
+              </span>
+            )}
+          </m.p>
+        </AnimatePresence>
         {canBuy && (
           <a
             href={href}
@@ -209,7 +226,7 @@ export function Pricing() {
   return (
     <section id="precios" className="scroll-mt-16 border-t border-line-subtle">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+        <Reveal className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="max-w-2xl font-display text-3xl leading-[1.15] text-ink md:text-4xl">
               Contratas solo lo que usas.
@@ -221,14 +238,16 @@ export function Pricing() {
             </p>
           </div>
           <PeriodToggle period={period} onChange={setPeriod} />
-        </div>
+        </Reveal>
 
         {founder.available && canBuy && (
-          <p className="mt-8 rounded-lg border border-line bg-sunken px-4 py-3 text-sm leading-relaxed text-ink">
-            <strong className="font-semibold">Precio fundador.</strong> Los primeros negocios pagan{" "}
-            {founder.discountPercent}% menos durante {founder.months} meses.{" "}
-            {founder.slotsLeft === 1 ? "Queda 1 lugar." : `Quedan ${founder.slotsLeft} lugares.`}
-          </p>
+          <Reveal delay={0.08} className="mt-8">
+            <p className="rounded-lg border border-line bg-sunken px-4 py-3 text-sm leading-relaxed text-ink">
+              <strong className="font-semibold">Precio fundador.</strong> Los primeros negocios
+              pagan {founder.discountPercent}% menos durante {founder.months} meses.{" "}
+              {founder.slotsLeft === 1 ? "Queda 1 lugar." : `Quedan ${founder.slotsLeft} lugares.`}
+            </p>
+          </Reveal>
         )}
 
         <ul className="mt-8 divide-y divide-line-subtle border-y border-line-subtle">
@@ -238,7 +257,7 @@ export function Pricing() {
         </ul>
 
         {trial.available && (
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Reveal className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-[60ch] leading-relaxed text-muted">
               <span className="font-medium text-ink">
                 {canBuy ? "¿Prefieres verlo antes de pagar?" : "Empieza con la prueba gratuita."}
@@ -255,7 +274,7 @@ export function Pricing() {
             >
               Probar {trial.days} días gratis
             </a>
-          </div>
+          </Reveal>
         )}
       </div>
     </section>
