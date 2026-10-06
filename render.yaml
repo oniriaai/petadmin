@@ -53,6 +53,8 @@ services:
       # its seeded tutors all have Resend's test inbox as their address. Use an API key made
       # for the demo alone, so it can be revoked without touching production. WhatsApp is
       # deliberately absent: the seeded phone numbers are invented and may be someone's.
+      # Port 2465, not 465: free web services cannot reach SMTP ports 25, 465 and 587, and
+      # Resend also listens on 2465 (implicit TLS) and 2587 (STARTTLS).
       - key: SMTP_URL
         sync: false
       - key: MAIL_FROM
