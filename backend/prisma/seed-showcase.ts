@@ -1,5 +1,4 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -7,6 +6,7 @@ import path from "node:path";
 import { localDatePartsInTimezone, localDateTimeToUtc } from "../src/core/tenancy/local-time";
 import { DEFAULT_STAFF_PERMISSIONS } from "../src/core/tenancy/permissions";
 import { DEFAULT_GROOMING_SERVICES } from "../src/modules/peluqueria";
+import { hashDemoPassword } from "./demo-accounts";
 
 /**
  * The main demo tenant's data: a small Quito business running all three units, with about a
@@ -506,7 +506,6 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
   const minutesAfter = (date: Date, minutes: number) => new Date(date.getTime() + minutes * 60000);
 
   // ---- Staff ------------------------------------------------------------------------------
-  const hash = (password: string) => bcrypt.hashSync(password, 10);
   // The unit accounts start where any new staff user does, so the demo shows the boundary: the
   // admin grants finance, export and delete from Configuración.
   const STAFF_PERMISSIONS = [...DEFAULT_STAFF_PERMISSIONS];
@@ -514,14 +513,14 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
     data: [
       {
         username: "admin_global",
-        passwordHash: hash("admin123"),
+        passwordHash: hashDemoPassword("admin_global"),
         name: "Daniela Paredes",
         businessUnit: "GLOBAL",
         role: "admin",
       },
       {
         username: "guarderia_admin",
-        passwordHash: hash("guarderia123"),
+        passwordHash: hashDemoPassword("guarderia_admin"),
         name: "Andrés Molina",
         businessUnit: BU.DAYCARE,
         role: "daycare",
@@ -529,7 +528,7 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
       },
       {
         username: "peluqueria_admin",
-        passwordHash: hash("peluqueria123"),
+        passwordHash: hashDemoPassword("peluqueria_admin"),
         name: "Sofía Lara",
         businessUnit: BU.GROOMING,
         role: "grooming",
@@ -613,7 +612,10 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
       idNumber,
       phone,
       whatsapp: phone,
-      email: `${firstName}.${lastName}@example.com`
+      // Resend's test inbox, with the tutor as a label. The hosted demo sends real reminder
+      // emails, and its logins are public: an invented address would hard-bounce and cost the
+      // sending domain its reputation, where this one accepts the message and discards it.
+      email: `delivered+${firstName}.${lastName}@resend.dev`
         .toLowerCase()
         .normalize("NFD")
         .replace(/[̀-ͯ]/g, ""),

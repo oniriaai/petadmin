@@ -4,8 +4,8 @@
 # database is external (Neon free tier), because Render's own free Postgres is deleted 30 days
 # after it is created.
 #
-# This instance seeds the demo tenants, whose passwords are public, and rebuilds the main one
-# every day. Never point its DATABASE_URL at a database that holds a customer's data.
+# This instance seeds the demo tenants, whose passwords get handed around, and rebuilds the
+# main one every day. Never point its DATABASE_URL at a database that holds a customer's data.
 #
 # Step by step, including the values entered by hand: docs/demo-hosting.md
 
@@ -46,13 +46,39 @@ services:
         value: daily
       # No cron on the free plan. The generator runs once at each start instead, which for a
       # service that sleeps after 15 idle minutes is several times a day. The reminders pass
-      # starts with it and sends nothing: the demo has no WhatsApp or SMTP credentials, and in
-      # production a channel without them is unavailable rather than simulated.
+      # starts with it, and only sends for a unit where someone turned automatic sending on.
       - key: RUN_SCHEDULER_IN_PROCESS
         value: "true"
+      # Reminder emails, through Resend (docs/recordatorios.md). The demo sends for real, but
+      # its seeded tutors all have Resend's test inbox as their address. Use an API key made
+      # for the demo alone, so it can be revoked without touching production. WhatsApp is
+      # deliberately absent: the seeded phone numbers are invented and may be someone's.
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # The static site's URL, the same value as CORS_ORIGINS: where the email finds the logo.
+      - key: PUBLIC_SITE_URL
+        sync: false
+      # The demo's passwords get shared around. This bounds what can be sent in a day.
+      - key: REMINDERS_DAILY_CAP
+        value: "50"
       - key: JWT_SECRET
         generateValue: true
       - key: SUPERADMIN_PASSWORD
+        generateValue: true
+      # The demo logins. Their development passwords are in this public repository, so here
+      # each gets one Render generates, and the seed refuses to run without them. Read them in
+      # the service's Environment tab; the seed rewrites an account whose value changes.
+      - key: DEMO_PASSWORD_ADMIN_GLOBAL
+        generateValue: true
+      - key: DEMO_PASSWORD_GUARDERIA_ADMIN
+        generateValue: true
+      - key: DEMO_PASSWORD_PELUQUERIA_ADMIN
+        generateValue: true
+      - key: DEMO_PASSWORD_VET_ADMIN
+        generateValue: true
+      - key: DEMO_PASSWORD_DEMO_ADMIN
         generateValue: true
       # Neon's DIRECT connection string (the host without "-pooler"): `migrate deploy` needs a
       # session, which the pooled endpoint does not give it.
@@ -104,7 +130,7 @@ services:
       - key: VITE_API_URL
         sync: false
       # The site's own URL, no trailing slash. Leave it empty: without it the build disallows
-      # every crawler (frontend/vite.config.ts), which is what a demo with public passwords
-      # wants. Setting it publishes a sitemap and lets the landing be indexed.
+      # every crawler (frontend/vite.config.ts), which is what a demo whose passwords get
+      # handed around wants. Setting it publishes a sitemap and lets the landing be indexed.
       - key: VITE_SITE_URL
         sync: false

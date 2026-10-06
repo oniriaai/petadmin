@@ -130,8 +130,9 @@ configuración es solo del administrador.
 
 Sin credenciales, fuera de producción los canales son **simulados**: el mensaje se escribe en el
 log del servidor y se registra como enviado. Así funcionan el stack de desarrollo y la CI. En
-producción, un canal sin credenciales simplemente no está disponible; es el caso de la demo
-pública, que corre con `NODE_ENV=production` y sin proveedores.
+producción, un canal sin credenciales simplemente no está disponible. La demo pública corre con
+`NODE_ENV=production` y solo tiene correo: ahí WhatsApp no está disponible y los tutores sembrados
+reciben en la bandeja de pruebas de Resend (`docs/demo-hosting.md`).
 
 Para comprobar una instalación: `GET /reminders/channels` debe responder `live` en cada canal
 configurado, y un envío a mano a un tutor de prueba debe llegar y quedar como **Enviado** en la
