@@ -5,7 +5,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { Login } from "./pages/Login";
 import { ModuleUnavailable, NotFound, SubscriptionSuspended } from "./pages/StatusPages";
 import { frontendModules, ModuleRoute, validateFrontendModules } from "./modules/registry";
-import { Spinner } from "./components/ui/Spinner";
+import { PageLoader, Spinner } from "./components/ui/Spinner";
 import { useDocumentTitle } from "./lib/document-title";
 
 validateFrontendModules();
@@ -115,7 +115,10 @@ function ModuleRouteElement({ route }: { route: ModuleRoute }) {
   const Component = route.component;
   return (
     <GuardedRoute route={route}>
-      <Component />
+      {/* Inside the guard and the shell: only the page's own area waits for its chunk. */}
+      <Suspense fallback={<PageLoader />}>
+        <Component />
+      </Suspense>
     </GuardedRoute>
   );
 }

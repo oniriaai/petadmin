@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "motion/react";
-import { ArrowRightIcon as ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight";
-import { CheckIcon as Check } from "@phosphor-icons/react/dist/csr/Check";
+import { ArrowRightBold, CheckBold } from "../components/icons/PublicIcons";
 import { cls } from "../lib/cls";
 import {
   ADD_ON_NAMES,
@@ -13,14 +12,21 @@ import {
   type Catalog,
   type CatalogPlan,
 } from "../lib/billing";
-import { EASE, Reveal } from "./LandingReveal";
+import { EASE, Reveal, revealStyle, useReveal, useSlidingPill } from "./LandingReveal";
 
 /**
  * The price list on the public page.
  *
  * Every figure comes from `GET /signup/plans`, the same catalog the checkout charges from, so
  * the page cannot advertise a price the server would not honour. If the catalog cannot be read
- * the section is simply absent and the page falls back to "Escríbenos".
+ * the section is removed and the page falls back to "Escríbenos".
+ *
+ * While the catalog is on its way the section is already there, with its heading and a
+ * placeholder about the height of the list: a section that appeared when the answer arrived
+ * pushed everything under it down the page, under the eyes of whoever had scrolled that far.
+ * The placeholder cannot know the catalog's exact height (the rows are shorter with nothing to
+ * buy, the founder notice comes and goes), so `Pricing` also scrolls by the difference for a
+ * reader who is already past the section. Browsers' own scroll anchoring does not do it here.
  *
  * The prices show whether or not they can be paid online. A deployment with no gateway (the
  * public demo) still has plans and may still offer the trial: there each plan leads to the
@@ -59,17 +65,21 @@ function PeriodToggle({
     { id: "MONTHLY", label: "Mensual" },
     { id: "ANNUAL", label: "Anual, 2 meses gratis" },
   ];
+  const slider = useSlidingPill(period);
   return (
     <div
+      ref={slider.group}
       role="radiogroup"
       aria-label="Forma de pago"
-      className="inline-flex rounded-lg border border-line bg-surface p-1"
+      className="relative inline-flex rounded-lg border border-line bg-surface p-1"
     >
+      {slider.pill("rounded-md bg-ink")}
       {options.map((option) => {
         const selected = period === option.id;
         return (
           <button
             key={option.id}
+            ref={slider.option(option.id)}
             type="button"
             role="radio"
             aria-checked={selected}
@@ -79,14 +89,7 @@ function PeriodToggle({
               selected ? "text-canvas" : "text-muted hover:text-ink",
             )}
           >
-            {selected && (
-              <m.span
-                layoutId="period-pill"
-                className="absolute inset-0 rounded-md bg-ink"
-                transition={{ type: "spring", stiffness: 380, damping: 32 }}
-              />
-            )}
-            <span className="relative">{option.label}</span>
+            {option.label}
           </button>
         );
       })}
@@ -111,15 +114,14 @@ function PlanRow({
   const cents = founder ? founderPriceCents(listCents, catalog.founder.discountPercent) : listCents;
   const href = `/registro?plan=${plan.id}&periodo=${period === "ANNUAL" ? "anual" : "mensual"}`;
   const canBuy = catalog.checkoutAvailable;
+  const ref = useReveal<HTMLLIElement>(0.4);
 
   return (
-    <m.li
-      initial={{ opacity: 0, y: 14 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.4 }}
-      transition={{ duration: 0.5, delay: index * 0.05, ease: EASE }}
+    <li
+      ref={ref}
+      style={revealStyle({ delay: index * 0.05, rise: 14, duration: 0.5 })}
       className={cls(
-        "grid grid-cols-1 gap-x-10 gap-y-5 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_auto] lg:items-center",
+        "landing-reveal grid grid-cols-1 gap-x-10 gap-y-5 px-5 py-7 sm:px-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_auto] lg:items-center",
         // The recommended step is lifted onto the surface; the rest lie on the canvas.
         plan.featured && "rounded-xl bg-surface shadow-raised ring-1 ring-ink",
       )}
@@ -139,12 +141,7 @@ function PlanRow({
       <ul className="grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm text-ink sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
         {included(plan).map((item) => (
           <li key={item} className="flex items-start gap-2">
-            <Check
-              size={15}
-              weight="bold"
-              className="mt-0.5 shrink-0 text-action"
-              aria-hidden="true"
-            />
+            <CheckBold size={15} className="mt-0.5 shrink-0 text-action" aria-hidden="true" />
             {item}
           </li>
         ))}
@@ -192,16 +189,45 @@ function PlanRow({
             )}
           >
             Contratar {plan.label}
-            <ArrowRight size={15} weight="bold" aria-hidden="true" />
+            <ArrowRightBold size={15} aria-hidden="true" />
           </a>
         )}
       </div>
-    </m.li>
+    </li>
+  );
+}
+
+/**
+ * Stands in for the list and the trial offer while the catalog loads. The heights are those the
+ * five plans take at each breakpoint, so the page below barely moves when they arrive. The
+ * founder notice has no place kept: it shows only while founder places remain.
+ */
+function PricingPlaceholder() {
+  return (
+    <div aria-hidden="true">
+      <ul className="mt-8 divide-y divide-line-subtle border-y border-line-subtle">
+        {[0, 1, 2, 3, 4].map((row) => (
+          <li
+            key={row}
+            className="grid min-h-[24.5rem] grid-cols-1 content-start gap-x-10 gap-y-5 px-5 py-7 sm:min-h-[17.5rem] sm:px-8 lg:min-h-[12rem] lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_auto] lg:items-center xl:min-h-[10.75rem]"
+          >
+            <div>
+              <div className="skeleton h-7 w-40" />
+              <div className="skeleton mt-3 h-10 w-full max-w-[46ch]" />
+            </div>
+            <div className="skeleton h-16 w-full" />
+            <div className="skeleton h-10 w-36" />
+          </li>
+        ))}
+      </ul>
+      <div className="skeleton mt-10 h-[8.25rem] w-full sm:h-[4.875rem] md:h-[3.25rem]" />
+    </div>
   );
 }
 
 export function Pricing() {
-  const [catalog, setCatalog] = useState<Catalog | null>(null);
+  // null while the catalog is on its way; "absent" once it is known there is none to show.
+  const [catalog, setCatalog] = useState<Catalog | "absent" | null>(null);
   const [period, setPeriod] = useState<BillingPeriod>("MONTHLY");
 
   useEffect(() => {
@@ -209,22 +235,61 @@ export function Pricing() {
     signupApi
       .catalog()
       .then((data) => {
-        if (alive) setCatalog(data);
+        if (alive) setCatalog(data.plans.length > 0 ? data : "absent");
       })
       .catch(() => {
         // No catalog, no prices: the rest of the page still offers a way to get in touch.
+        if (alive) setCatalog("absent");
       });
     return () => {
       alive = false;
     };
   }, []);
 
-  if (!catalog || catalog.plans.length === 0) return null;
-  const { founder, trial } = catalog;
-  const canBuy = catalog.checkoutAvailable;
+  // What the section last measured, to tell by how much it has just changed. Watched and not
+  // only read when the catalog lands: the rows go on settling after that render (text wraps
+  // once it is laid out at its real width), and each change would move the page again.
+  const section = useRef<HTMLElement>(null);
+  const measured = useRef<{ bottom: number; height: number } | null>(null);
+  // Where the reader had scrolled to, kept from the scroll events. Near the foot of the page a
+  // section that shrinks makes the browser pull the scroll back before anyone can read it.
+  const scrolledTo = useRef(0);
+  useEffect(() => {
+    const read = () => {
+      scrolledTo.current = window.scrollY;
+    };
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, []);
+  useLayoutEffect(() => {
+    const node = section.current;
+    function settle() {
+      const before = measured.current;
+      const height = node?.offsetHeight ?? 0;
+      const from = scrolledTo.current;
+      // Past the section: most of what is on screen comes after its end, so that stays put.
+      const past = before !== null && before.bottom - from <= window.innerHeight / 2;
+      if (before && past && height !== before.height) {
+        scrolledTo.current = from + height - before.height;
+        window.scrollTo({ top: scrolledTo.current, behavior: "instant" });
+      }
+      measured.current = node
+        ? { bottom: node.getBoundingClientRect().bottom + window.scrollY, height }
+        : null;
+    }
+    settle();
+    if (!node || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(settle);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [catalog]);
+
+  if (catalog === "absent") return null;
+  const canBuy = catalog?.checkoutAvailable ?? false;
 
   return (
-    <section id="precios" className="scroll-mt-16 border-t border-line-subtle">
+    <section ref={section} id="precios" className="scroll-mt-16 border-t border-line-subtle">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
         <Reveal className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -233,37 +298,43 @@ export function Pricing() {
             </h2>
             <p className="mt-4 max-w-[58ch] leading-relaxed text-muted">
               Todos los planes incluyen usuarios, tutores y mascotas sin límite, y soporte por
-              WhatsApp y correo. Los precios están en dólares y no incluyen el {catalog.vatPercent}%
-              de IVA.
+              WhatsApp y correo. Los precios están en dólares y no incluyen el{" "}
+              {catalog && `${catalog.vatPercent}% de `}IVA.
             </p>
           </div>
           <PeriodToggle period={period} onChange={setPeriod} />
         </Reveal>
 
-        {founder.available && canBuy && (
+        {!catalog && <PricingPlaceholder />}
+
+        {catalog?.founder.available && canBuy && (
           <Reveal delay={0.08} className="mt-8">
             <p className="rounded-lg border border-line bg-sunken px-4 py-3 text-sm leading-relaxed text-ink">
               <strong className="font-semibold">Precio fundador.</strong> Los primeros negocios
-              pagan {founder.discountPercent}% menos durante {founder.months} meses.{" "}
-              {founder.slotsLeft === 1 ? "Queda 1 lugar." : `Quedan ${founder.slotsLeft} lugares.`}
+              pagan {catalog.founder.discountPercent}% menos durante {catalog.founder.months} meses.{" "}
+              {catalog.founder.slotsLeft === 1
+                ? "Queda 1 lugar."
+                : `Quedan ${catalog.founder.slotsLeft} lugares.`}
             </p>
           </Reveal>
         )}
 
-        <ul className="mt-8 divide-y divide-line-subtle border-y border-line-subtle">
-          {catalog.plans.map((plan, index) => (
-            <PlanRow key={plan.id} plan={plan} period={period} catalog={catalog} index={index} />
-          ))}
-        </ul>
+        {catalog && (
+          <ul className="mt-8 divide-y divide-line-subtle border-y border-line-subtle">
+            {catalog.plans.map((plan, index) => (
+              <PlanRow key={plan.id} plan={plan} period={period} catalog={catalog} index={index} />
+            ))}
+          </ul>
+        )}
 
-        {trial.available && (
+        {catalog?.trial.available && (
           <Reveal className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-[60ch] leading-relaxed text-muted">
               <span className="font-medium text-ink">
                 {canBuy ? "¿Prefieres verlo antes de pagar?" : "Empieza con la prueba gratuita."}
               </span>{" "}
-              Prueba Argos Suite {trial.days} días con todas las unidades y módulos. No pedimos
-              tarjeta.
+              Prueba Argos Suite {catalog.trial.days} días con todas las unidades y módulos. No
+              pedimos tarjeta.
             </p>
             <a
               href="/registro?prueba=1"
@@ -272,7 +343,7 @@ export function Pricing() {
                 canBuy ? "btn-secondary" : "btn-primary px-5 py-2.5",
               )}
             >
-              Probar {trial.days} días gratis
+              Probar {catalog.trial.days} días gratis
             </a>
           </Reveal>
         )}

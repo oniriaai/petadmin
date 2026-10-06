@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import type { ComponentType } from "react";
 import type { LucideIcon } from "lucide-react";
 import { isPermissionId, isProductModuleId } from "./shared/contracts";
@@ -26,36 +27,97 @@ import {
   Wrench,
 } from "lucide-react";
 import { Dashboard } from "../pages/Dashboard";
-import { ClientesPage } from "../pages/clientes/ClientesPage";
-import { AnimalesPage } from "../pages/animales/AnimalesPage";
-import { OperacionesPage } from "../pages/operaciones/OperacionesPage";
-import { DisponibilidadPage } from "../pages/disponibilidad/DisponibilidadPage";
-import { TransportePage } from "../pages/transporte/TransportePage";
-import { InformesPage } from "../pages/informes/InformesPage";
-import { HerramientasPage } from "../pages/herramientas/HerramientasPage";
-import { ConfiguracionPage } from "../pages/configuracion/ConfiguracionPage";
-import { GuidePage } from "../pages/GuidePage";
-import { SuscripcionPage } from "../pages/suscripcion/SuscripcionPage";
-import { RoomsPage } from "../pages/salas/RoomsPage";
-import { RecurringPlansPage } from "../pages/planes/RecurringPlansPage";
-import { FinancialPage } from "../pages/transacciones/FinancialPage";
-import { InventarioPage } from "../pages/inventario/InventarioPage";
-import { AgendaPeluqueriaPage } from "../pages/peluqueria/AgendaPeluqueriaPage";
-import { ControlGuarderiaPage } from "../pages/guarderia/ControlGuarderiaPage";
-import { AgendaVeterinariaPage } from "../pages/veterinaria/AgendaVeterinariaPage";
-import { ConsultaPage } from "../pages/veterinaria/ConsultaPage";
-import { PacientesPage } from "../pages/veterinaria/PacientesPage";
-import { HistoriaClinicaPage } from "../pages/veterinaria/HistoriaClinicaPage";
-import { CatalogoVeterinariaPage } from "../pages/veterinaria/CatalogoVeterinariaPage";
-import { FarmaciaPage } from "../pages/veterinaria/FarmaciaPage";
-import { RecetaPage } from "../pages/veterinaria/RecetaPage";
-import { HospitalizacionPage } from "../pages/veterinaria/HospitalizacionPage";
-import { AltaPage } from "../pages/veterinaria/AltaPage";
-import { LaboratorioPage } from "../pages/veterinaria/LaboratorioPage";
-import { ConsentimientoPage } from "../pages/veterinaria/ConsentimientoPage";
-import { RecordatoriosPage } from "../pages/veterinaria/RecordatoriosPage";
-import { InformeClinicaPage } from "../pages/veterinaria/InformeClinicaPage";
-import { AvisosPage } from "../pages/recordatorios/AvisosPage";
+
+/**
+ * Every page but the dashboard is a chunk of its own, fetched when its route is first opened: an
+ * operator downloads the screens of the units they work in, not all three, and the charts only
+ * with the pages that draw them. `App.tsx` renders them under a `Suspense`.
+ */
+function page<M extends Record<K, ComponentType>, K extends string>(
+  load: () => Promise<M>,
+  name: K,
+) {
+  return lazy(() => load().then((module) => ({ default: module[name] as ComponentType })));
+}
+
+const ClientesPage = page(() => import("../pages/clientes/ClientesPage"), "ClientesPage");
+const AnimalesPage = page(() => import("../pages/animales/AnimalesPage"), "AnimalesPage");
+const OperacionesPage = page(
+  () => import("../pages/operaciones/OperacionesPage"),
+  "OperacionesPage",
+);
+const DisponibilidadPage = page(
+  () => import("../pages/disponibilidad/DisponibilidadPage"),
+  "DisponibilidadPage",
+);
+const TransportePage = page(() => import("../pages/transporte/TransportePage"), "TransportePage");
+const InformesPage = page(() => import("../pages/informes/InformesPage"), "InformesPage");
+const HerramientasPage = page(
+  () => import("../pages/herramientas/HerramientasPage"),
+  "HerramientasPage",
+);
+const ConfiguracionPage = page(
+  () => import("../pages/configuracion/ConfiguracionPage"),
+  "ConfiguracionPage",
+);
+const GuidePage = page(() => import("../pages/GuidePage"), "GuidePage");
+const SuscripcionPage = page(
+  () => import("../pages/suscripcion/SuscripcionPage"),
+  "SuscripcionPage",
+);
+const RoomsPage = page(() => import("../pages/salas/RoomsPage"), "RoomsPage");
+const RecurringPlansPage = page(
+  () => import("../pages/planes/RecurringPlansPage"),
+  "RecurringPlansPage",
+);
+const FinancialPage = page(() => import("../pages/transacciones/FinancialPage"), "FinancialPage");
+const InventarioPage = page(() => import("../pages/inventario/InventarioPage"), "InventarioPage");
+const AgendaPeluqueriaPage = page(
+  () => import("../pages/peluqueria/AgendaPeluqueriaPage"),
+  "AgendaPeluqueriaPage",
+);
+const ControlGuarderiaPage = page(
+  () => import("../pages/guarderia/ControlGuarderiaPage"),
+  "ControlGuarderiaPage",
+);
+const AgendaVeterinariaPage = page(
+  () => import("../pages/veterinaria/AgendaVeterinariaPage"),
+  "AgendaVeterinariaPage",
+);
+const ConsultaPage = page(() => import("../pages/veterinaria/ConsultaPage"), "ConsultaPage");
+const PacientesPage = page(() => import("../pages/veterinaria/PacientesPage"), "PacientesPage");
+const HistoriaClinicaPage = page(
+  () => import("../pages/veterinaria/HistoriaClinicaPage"),
+  "HistoriaClinicaPage",
+);
+const CatalogoVeterinariaPage = page(
+  () => import("../pages/veterinaria/CatalogoVeterinariaPage"),
+  "CatalogoVeterinariaPage",
+);
+const FarmaciaPage = page(() => import("../pages/veterinaria/FarmaciaPage"), "FarmaciaPage");
+const RecetaPage = page(() => import("../pages/veterinaria/RecetaPage"), "RecetaPage");
+const HospitalizacionPage = page(
+  () => import("../pages/veterinaria/HospitalizacionPage"),
+  "HospitalizacionPage",
+);
+const AltaPage = page(() => import("../pages/veterinaria/AltaPage"), "AltaPage");
+const LaboratorioPage = page(
+  () => import("../pages/veterinaria/LaboratorioPage"),
+  "LaboratorioPage",
+);
+const ConsentimientoPage = page(
+  () => import("../pages/veterinaria/ConsentimientoPage"),
+  "ConsentimientoPage",
+);
+const RecordatoriosPage = page(
+  () => import("../pages/veterinaria/RecordatoriosPage"),
+  "RecordatoriosPage",
+);
+const InformeClinicaPage = page(
+  () => import("../pages/veterinaria/InformeClinicaPage"),
+  "InformeClinicaPage",
+);
+const AvisosPage = page(() => import("../pages/recordatorios/AvisosPage"), "AvisosPage");
 
 export type FrontendRole = TenantRole;
 export type FrontendUnit = BusinessUnit;

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import compression from "compression";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
@@ -36,6 +37,8 @@ if (process.env.TRUST_PROXY) {
 app.disable("x-powered-by");
 app.use(requestLogger);
 app.use(helmet());
+// Nothing in front of the API compresses for it, and the list endpoints answer with large JSON.
+app.use(compression());
 app.use(cors(corsOptions()));
 app.use(express.json({ limit: "10mb" }));
 app.use(globalLimiter);

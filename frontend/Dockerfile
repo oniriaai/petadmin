@@ -20,14 +20,25 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # A single-page app: unknown paths are routes, not missing files. Those routes are the
 # application, which no search engine should list; the landing at / and real files are not
 # touched.
+#
+# Text is compressed here: the stock image leaves gzip off. Hashed files under /assets/ never
+# change, so they cache for a year; the shell that names them is revalidated on every visit, or
+# a browser would keep asking for the chunks of a build that is gone.
 RUN printf 'server {\n\
   listen 80;\n\
   root /usr/share/nginx/html;\n\
   index index.html;\n\
+  gzip on;\n\
+  gzip_comp_level 6;\n\
+  gzip_min_length 1024;\n\
+  gzip_vary on;\n\
+  gzip_types text/css text/plain application/javascript application/json image/svg+xml application/manifest+json application/xml;\n\
   location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; }\n\
+  location = /index.html { add_header Cache-Control "no-cache"; }\n\
   location / { try_files $uri $uri/ @spa; }\n\
   location @spa {\n\
     add_header X-Robots-Tag "noindex";\n\
+    add_header Cache-Control "no-cache";\n\
     try_files /index.html =404;\n\
   }\n\
 }\n' > /etc/nginx/conf.d/default.conf
