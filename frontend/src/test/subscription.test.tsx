@@ -12,6 +12,7 @@ import {
   slugify,
   type Catalog,
 } from "../lib/billing";
+import { Pricing } from "../pages/LandingPricing";
 import SignupApp from "../pages/signup/SignupApp";
 
 const mockUseAuth = vi.fn();
@@ -213,6 +214,50 @@ describe("signing up from the public page", () => {
     expect(
       await screen.findByRole("heading", { name: "El registro en línea no está disponible ahora" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("the price list on the public page", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("links every plan to its checkout when plans can be bought online", async () => {
+    vi.spyOn(signupApi, "catalog").mockResolvedValue(CATALOG);
+    render(<Pricing />);
+    expect(await screen.findByRole("link", { name: /Contratar Integral/ })).toHaveAttribute(
+      "href",
+      "/registro?plan=integral&periodo=mensual",
+    );
+    expect(screen.getByRole("link", { name: "Probar 30 días gratis" })).toHaveAttribute(
+      "href",
+      "/registro?prueba=1",
+    );
+  });
+
+  // The public demo: no gateway, but a trial. Hiding the whole section there left the header's
+  // "Precios" link pointing at nothing and no way from the page into the signup.
+  it("still shows the plans and the way into the trial where nothing can be paid online", async () => {
+    vi.spyOn(signupApi, "catalog").mockResolvedValue({
+      ...CATALOG,
+      checkoutAvailable: false,
+      founder: { ...CATALOG.founder, available: true, slotsLeft: 20 },
+    });
+    const { container } = render(<Pricing />);
+    expect(await screen.findByRole("heading", { name: "Inicial" })).toBeInTheDocument();
+    expect(container.querySelector("#precios")).not.toBeNull();
+    expect(screen.queryByRole("link", { name: /Contratar/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Probar 30 días gratis" })).toBeInTheDocument();
+    // No founder price where there is no price to pay: list prices only.
+    expect(screen.queryByText(/Precio fundador/)).not.toBeInTheDocument();
+    expect(screen.getByText("$89")).toBeInTheDocument();
+  });
+
+  it("is absent when the catalog cannot be read", async () => {
+    vi.spyOn(signupApi, "catalog").mockRejectedValue(new Error("sin red"));
+    const { container } = render(<Pricing />);
+    await waitFor(() => expect(signupApi.catalog).toHaveBeenCalled());
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

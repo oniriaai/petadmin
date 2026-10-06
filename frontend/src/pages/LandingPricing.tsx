@@ -21,6 +21,10 @@ import {
  * the page cannot advertise a price the server would not honour. If the catalog cannot be read
  * the section is simply absent and the page falls back to "Escríbenos".
  *
+ * The prices show whether or not they can be paid online. A deployment with no gateway (the
+ * public demo) still has plans and may still offer the trial: there each plan leads to the
+ * trial instead of to a checkout, or to nothing when neither is on offer.
+ *
  * Set as a list, not a row of cards: five plans read as one ladder, each step adding to the one
  * above, and the eye compares the prices down a single column.
  */
@@ -93,9 +97,11 @@ function PlanRow({
   index: number;
 }) {
   const listCents = period === "ANNUAL" ? plan.annualCents : plan.monthlyCents;
-  const founder = catalog.founder.available;
+  // The founder price is a price to pay now; with nothing to pay it would only mislead.
+  const founder = catalog.founder.available && catalog.checkoutAvailable;
   const cents = founder ? founderPriceCents(listCents, catalog.founder.discountPercent) : listCents;
   const href = `/registro?plan=${plan.id}&periodo=${period === "ANNUAL" ? "anual" : "mensual"}`;
+  const canBuy = catalog.checkoutAvailable;
 
   return (
     <m.li
@@ -160,16 +166,18 @@ function PlanRow({
             </span>
           )}
         </p>
-        <a
-          href={href}
-          className={cls(
-            "whitespace-nowrap",
-            plan.featured ? "btn-primary px-5 py-2.5" : "btn-secondary",
-          )}
-        >
-          Contratar {plan.label}
-          <ArrowRight size={15} weight="bold" aria-hidden="true" />
-        </a>
+        {canBuy && (
+          <a
+            href={href}
+            className={cls(
+              "whitespace-nowrap",
+              plan.featured ? "btn-primary px-5 py-2.5" : "btn-secondary",
+            )}
+          >
+            Contratar {plan.label}
+            <ArrowRight size={15} weight="bold" aria-hidden="true" />
+          </a>
+        )}
       </div>
     </m.li>
   );
@@ -194,8 +202,9 @@ export function Pricing() {
     };
   }, []);
 
-  if (!catalog || !catalog.checkoutAvailable || catalog.plans.length === 0) return null;
+  if (!catalog || catalog.plans.length === 0) return null;
   const { founder, trial } = catalog;
+  const canBuy = catalog.checkoutAvailable;
 
   return (
     <section id="precios" className="scroll-mt-16 border-t border-line-subtle">
@@ -214,7 +223,7 @@ export function Pricing() {
           <PeriodToggle period={period} onChange={setPeriod} />
         </div>
 
-        {founder.available && (
+        {founder.available && canBuy && (
           <p className="mt-8 rounded-lg border border-line bg-sunken px-4 py-3 text-sm leading-relaxed text-ink">
             <strong className="font-semibold">Precio fundador.</strong> Los primeros negocios pagan{" "}
             {founder.discountPercent}% menos durante {founder.months} meses.{" "}
@@ -231,10 +240,19 @@ export function Pricing() {
         {trial.available && (
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="max-w-[60ch] leading-relaxed text-muted">
-              <span className="font-medium text-ink">¿Prefieres verlo antes de pagar?</span> Prueba
-              Argos Suite {trial.days} días con todas las unidades y módulos. No pedimos tarjeta.
+              <span className="font-medium text-ink">
+                {canBuy ? "¿Prefieres verlo antes de pagar?" : "Empieza con la prueba gratuita."}
+              </span>{" "}
+              Prueba Argos Suite {trial.days} días con todas las unidades y módulos. No pedimos
+              tarjeta.
             </p>
-            <a href="/registro?prueba=1" className="btn-secondary shrink-0 whitespace-nowrap">
+            <a
+              href="/registro?prueba=1"
+              className={cls(
+                "shrink-0 whitespace-nowrap",
+                canBuy ? "btn-secondary" : "btn-primary px-5 py-2.5",
+              )}
+            >
               Probar {trial.days} días gratis
             </a>
           </div>
