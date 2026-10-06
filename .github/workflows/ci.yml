@@ -121,6 +121,10 @@ jobs:
       SEED_DEMO_DATA: "true"
       # The in-process timer would run generation concurrently with test:scheduler.
       RUN_SCHEDULER_IN_PROCESS: "false"
+      # The suites share one address and finish inside the same minute, so together they pass
+      # the default global ceiling of 600 requests a minute and the later ones get 429s. Raised
+      # here only; test:ratelimit exercises the login limiter, which this does not touch.
+      RATE_LIMIT_GLOBAL: "10000"
 
     steps:
       - uses: actions/checkout@v7

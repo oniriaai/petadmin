@@ -608,6 +608,7 @@ npm run typecheck:aux        # Solo seed/scripts/tests
 # Jobs
 npm run job:recurring-plans  # Generación de planes recurrentes, un solo uso
 npm run job:reminders        # Recordatorios automáticos a tutores, un solo uso (cada hora)
+npm run mail:test -- a@b.com # Envía un recordatorio de muestra por el SMTP configurado
 
 # Base de datos
 npm run db:generate          # Prisma Client
