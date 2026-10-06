@@ -176,7 +176,9 @@ clientes.
    al correo de contacto de cada unidad (`Reply-To`).
 
    El usuario SMTP es siempre `resend`. El puerto 465 es TLS implícito (`smtps://`); con 587
-   sería `smtp://` y STARTTLS.
+   sería `smtp://` y STARTTLS. Si el host bloquea la salida a esos puertos, como hace el plan
+   gratuito de Render, Resend atiende también en **2465** (TLS implícito) y **2587** (STARTTLS).
+   El síntoma es "No se pudo conectar con el servidor de correo" con el canal en `live`.
 5. Definir `PUBLIC_SITE_URL` en el backend para que el correo muestre el logo
    (`/brand/argos-suite-lockup.png`, servido por el frontend). Sin ella, el nombre va en texto.
 6. Comprobarlo sin tocar ningún dato: envía un recordatorio de muestra a la dirección que digas.

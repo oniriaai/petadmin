@@ -44,7 +44,7 @@ marcados para introducir a mano:
 | `argos-demo-api` | `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT`, `B2_REGION` | Los del bucket de la demo |
 | `argos-demo-api` | `CORS_ORIGINS` | La URL del sitio estático, sin barra final |
 | `argos-demo-api` | `PUBLIC_SITE_URL` | La misma URL: de ahí toma el logo el correo de un recordatorio |
-| `argos-demo-api` | `SMTP_URL` | `smtps://resend:API_KEY@smtp.resend.com:465`, con una API key de Resend **solo para la demo** |
+| `argos-demo-api` | `SMTP_URL` | `smtps://resend:API_KEY@smtp.resend.com:2465`, con una API key de Resend **solo para la demo**. El puerto es **2465**, no 465: el plan gratuito de Render bloquea la salida a los puertos SMTP 25, 465 y 587, y con ellos el envío falla con "No se pudo conectar con el servidor de correo" |
 | `argos-demo-api` | `MAIL_FROM` | `Argos Suite <recordatorios@avisos.oniriasolutions.com>` |
 | `argos-demo` | `VITE_API_URL` | La URL de la API seguida de `/api/v1` |
 | `argos-demo` | `VITE_SITE_URL` | Vacía: así la demo queda fuera de los buscadores |
@@ -153,8 +153,10 @@ Para enseñarlo en una presentación, pon tu propio correo en la ficha de un tut
 recordatorio. **No añadas las credenciales de WhatsApp**: los teléfonos sembrados son inventados
 y pueden ser de alguien. Sin ellas, WhatsApp aparece como no conectado y todo sale por correo.
 
-Si las variables de correo ya existían en un servicio creado antes de este cambio, Render no las
-pide de nuevo: añádelas a mano en *Environment* de `argos-demo-api`.
+Render **no añade** las variables `sync: false` a un servicio que ya existe, ni las pide al
+sincronizar el Blueprint: `SMTP_URL`, `MAIL_FROM` y `PUBLIC_SITE_URL` se añaden a mano en
+*Environment* de `argos-demo-api`, guardando con *Save, rebuild, and deploy* para que la API
+arranque de nuevo y las lea.
 
 ---
 
