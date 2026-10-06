@@ -176,19 +176,20 @@ Names and numbers in these examples are illustrative; real copy reads them from 
 
 ## Logo
 
-The logo combines Greek styling with Argos the hound. Final artwork is pending from a designer; until it exists, the drawn marks below are direction, not assets to ship.
+The logo is the Vasija de figuras negras: Argos the hound in Tinta on a terracotta disc, like black-figure vase painting.
 
 | Mark | What it is | Use it for | Minimum size |
 | --- | --- | --- | --- |
-| Argos griego (lockup) | Geometric hound in profile beside a ΛRGOS wordmark, SUITE below, meander band underneath | Login screen, website, contracts, invoices | 120 px wide |
-| Sello griego (icon) | The hound inside a square seal with a small meander strip | Favicon, app icon, sidebar, social avatars | 16 px |
-| Vasija de figuras negras | Tinta hound on a terracotta disc, like black-figure vase painting | Signage, merchandise | 48 px |
+| Lockup | The disc beside a ΛRGOS wordmark, SUITE below, meander band underneath | Login screen, sidebar, website, contracts, invoices | 120 px wide |
+| Mark | The disc and hound alone | Avatars, signage, merchandise, tight headers | 48 px |
+| Small mark | The hound enlarged inside the disc, eye dropped | Favicon, app icon, collapsed sidebar | 16 px |
 
-- On light backgrounds the hound and wordmark are Tinta and the meander is Azul Egeo; on the dark shell, use Mármol and Oro.
-- Keep clear space around the logo at least as tall as the Λ.
-- Inside a unit's screens the meander may take that unit's color; never more than one unit color in one logo.
+- The logo's colors are fixed: Terracota disc, SUITE and meander; Tinta hound. The wordmark is Tinta on light backgrounds (`color`) and Mármol on the dark shell and the platform console (`on-dark`).
+- The logo does not take a unit's color, and no second meander goes beside it. A unit's color shows in the interface around it.
+- One-color printing uses `mono-black` or `mono-white`, with the hound cut out of the disc.
+- Keep clear space around the logo at least as tall as the Λ. The lockup file carries less than that, so the layout supplies it.
 - Do not redraw the hound, stretch or rotate the lockup, or add shadows or gradients.
-- Store final assets under `frontend/src/assets/brand/` (SVG source, PNG exports, favicon set).
+- Assets live under `frontend/src/assets/brand/` (SVG, PDF, PNG exports and the script that builds them); the favicon set is at the root of `frontend/public/`. In the app, use `Lockup` and `Mark` from `src/components/brand/Logo.tsx`.
 
 ## Colors
 

@@ -8,9 +8,7 @@ import { frontendModules, ModuleNavigationItem } from "../../modules/registry";
 import { normalizeBusinessUnit } from "../../modules/shared/contracts";
 import { cls } from "../../lib/utils";
 import { unitTheme } from "../../lib/unit-theme";
-import { Wordmark } from "../brand/Wordmark";
-import { BrandTile } from "../brand/BrandTile";
-import { Meander } from "../brand/Meander";
+import { Lockup, Mark } from "../brand/Logo";
 import { UnitSwitcher } from "./UnitSwitcher";
 
 const FOLDED_KEY = "sidebarGroups";
@@ -138,7 +136,7 @@ export function Sidebar({
   return (
     <div
       className="flex h-full w-full flex-col bg-shell text-shell-ink"
-      // The active nav item and the meander read the unit's colour from here; Oro when consolidated.
+      // The active nav item reads the unit's colour from here; Oro when consolidated.
       style={{ "--unit-accent": unitTheme(effectiveUnit).accent } as React.CSSProperties}
       {...(compact && {
         onMouseOver: showTip,
@@ -154,7 +152,7 @@ export function Sidebar({
           compact ? "flex-col gap-2 px-3" : "justify-between pl-5 pr-2",
         )}
       >
-        {compact ? <BrandTile /> : <Wordmark />}
+        {compact ? <Mark size={36} /> : <Lockup tone="dark" className="w-44" />}
         {isDrawer ? (
           <button
             type="button"
@@ -178,12 +176,6 @@ export function Sidebar({
           )
         )}
       </div>
-      {/* One unit colour per logo: the band follows the unit you are working in. */}
-      {!compact && (
-        <div className="px-5 pt-3 text-[color:var(--unit-accent)]" aria-hidden="true">
-          <Meander height={6} />
-        </div>
-      )}
 
       <div className={cls("px-3", compact ? "pt-2" : "pt-4")}>
         <UnitSwitcher unit={effectiveUnit} compact={compact} />

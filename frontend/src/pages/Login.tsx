@@ -12,8 +12,7 @@ import {
 import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/api";
 import { Spinner } from "../components/ui/Spinner";
-import { Wordmark } from "../components/brand/Wordmark";
-import { Meander } from "../components/brand/Meander";
+import { Lockup } from "../components/brand/Logo";
 
 /**
  * Sign-in.
@@ -134,11 +133,8 @@ export function Login() {
             className="inline-block text-shell-ink"
             aria-label="Argos Suite, página de inicio"
           >
-            <Wordmark size="lg" />
+            <Lockup tone="dark" className="w-44 lg:w-60" />
           </a>
-          <div className="mt-4 w-40 text-oro">
-            <Meander />
-          </div>
         </div>
 
         <div className="hidden lg:block max-w-sm">

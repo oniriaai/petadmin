@@ -29,7 +29,7 @@ import { SquaresFourIcon as SquaresFour } from "@phosphor-icons/react/dist/csr/S
 import { VanIcon as Van } from "@phosphor-icons/react/dist/csr/Van";
 import { WalletIcon as Wallet } from "@phosphor-icons/react/dist/csr/Wallet";
 import type { Icon } from "@phosphor-icons/react";
-import { Wordmark } from "../components/brand/Wordmark";
+import { Lockup } from "../components/brand/Logo";
 import { Meander } from "../components/brand/Meander";
 import { cls } from "../lib/cls";
 import marbleUrl from "../assets/landing/marble.webp";
@@ -287,7 +287,7 @@ function Header() {
     <header className="sticky top-0 z-shell border-b border-line-subtle bg-canvas">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         <a href="#inicio" className="text-ink">
-          <Wordmark />
+          <Lockup tone="auto" className="w-36" />
         </a>
         <nav aria-label="Secciones" className="hidden items-center gap-8 md:flex">
           {[
@@ -658,7 +658,7 @@ function Footer() {
     <footer className="border-t border-line-subtle">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
         <div className="text-ink">
-          <Wordmark />
+          <Lockup tone="auto" className="w-44" />
           <p className="mt-3 text-sm text-muted">
             Gestión de guarderías, peluquerías y veterinarias.
           </p>

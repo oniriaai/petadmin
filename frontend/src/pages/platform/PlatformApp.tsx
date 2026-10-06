@@ -3,7 +3,7 @@ import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom"
 import { Building2, LayoutDashboard, LogOut, ScrollText, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { cls } from "../../lib/utils";
-import { Wordmark } from "../../components/brand/Wordmark";
+import { Lockup } from "../../components/brand/Logo";
 import { PlatformOverviewPage } from "./PlatformOverviewPage";
 import { DaycaresPage } from "./DaycaresPage";
 import { DaycareDetailPage } from "./DaycareDetailPage";
@@ -36,7 +36,7 @@ export default function PlatformApp() {
     <div data-theme="platform" className="min-h-[100dvh] flex bg-canvas text-ink">
       <aside className="w-60 shrink-0 border-r flex flex-col border-line bg-surface">
         <div className="px-4 py-5 border-b border-line">
-          <Wordmark className="mb-4" />
+          <Lockup tone="dark" className="mb-4 w-44" />
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl grid place-items-center bg-action">
               <ShieldCheck size={18} className="text-white" />
