@@ -28,6 +28,16 @@ export function localDatePartsInTimezone(
   return { year, month, day };
 }
 
+/** The hour of the day, 0 to 23, that it is in a timezone at a given instant. */
+export function localHourInTimezone(date: Date, timezone: string): number {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    hour: "2-digit",
+    hourCycle: "h23",
+  });
+  return Number(formatter.formatToParts(date).find((p) => p.type === "hour")?.value);
+}
+
 function localDateTimeOffsetMs(utcDate: Date, timezone: string): number {
   const formatter = new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,

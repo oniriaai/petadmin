@@ -73,7 +73,7 @@ npx vitest run -t "name of the test"              # one test
 ### What CI runs
 
 `.github/workflows/ci.yml`: `static` (typecheck, lint, format check, architecture suite, frontend
-build + tests) → `e2e` (all thirteen suites, then greps the backend log for tenant-scope violations)
+build + tests) → `e2e` (all fourteen suites, then greps the backend log for tenant-scope violations)
 and `production-image`. Before pushing, at minimum run typecheck, lint, `format:check` and
 `test:architecture` in the backend, and typecheck, lint, `format:check`, build and test in the
 frontend.
@@ -88,7 +88,7 @@ Prettier covers TypeScript only. Markdown and YAML are hand-wrapped — do not r
   `BackendModule` with `id`, `basePath`, `router` and optional `access` (roles, business units).
 - **Product modules** (`backend/src/platform/product-modules.ts`): the sellable units the console
   toggles per tenant (`nucleo`, `reservas`, `guarderia`, `peluqueria`, `veterinaria`, `finanzas`, `inventario`,
-  `informes`, `cumplimiento`, plus vendor-only `plataforma`). Each grants a set of backend module
+  `informes`, `cumplimiento`, `recordatorios`, plus vendor-only `plataforma`). Each grants a set of backend module
   ids and may `require` other product modules.
 
 Every backend module must be claimed by exactly one product module. `validateBackendModules()`
@@ -202,6 +202,22 @@ The recurring-plans generator runs in-process only in dev (`RUN_SCHEDULER_IN_PRO
 production it is a scheduled job (`npm run job:recurring-plans`), idempotent on
 `(recurringPlanId, checkIn)`.
 
+### Reminders to tutors
+
+`modules/recordatorios` sends reminders by WhatsApp (Meta Cloud API) and email (SMTP) through
+`core/messaging`, which is transport only. `docs/recordatorios.md` has the rules.
+
+- What is due is **computed, never queued** (`due.service.ts`); the send re-derives the item from
+  its `sourceKey` under the caller's tenant and units. The recipient always comes from the
+  tutor's record, never from the request.
+- The copy lives in `templates.ts` and is the text registered as WhatsApp templates at Meta.
+  Changing a body means changing the template there too; keep `docs/recordatorios.md` in step
+  (`tests/reminders-module.ts` checks it).
+- The automatic pass (`npm run job:reminders`, hourly in production) is idempotent on
+  `(daycareId, dedupeKey)` and off per unit until an admin turns it on.
+- Outside production a channel with no credentials is **simulated** (logged, recorded as sent).
+  `test:reminders` refuses to run against a backend with a live channel.
+
 ### Frontend
 
 - `src/modules/registry.tsx` is the single source for routes and navigation. Each route and nav
@@ -228,4 +244,6 @@ test that the nav item disappears when its product module is absent.
 - `README.md` — product overview, production deployment, required env vars, seeded credentials.
 - `backend/README.md` — API and endpoints. `backend/tests/README.md` — what each suite pins.
 - `docs/alcance.md`, `docs/functional-design.md` — functional scope and flows.
+- `docs/recordatorios.md` — reminders to tutors: rules, requirements, setup and the WhatsApp
+  templates to register.
 - `PRODUCT.md` — product and design context for UI work.

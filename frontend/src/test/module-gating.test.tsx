@@ -284,6 +284,37 @@ describe("navigation gating", () => {
     expect(screen.getByText("Informes")).toBeInTheDocument();
   });
 
+  it("hides reminders to tutors when recordatorios is not enabled", () => {
+    renderSidebar({ modules: ["reservas", "peluqueria"] });
+    expect(screen.queryByText("Avisos a tutores")).not.toBeInTheDocument();
+  });
+
+  it("shows reminders to tutors to every unit once the module is enabled", () => {
+    renderSidebar({ modules: ["reservas", "recordatorios"] });
+    expect(screen.getByText("Avisos a tutores")).toBeInTheDocument();
+  });
+
+  it("offers reminders to an operational role, not only to the admin", () => {
+    renderSidebar({
+      role: "grooming",
+      businessUnit: "GROOMING",
+      modules: ["reservas", "peluqueria", "recordatorios"],
+    });
+    expect(screen.getByText("Avisos a tutores")).toBeInTheDocument();
+  });
+
+  it("keeps the clinic's own reminders list apart from the sold module", () => {
+    // The clinic's list of what to chase comes with `veterinaria`; sending through the system
+    // is what `recordatorios` adds. Neither nav item stands in for the other.
+    renderSidebar({
+      role: "veterinary",
+      businessUnit: "VETERINARY",
+      modules: ["reservas", "veterinaria"],
+    });
+    expect(screen.getByText("Recordatorios")).toBeInTheDocument();
+    expect(screen.queryByText("Avisos a tutores")).not.toBeInTheDocument();
+  });
+
   it("hides the clinic's navigation when veterinaria is not enabled", () => {
     renderSidebar({ modules: ["reservas"] });
     expect(screen.queryByText("Agenda veterinaria")).not.toBeInTheDocument();

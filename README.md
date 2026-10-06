@@ -105,6 +105,7 @@ del backend (definidos en `backend/src/platform/product-modules.ts`):
 | `inventario` | `inventory` | Stock con aviso de mínimo y movimientos |
 | `informes` | `reports`, `export` | |
 | `cumplimiento` | `contracts`, `alerts` | Pestañas de Alertas y Contratos en Herramientas |
+| `recordatorios` | `reminders` | Recordatorios a tutores por WhatsApp y correo, automáticos o a mano. No se habilita por defecto. Ver `docs/recordatorios.md` |
 | `plataforma` | `platform` | Solo del proveedor; nunca se asigna a una guardería |
 
 Los cobros generados al cerrar una estancia o una cita **se registran siempre**, incluso con
@@ -189,6 +190,12 @@ en los que confiar para resolver la IP real; sin definir, los límites por IP co
 `RATE_LIMIT_GLOBAL`, `RATE_LIMIT_LOGIN`, `RATE_LIMIT_STORAGE`, `SEED_DEMO_DATA` (inactivo en
 producción) y `RUN_SCHEDULER_IN_PROCESS` (inactivo en producción).
 
+Para que los recordatorios lleguen de verdad hacen falta `WHATSAPP_PHONE_NUMBER_ID` y
+`WHATSAPP_ACCESS_TOKEN` (WhatsApp) y `SMTP_URL` y `MAIL_FROM` (correo). Sin ellas el backend
+arranca igual y ese canal no está disponible. La lista completa de requisitos (cuentas, dominio,
+variables, cron y lo que debe configurar cada negocio), las plantillas de WhatsApp que hay que
+dar de alta en Meta y la puesta en marcha están en `docs/recordatorios.md`.
+
 ### Protecciones de borde
 
 - **Límite de inicios de sesión** por IP **y** usuario (`/auth/login`): las dos mitades
@@ -226,6 +233,18 @@ docker compose -f docker-compose.prod.yml run --rm scheduler
 La generación es idempotente sobre la clave única `(recurringPlanId, checkIn)`, así que una
 ejecución repetida es inofensiva; el job sale con código distinto de cero si alguna ocurrencia
 falla.
+
+### Recordatorios
+
+Por las mismas razones, el envío automático de recordatorios es otro job, que se invoca **cada
+hora**:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm reminders
+```
+
+Solo envía para las unidades que lo encendieron en Configuración y dentro de su horario diurno;
+cada envío se reserva antes en la base de datos, así que una ejecución de más no repite nada.
 
 ---
 
@@ -488,6 +507,7 @@ docker exec argos-backend npm run test:suspension  # Desactivación de usuarios 
 docker exec argos-backend npm run test:ratelimit   # Límite de inicios de sesión y lista blanca de CORS
 docker exec argos-backend npm run test:users       # Usuarios por guardería y nombres por inquilino
 docker exec argos-backend npm run test:offboarding # Exportación y eliminación de una guardería
+docker exec argos-backend npm run test:reminders   # Recordatorios: envío, canal del tutor e idempotencia
 
 # Frontend
 cd frontend && npm run build && npm test -- --run
@@ -505,5 +525,6 @@ sembrados ni los altera.
 - [docs/alcance.md](docs/alcance.md): alcance funcional por módulo y reglas de negocio.
 - [docs/functional-design.md](docs/functional-design.md): flujos operativos y mapa de experiencia.
 - [docs/adding-a-module.md](docs/adding-a-module.md): checklist para incorporar nuevos módulos.
+- [docs/recordatorios.md](docs/recordatorios.md): recordatorios a tutores por WhatsApp y correo: reglas, requisitos, puesta en marcha y plantillas.
 - [docs/demo-hosting.md](docs/demo-hosting.md): demo pública sin coste (Render + Neon), su reinicio diario y su despliegue continuo.
 - [docs/futuras-implementaciones.md](docs/futuras-implementaciones.md): roadmap técnico.

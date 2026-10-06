@@ -764,6 +764,132 @@ async function run() {
     }
   });
 
+  await test("Los recordatorios no contratados se deniegan con 403 MODULE_DISABLED", async () => {
+    const b = clientFor(demo);
+    const attempts: Array<[string, Promise<{ status: number; data: any }>]> = [
+      ["GET /reminders/due", b.get("/reminders/due")],
+      ["GET /reminders/log", b.get("/reminders/log")],
+      ["GET /reminders/channels", b.get("/reminders/channels")],
+      ["POST /reminders/send", b.post("/reminders/send", { sourceKey: "CITA:x" })],
+    ];
+    for (const [what, attempt] of attempts) {
+      const denied = await attempt;
+      expectStatus(denied.status, 403, `${what} (tenant sin el módulo)`);
+      if (denied.data?.code !== "MODULE_DISABLED") {
+        throw new Error(`${what}: se esperaba MODULE_DISABLED, ${JSON.stringify(denied.data)}`);
+      }
+    }
+  });
+
+  await test("Una guardería no ve ni envía los recordatorios de otra", async () => {
+    // `demo` did not buy reminders, so its refusals above say nothing about scoping. A second
+    // tenant that DID buy them is the only way to exercise the module's own tenant filter.
+    const PREFIX = "e2e-remiso";
+    const platform = clientFor(superadmin);
+    const removeTenant = async (id: string, slug: string) => {
+      await platform.patch(`/platform/daycares/${id}`, { isActive: false });
+      await platform.delete(`/platform/daycares/${id}`, { data: { confirm: slug } } as any);
+    };
+    for (const stale of (await platform.get("/platform/daycares")).data as any[]) {
+      if (stale.slug.startsWith(PREFIX)) await removeTenant(stale.id, stale.slug);
+    }
+
+    const { prisma } = await import("../src/db");
+    const purgeFixture = async () => {
+      const clients = await prisma.client.findMany({
+        where: { daycareId: MAIN_ID, firstName: "AislamientoRecordatorio" },
+        select: { id: true },
+      });
+      const clientId = { in: clients.map((client) => client.id) };
+      await prisma.reminderMessage.deleteMany({ where: { daycareId: MAIN_ID, clientId } });
+      await prisma.reservation.deleteMany({ where: { daycareId: MAIN_ID, clientId } });
+      await prisma.pet.deleteMany({ where: { daycareId: MAIN_ID, clientId } });
+      await prisma.client.deleteMany({ where: { daycareId: MAIN_ID, id: clientId } });
+    };
+    await purgeFixture();
+
+    const slug = `${PREFIX}-${Date.now()}`;
+    const created = await platform.post("/platform/daycares", {
+      slug,
+      name: "Peluquería Aislamiento",
+      units: ["GROOMING"],
+      modules: ["reservas", "peluqueria", "recordatorios"],
+      admin: { username: `${slug}_admin`, password: "aislamiento123", name: "Admin Recordatorios" },
+    });
+    expectStatus(created.status, 201, "Alta de la guardería de prueba");
+    const otherId: string = created.data.daycare?.id ?? created.data.id;
+
+    try {
+      const owner = clientFor(await loginAs("admin_global", "admin123"), undefined, "GROOMING");
+      const other = clientFor(
+        await loginAs(`${slug}_admin`, "aislamiento123", undefined, slug),
+        undefined,
+        "GROOMING",
+      );
+
+      // An appointment for tomorrow in the main tenant: something real to be reminded of.
+      const tutor = await prisma.client.create({
+        data: {
+          daycareId: MAIN_ID,
+          firstName: "AislamientoRecordatorio",
+          lastName: "Tester",
+          phone: "0991234567",
+          pets: { create: { daycareId: MAIN_ID, name: "Ajena", sex: "F" } },
+        },
+        include: { pets: true },
+      });
+      const reservation = await prisma.reservation.create({
+        data: {
+          daycareId: MAIN_ID,
+          businessUnit: "GROOMING",
+          clientId: tutor.id,
+          service: "Baño",
+          status: "PENDIENTE",
+          checkIn: new Date(Date.now() + 26 * 3_600_000),
+          pets: { create: { petId: tutor.pets[0].id } },
+        },
+      });
+      const sourceKey = `CITA:${reservation.id}`;
+      const listed = async (api: typeof owner) =>
+        ((await api.get("/reminders/due?days=3")).data as any[]).some(
+          (item) => item.sourceKey === sourceKey,
+        );
+
+      if (!(await listed(owner)))
+        throw new Error("El recordatorio no aparece en su propia guardería");
+      if (await listed(other)) throw new Error("La otra guardería ve un recordatorio ajeno");
+
+      // The write: a key from the request body is not proof of tenancy.
+      expectStatus(
+        (await other.post("/reminders/send", { sourceKey })).status,
+        404,
+        "Enviar un recordatorio de otra guardería",
+      );
+      expectStatus(
+        (await prisma.reminderMessage.count({ where: { sourceKey } })) as number,
+        0,
+        "Envíos registrados tras el intento ajeno",
+      );
+
+      expectStatus(
+        (await owner.post("/reminders/send", { sourceKey })).status,
+        201,
+        "Envío propio",
+      );
+      const foreignLog = await other.get("/reminders/log?page=1&pageSize=50");
+      expectStatus(foreignLog.status, 200, "Registro de la otra guardería");
+      expectStatus(foreignLog.data.total, 0, "Envíos ajenos en el registro");
+      const ownLog = await owner.get("/reminders/log?page=1&pageSize=50");
+      if (!(ownLog.data.items as any[]).some((row) => row.sourceKey === sourceKey)) {
+        throw new Error("El envío no aparece en el registro de su propia guardería");
+      }
+    } finally {
+      await purgeFixture();
+      await prisma.$disconnect();
+      await removeTenant(otherId, slug);
+    }
+  });
+
   await test("Una guardería no puede referenciar ni borrar archivos de otra", async () => {
     // Deleting an object is authorized by a row of the caller's tenant referencing its key, so
     // a tenant that could write a reference into another's prefix could delete the file behind

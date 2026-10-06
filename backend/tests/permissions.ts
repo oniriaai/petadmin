@@ -123,5 +123,9 @@ assert.deepEqual(needs("peluqueria", "DELETE", "/appointments/abc"), ["registros
 assert.deepEqual(needs("veterinaria", "DELETE", "/visits/abc"), ["registros.delete"]);
 assert.deepEqual(needs("veterinaria", "DELETE", "/visits/abc/vitals/v1"), []);
 assert.deepEqual(needs("veterinaria", "DELETE", "/services/abc"), [], "already admin-only");
+// Telling a tutor about tomorrow's visit is ordinary front-desk work: no permission on top.
+assert.deepEqual(needs("reminders", "GET", "/due"), []);
+assert.deepEqual(needs("reminders", "POST", "/send"), []);
+assert.deepEqual(needs("reminders", "GET", "/log"), []);
 
 console.log(`✓ permissions (${PERMISSION_IDS.length} in the catalog)`);

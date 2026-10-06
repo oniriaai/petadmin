@@ -301,6 +301,42 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
 
   await addClinicSheets(daycareId, sheet);
 
+  // What was sent to the tenant's tutors in its name: the customer's record of having told them.
+  const reminders = await prisma.reminderMessage.findMany({
+    where: { daycareId },
+    include: {
+      client: { select: { firstName: true, lastName: true } },
+      pet: { select: { name: true } },
+    },
+    orderBy: { createdAt: "asc" },
+  });
+  const rms = sheet("Recordatorios", [
+    "Fecha",
+    "Unidad",
+    "Tipo",
+    "Tutor",
+    "Mascota",
+    "Canal",
+    "Destinatario",
+    "Estado",
+    "Origen",
+    "Detalle",
+  ]);
+  reminders.forEach((r) =>
+    rms.addRow([
+      r.sentAt ?? r.createdAt,
+      r.businessUnit,
+      r.kind,
+      r.client ? `${r.client.firstName} ${r.client.lastName}` : "",
+      r.pet?.name ?? "",
+      r.channel,
+      r.recipient,
+      r.status,
+      r.trigger,
+      r.error,
+    ]),
+  );
+
   return wb;
 }
 
@@ -616,6 +652,9 @@ export async function deleteDaycare(
       "reservationPets",
       await tx.reservationPet.deleteMany({ where: { reservation: { daycareId } } }),
     );
+
+    // The reminder log, before the tutors and pets it points at.
+    count("reminderMessages", await tx.reminderMessage.deleteMany({ where: { daycareId } }));
 
     // The clinical record, before the reservations, pets and veterinarians it points at.
     count("vetConsents", await tx.vetConsent.deleteMany({ where: { daycareId } }));

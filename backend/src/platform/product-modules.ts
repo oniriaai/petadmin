@@ -98,6 +98,14 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
     backendModuleIds: ["contracts", "alerts"],
   },
   {
+    id: "recordatorios",
+    label: "Recordatorios automáticos",
+    description:
+      "Recordatorios a los tutores por WhatsApp y correo: citas del día siguiente, vacunas, " +
+      "preventivos y controles por vencer, enviados solos o a mano, con registro de cada envío.",
+    backendModuleIds: ["reminders"],
+  },
+  {
     id: "plataforma",
     label: "Consola de Plataforma",
     description:

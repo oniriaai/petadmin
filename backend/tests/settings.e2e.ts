@@ -67,6 +67,11 @@ async function main(): Promise<void> {
     for (const unit of res.data.units) {
       if (typeof unit.vatPercent !== "number") throw new Error("falta vatPercent");
       if (!unit.timezone) throw new Error("falta timezone");
+      // Reminder settings ride along, and automatic sending is never on by default.
+      if (typeof unit.reminders?.auto !== "boolean") throw new Error("falta reminders");
+      if (!unit.reminders.channels.includes(unit.reminders.defaultChannel)) {
+        throw new Error("el canal por defecto no está entre los activos");
+      }
     }
   });
 

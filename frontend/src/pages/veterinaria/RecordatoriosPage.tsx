@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { BellRing, MessageCircle } from "lucide-react";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -15,6 +15,8 @@ import {
   type ReminderKind,
 } from "./api";
 import { Tabs } from "../../components/ui/Tabs";
+import { CHANNEL_LABELS, remindersApi, type DueReminder } from "../recordatorios/api";
+import { SendReminderButton } from "../recordatorios/SendReminderButton";
 
 const WINDOWS = [
   ["7", "7 días"],
@@ -22,7 +24,10 @@ const WINDOWS = [
   ["90", "90 días"],
 ] as const;
 
-/** The message offered to the tutor. The clinic sends it from its own WhatsApp, and may edit it. */
+/**
+ * The message offered to the tutor when the clinic sends it from its own WhatsApp, where it may
+ * still edit it. With the `recordatorios` module the system sends its own wording instead.
+ */
 export function reminderMessage(reminder: Reminder, clinic: string): string {
   const greeting = `Hola ${reminder.client.firstName}, le escribimos de ${clinic}.`;
   const date = fmt(reminder.dueAt, "d 'de' MMMM");
@@ -39,7 +44,11 @@ export function reminderMessage(reminder: Reminder, clinic: string): string {
 
 /** What the clinic should chase: doses coming due, follow-ups nobody booked, pending results. */
 export function RecordatoriosPage() {
-  const { daycare } = useAuth();
+  const { daycare, hasModule } = useAuth();
+  const canSend = hasModule("recordatorios");
+  // What the system can send for each row, by the same key the clinic's list uses.
+  const [sendable, setSendable] = useState<Map<string, DueReminder>>(new Map());
+  const [notice, setNotice] = useState<{ tone: string; text: string } | null>(null);
   const [kind, setKind] = useState<ReminderKind | "">("");
   const [days, setDays] = useState("30");
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -62,6 +71,21 @@ export function RecordatoriosPage() {
       current = false;
     };
   }, [days]);
+
+  const loadSendable = useCallback(async () => {
+    if (!canSend) return;
+    try {
+      const due = await remindersApi.due({ days });
+      setSendable(new Map(due.map((item) => [item.sourceKey, item])));
+    } catch {
+      // The list itself still works; rows simply fall back to the clinic's own WhatsApp.
+      setSendable(new Map());
+    }
+  }, [canSend, days]);
+
+  useEffect(() => {
+    void loadSendable();
+  }, [loadSendable]);
 
   const clinic = daycare?.name ?? "la clínica";
   const shown = kind ? reminders.filter((reminder) => reminder.kind === kind) : reminders;
@@ -91,6 +115,12 @@ export function RecordatoriosPage() {
       {error && (
         <div className="notice notice-danger" role="alert">
           {error}
+        </div>
+      )}
+
+      {notice && (
+        <div className={`notice ${notice.tone}`} role="status">
+          {notice.text}
         </div>
       )}
 
@@ -131,6 +161,7 @@ export function RecordatoriosPage() {
               <tbody>
                 {shown.map((reminder) => {
                   const link = whatsappLink(reminder.client, reminderMessage(reminder, clinic));
+                  const due = sendable.get(reminder.id);
                   return (
                     <tr key={reminder.id} className="table-tr">
                       <td className="table-td whitespace-nowrap">
@@ -155,7 +186,25 @@ export function RecordatoriosPage() {
                       </td>
                       <td className="table-td">{reminder.label}</td>
                       <td className="table-td text-right whitespace-nowrap">
-                        {link ? (
+                        {due ? (
+                          <SendReminderButton
+                            reminder={due}
+                            onResult={(result, failure) => {
+                              setNotice(
+                                result?.outcome === "sent" && result.channel
+                                  ? {
+                                      tone: "notice-success",
+                                      text: `Listo, el recordatorio de ${reminder.pet.name} salió por ${CHANNEL_LABELS[result.channel]} a ${reminder.client.firstName}.`,
+                                    }
+                                  : {
+                                      tone: "notice-danger",
+                                      text: `No pudimos enviar el recordatorio de ${reminder.pet.name}. ${result?.reason ?? failure ?? "Inténtalo de nuevo en un momento."}`,
+                                    },
+                              );
+                              void loadSendable();
+                            }}
+                          />
+                        ) : link ? (
                           <a
                             href={link}
                             target="_blank"

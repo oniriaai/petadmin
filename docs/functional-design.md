@@ -59,8 +59,15 @@ Consolidar la operación administrativa y diaria de tres líneas de negocio comp
 
 ### Flujo 6: Seguimiento
 - `/veterinaria/laboratorio` recibe los resultados, incluso con la consulta ya cerrada.
-- `/veterinaria/recordatorios` lista refuerzos, preventivos, controles y exámenes pendientes, calculados al momento, con un enlace de WhatsApp al tutor.
+- `/veterinaria/recordatorios` lista refuerzos, preventivos, controles y exámenes pendientes, calculados al momento, con un enlace de WhatsApp al tutor. Con el módulo `recordatorios`, cada fila se envía por el sistema.
 - `/veterinaria/informe` (solo administradores) resume consultas, facturación, diagnósticos y hospitalización de un periodo.
+
+### Flujo 7: Recordatorios a tutores (módulo `recordatorios`)
+1. **Configuración**: El administrador elige por unidad los canales, el canal por defecto, los días de aviso y el contacto del negocio, y decide si se envía automáticamente.
+2. **Preferencia del tutor**: En su ficha se elige WhatsApp, correo o no recibir recordatorios; sin elección vale el canal de la unidad.
+3. **Envío automático**: Cada hora, en horario diurno de la unidad, salen las citas del día siguiente y las vacunas, preventivos y controles dentro de los días de aviso. Nada se envía dos veces.
+4. **Envío a mano**: En `/avisos` se ve cada recordatorio con el mensaje ya redactado y se envía o reenvía por el canal que se elija. Lo vencido y los exámenes pendientes solo salen así.
+5. **Registro**: La pestaña Enviados muestra cada envío, fallo u omisión con su motivo.
 
 ---
 
@@ -101,6 +108,7 @@ núcleo y está siempre disponible.
     ├── Animales (/animales)
     ├── Finanzas (/transacciones)           [finanzas]
     ├── Informes (/informes)                [informes]
+    ├── Avisos a tutores (/avisos)          [recordatorios]
     ├── Herramientas (/herramientas)        — pestaña Alertas: [cumplimiento]
     ├── Configuración (/configuracion)      [admin]
     └── Guía de uso (/guia)
@@ -163,6 +171,12 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `POST /veterinaria/visits/:id/procedures | lab-orders | consents`: Procedimientos, exámenes y consentimientos.
 - `POST /veterinaria/procedures/:id/start | finish`, `/lab-orders/:id/result`, `/consents/:id/sign`: Su ciclo de vida.
 - `GET /veterinaria/reminders`, `/reports/summary`: Recordatorios calculados e informe del periodo.
+
+### Módulo Recordatorios
+- `GET /reminders/due`: Lo que hay que recordar en la unidad, con canal y mensaje.
+- `POST /reminders/send`: Envío a mano de un recordatorio, eligiendo canal.
+- `GET /reminders/log`, `/reminders/channels`: Registro de envíos y canales disponibles.
+- `PUT /settings/:businessUnit` (`reminders`), `PUT /clients/:id` (`reminderChannel`): Configuración de la unidad y preferencia del tutor.
 
 ### Módulo Finanzas y Backoffice
 - `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.

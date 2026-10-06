@@ -123,6 +123,12 @@ Hasta que existan los cuatro valores, el workflow falla en su primer paso dicien
 Son contraseñas públicas. Sirven para una demo y para nada más: cualquiera con la URL puede entrar
 y cambiar datos.
 
+**Los recordatorios no se envían desde la demo.** `principal` tiene el módulo, así que la pantalla
+Avisos a tutores y su configuración se pueden enseñar, pero la demo no tiene credenciales de
+WhatsApp ni de correo y cada recordatorio aparece sin canal disponible. No se las pongas: los
+tutores sembrados tienen números inventados que pueden ser de alguien. Para enseñar un envío
+completo usa el stack de desarrollo, donde los canales son simulados (`docs/recordatorios.md`).
+
 ---
 
 ## Reinicio diario

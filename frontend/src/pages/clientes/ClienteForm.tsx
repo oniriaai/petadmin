@@ -3,6 +3,7 @@ import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
 import { clientsApi } from "../../modules/shared/api";
 import { Spinner } from "../../components/ui/Spinner";
+import { useAuth } from "../../lib/auth-context";
 
 interface Client {
   id: string;
@@ -18,6 +19,7 @@ interface Client {
   language?: string;
   birthdate?: string;
   notes?: string;
+  reminderChannel?: string | null;
 }
 interface Props {
   open: boolean;
@@ -40,7 +42,10 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
     language: "es",
     birthdate: "",
     notes: "",
+    // "" is "whatever the business uses by default", stored as null.
+    reminderChannel: "",
   });
+  const { hasModule } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,6 +64,7 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
         language: client.language ?? "es",
         birthdate: client.birthdate ?? "",
         notes: client.notes ?? "",
+        reminderChannel: client.reminderChannel ?? "",
       });
     else
       setForm({
@@ -74,6 +80,7 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
         language: "es",
         birthdate: "",
         notes: "",
+        reminderChannel: "",
       });
     setError("");
   }, [client, open]);
@@ -91,8 +98,9 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
     setSaving(true);
     setError("");
     try {
-      if (client) await api.put(`/clients/${client.id}`, form);
-      else await clientsApi.create(form);
+      const payload = { ...form, reminderChannel: form.reminderChannel || null };
+      if (client) await api.put(`/clients/${client.id}`, payload);
+      else await clientsApi.create(payload);
       onSaved();
       onClose();
     } catch (e) {
@@ -178,6 +186,24 @@ export function ClienteForm({ open, onClose, onSaved, client }: Props) {
               <option value="en">English</option>
             </select>
           </div>
+          {hasModule("recordatorios") && (
+            <div>
+              <label className="label" htmlFor="client-reminder-channel">
+                Canal para recordatorios
+              </label>
+              <select
+                id="client-reminder-channel"
+                className="input"
+                value={form.reminderChannel}
+                onChange={set("reminderChannel")}
+              >
+                <option value="">Según el negocio</option>
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="EMAIL">Correo</option>
+                <option value="NONE">No enviar recordatorios</option>
+              </select>
+            </div>
+          )}
           <div className="col-span-2">
             <label className="label">Notas</label>
             <textarea className="input" rows={3} value={form.notes} onChange={set("notes")} />

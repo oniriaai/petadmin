@@ -22,6 +22,7 @@ import { storageRouter } from "../routes/storage";
 import { peluqueriaRouter } from "../modules/peluqueria";
 import { veterinariaRouter } from "../modules/veterinaria";
 import { guarderiaRouter } from "../modules/guarderia";
+import { recordatoriosRouter } from "../modules/recordatorios";
 import { platformRouter } from "../modules/platform-admin";
 import { usersRouter } from "../modules/admin";
 import { settingsRouter } from "../core/tenancy/settings.router";
@@ -230,6 +231,18 @@ export const backendModules: readonly BackendModule[] = [
       { methods: "delete", path: /^\/visits\/[^/]+\/?$/, permission: "registros.delete" },
     ],
     access: { roles: ["admin", "veterinary"], businessUnits: ["VETERINARY"] },
+  },
+  {
+    id: "reminders",
+    basePath: "/reminders",
+    router: recordatoriosRouter,
+    description: "Reminders sent to tutors by WhatsApp and email",
+    // Every unit has something to remind about, so every operational role sends. No permission
+    // on top: telling a tutor about tomorrow's visit is ordinary front-desk work.
+    access: {
+      roles: ["admin", "daycare", "grooming", "veterinary"],
+      businessUnits: ["DAYCARE", "GROOMING", "VETERINARY"],
+    },
   },
   {
     id: "platform",

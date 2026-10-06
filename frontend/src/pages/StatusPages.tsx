@@ -15,6 +15,7 @@ const MODULE_LABELS: Record<ProductModuleId, string> = {
   inventario: "Inventario",
   informes: "Informes y Exportación",
   cumplimiento: "Contratos y Alertas",
+  recordatorios: "Recordatorios automáticos",
 };
 
 function Shell({

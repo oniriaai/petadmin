@@ -32,6 +32,7 @@ model Daycare {
   pets                 Pet[]
   providers            Provider[]
   recurringPlans       RecurringPlan[]
+  reminderMessages     ReminderMessage[]
   reservations         Reservation[]
   rooms                Room[]
   unitSettings         BusinessUnitSetting[]
@@ -115,7 +116,7 @@ model User {
 }
 
 model Client {
-  id               String          @id @default(cuid())
+  id               String            @id @default(cuid())
   daycareId        String
   firstName        String
   lastName         String
@@ -126,17 +127,20 @@ model Client {
   address          String?
   city             String?
   province         String?
-  language         String          @default("es")
+  language         String            @default("es")
   birthdate        DateTime?
-  isActive         Boolean         @default(true)
+  isActive         Boolean           @default(true)
   notes            String?
   firstServiceDate DateTime?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  /// How this tutor wants reminders: WHATSAPP, EMAIL or NONE. Null follows the unit's default.
+  reminderChannel  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   checkInOuts      CheckInOut[]
   contracts        Contract[]
   pets             Pet[]
   recurringPlans   RecurringPlan[]
+  reminderMessages ReminderMessage[]
   reservations     Reservation[]
   vetVisits        VetVisit[]
   vetConsents      VetConsent[]
@@ -185,6 +189,7 @@ model Pet {
   alerts              Alert[]
   checkInOuts         CheckInOut[]
   contracts           Contract[]
+  reminderMessages    ReminderMessage[]
   documents           PetDocument[]
   vaccinations        PetVaccination[]
   client              Client               @relation(fields: [clientId], references: [id])
@@ -469,14 +474,25 @@ model RecurringPlan {
 }
 
 model BusinessUnitSetting {
-  id           String   @id @default(cuid())
-  daycareId    String
-  businessUnit String
-  timezone     String
+  id                     String   @id @default(cuid())
+  daycareId              String
+  businessUnit           String
+  timezone               String
   /// Default VAT applied to new reservations and appointments in this unit.
-  vatPercent   Float    @default(15)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  vatPercent             Float    @default(15)
+  /// Whether the scheduled job sends this unit's reminders. Off until an admin turns it on.
+  remindersAuto          Boolean  @default(false)
+  /// Channels the unit uses at all: WHATSAPP, EMAIL.
+  reminderChannels       String[] @default(["WHATSAPP", "EMAIL"])
+  /// The channel of a tutor with no preference of their own.
+  reminderDefaultChannel String   @default("WHATSAPP")
+  /// Days of notice before a vaccine, a preventive or a follow-up comes due.
+  reminderLeadDays       Int      @default(7)
+  /// How a tutor reaches the business back; the email is also the Reply-To of a reminder.
+  contactPhone           String?
+  contactEmail           String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
@@ -984,4 +1000,42 @@ model VetConsent {
   @@index([petId])
   @@index([visitId])
   @@map("vet_consents")
+}
+
+/// One reminder the system sent, tried to send or decided not to send to a tutor.
+model ReminderMessage {
+  id                String    @id @default(cuid())
+  daycareId         String
+  businessUnit      String
+  /// Nullable so the log outlives the record it was about; `recipient` is the snapshot.
+  clientId          String?
+  petId             String?
+  /// CITA, VACUNA, PREVENTIVO, CONTROL or LABORATORIO.
+  kind              String
+  /// What the reminder is about, e.g. "CITA:<reservationId>" or "VACUNA:<vaccinationId>".
+  sourceKey         String
+  /// Set on automatic sends only, where it is what makes a second run a no-op.
+  dedupeKey         String?
+  /// WHATSAPP or EMAIL. Null when nothing was sent because no channel applied.
+  channel           String?
+  recipient         String?
+  /// PENDIENTE, ENVIADO, FALLIDO or OMITIDO.
+  status            String    @default("PENDIENTE")
+  /// AUTO or MANUAL.
+  trigger           String    @default("AUTO")
+  attempts          Int       @default(0)
+  providerMessageId String?
+  error             String?
+  sentByUserId      String?
+  createdAt         DateTime  @default(now())
+  sentAt            DateTime?
+
+  daycare Daycare @relation(fields: [daycareId], references: [id])
+  client  Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  pet     Pet?    @relation(fields: [petId], references: [id], onDelete: SetNull)
+
+  @@unique([daycareId, dedupeKey])
+  @@index([daycareId, createdAt])
+  @@index([daycareId, sourceKey])
+  @@map("reminder_messages")
 }

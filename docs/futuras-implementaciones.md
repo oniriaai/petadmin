@@ -79,8 +79,13 @@ encuentre aquí primero.
   en una consulta previa no cuenta.
 - **Los textos de consentimiento viven en el frontend** (`ConsultaInpatientPanels.tsx`). Son
   editables al redactar, pero una clínica no puede guardar sus propias plantillas.
-- **Los recordatorios se envían a mano.** El enlace de WhatsApp usa el número tal como está
-  guardado, solo dígitos: sin código de país puede abrir el chat equivocado o ninguno.
+- **Sin el módulo `recordatorios`, los recordatorios se envían a mano.** El enlace de WhatsApp
+  de `/veterinaria/recordatorios` usa el número tal como está guardado, solo dígitos: sin código
+  de país puede abrir el chat equivocado o ninguno. El envío por el sistema sí lo normaliza.
+- **"Enviado" no es "entregado".** Un recordatorio consta como enviado cuando el proveedor lo
+  acepta. No hay webhook que recoja la entrega, la lectura ni la respuesta del tutor.
+- **El texto de los recordatorios no es editable por el negocio.** En WhatsApp es una plantilla
+  aprobada por Meta; cambiarla es cambiar el código y la plantilla.
 - **El rol `veterinary` no ve el informe clínico.** Es solo del `admin`; en una clínica donde el
   veterinario es también quien la administra, necesita un usuario `admin`.
 - **La semilla no crea registros clínicos.** `principal` recibe la unidad, el usuario, las salas,
@@ -156,7 +161,7 @@ encuentre aquí primero.
 
 ### Clínica Veterinaria: pendientes
 1. **Archivos adjuntos**: subir el informe o la imagen de un resultado y el consentimiento firmado escaneado.
-2. **Envío automático de recordatorios**: hoy la clínica los envía desde su propio WhatsApp con el mensaje ya redactado.
+2. ✅ **Envío automático de recordatorios**: hecho, como módulo `recordatorios` (`docs/recordatorios.md`).
 3. **Stock por lote**: para que caducidades y libro de controlados sean exactos.
 4. **Carnet de vacunación imprimible** y plantillas de consentimiento propias de cada clínica.
 
@@ -165,7 +170,7 @@ El resto de limitaciones conocidas está en "Deuda Técnica Abierta", más arrib
 ### Fase 1: Automatización y Recordatorios de Citas
 1. **Notificaciones WhatsApp**:
    - Confirmación automática al agendar cita de peluquería o plan de guardería.
-   - Recordatorio automático 24 horas y 2 horas antes de la cita.
+   - ✅ Recordatorio automático el día anterior a la cita (módulo `recordatorios`). Falta el de 2 horas antes.
    - Notificación al tutor cuando la mascota pasa al estado `LISTO` en peluquería.
 2. **Alertas Sanitarias y Vacunas**:
    - Aviso visual en ficha de la mascota cuando una vacuna está por vencer o vencida. La clínica ya lo tiene en `/veterinaria/recordatorios`; falta en la ficha del núcleo, para guarderías sin el módulo `veterinaria`.
