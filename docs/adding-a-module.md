@@ -156,8 +156,8 @@ makes it scoped and gated — there is nothing to remember per route.
 - New endpoint paths should be registered through the backend module registry.
 - New frontend routes and navigation items should be registered through the
   frontend module registry.
-- Only the `auth` module may be `public: true`; everything else is mounted behind
-  authentication and the entitlement gate.
+- Only the modules in `PUBLIC_MODULE_IDS` (`auth` and `signup`) may be `public: true`;
+  everything else is mounted behind authentication and the entitlement gate.
 - A new table with a `daycareId` has three more places to go, and nothing fails at boot if one is
   missed: `TENANT_OWNED` in `backend/src/core/tenancy/guard.ts`; `deleteDaycare` in
   `backend/src/modules/platform-admin/offboarding.service.ts`, children first (and the mirror

@@ -35,6 +35,7 @@ import { InformesPage } from "../pages/informes/InformesPage";
 import { HerramientasPage } from "../pages/herramientas/HerramientasPage";
 import { ConfiguracionPage } from "../pages/configuracion/ConfiguracionPage";
 import { GuidePage } from "../pages/GuidePage";
+import { SuscripcionPage } from "../pages/suscripcion/SuscripcionPage";
 import { RoomsPage } from "../pages/salas/RoomsPage";
 import { RecurringPlansPage } from "../pages/planes/RecurringPlansPage";
 import { FinancialPage } from "../pages/transacciones/FinancialPage";
@@ -478,6 +479,14 @@ export const frontendModules: readonly FrontendModule[] = [
         path: "/configuracion",
         title: "Configuración",
         component: ConfiguracionPage,
+        roles: ["admin"],
+      },
+      // No nav item: it is reached from the account menu and from the banner, and only by a
+      // daycare that signed up online. Free because `billing` is core, like `/configuracion`.
+      {
+        path: "/suscripcion",
+        title: "Suscripción",
+        component: SuscripcionPage,
         roles: ["admin"],
       },
       { path: "/guia", title: "Guía de uso", component: GuidePage },

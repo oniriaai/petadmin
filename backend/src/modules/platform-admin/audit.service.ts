@@ -9,7 +9,9 @@ export type PlatformAction =
   | "user.provision"
   | "user.update"
   | "daycare.export"
-  | "daycare.delete";
+  | "daycare.delete"
+  | "daycare.signup"
+  | "subscription.update";
 
 export interface AuditInput {
   action: PlatformAction;
@@ -26,12 +28,13 @@ export interface AuditInput {
  * operator already made and can see took effect. A missing line is a smaller problem than a
  * console that reports failure for a successful write.
  */
-export async function recordAudit(req: Request, input: AuditInput): Promise<void> {
+export async function recordAudit(req: Request | null, input: AuditInput): Promise<void> {
   try {
     await prisma.platformAuditLog.create({
       data: {
-        actorUserId: req.user?.userId ?? "unknown",
-        actorUsername: req.user?.username ?? "unknown",
+        // No request: the system acted on its own (a visitor's signup, the billing job).
+        actorUserId: req ? (req.user?.userId ?? "unknown") : "system",
+        actorUsername: req ? (req.user?.username ?? "unknown") : "system",
         action: input.action,
         daycareId: input.daycareId ?? null,
         targetType: input.targetType ?? null,

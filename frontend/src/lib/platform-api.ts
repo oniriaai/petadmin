@@ -1,5 +1,9 @@
 import { api } from "./api";
-import type { PermissionId, ProductModuleId } from "../modules/shared/contracts";
+import type {
+  PermissionId,
+  ProductModuleId,
+  SubscriptionSummary,
+} from "../modules/shared/contracts";
 
 /**
  * Typed client for the vendor console (`/platform`).
@@ -130,5 +134,17 @@ export const platformApi = {
       permissions?: PermissionId[];
     },
   ) => api.patch<PlatformUser>(`/platform/daycares/${id}/users/${userId}`, payload),
+  /** Null for a daycare created from the console: nothing bills it. */
+  getSubscription: (id: string) =>
+    api.get<{ subscription: PlatformSubscription | null }>(`/billing/tenants/${id}`),
   audit: (limit = 50) => api.get<AuditEntry[]>(`/platform/audit?limit=${limit}`),
 };
+
+/** A self-service daycare's subscription, as the vendor sees it. */
+export interface PlatformSubscription extends SubscriptionSummary {
+  priceCents: number;
+  founderNumber: number | null;
+  founderUntil: string | null;
+  billingEmail: string;
+  failedAttempts: number;
+}

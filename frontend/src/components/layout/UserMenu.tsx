@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LogOut, ShieldCheck, User } from "lucide-react";
+import { CreditCard, LogOut, ShieldCheck, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth-context";
 
@@ -12,7 +12,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function UserMenu() {
-  const { user, logout } = useAuth();
+  const { user, logout, subscription } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,6 +71,20 @@ export function UserMenu() {
               }}
             >
               <ShieldCheck size={15} /> Consola de plataforma
+            </button>
+          )}
+
+          {/* Only where there is one to show: a daycare the vendor manages has no online plan. */}
+          {user.role === "admin" && subscription && (
+            <button
+              role="menuitem"
+              className="w-full text-left px-3 py-2 text-sm text-ink rounded-lg hover:bg-sunken flex items-center gap-2"
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/suscripcion");
+              }}
+            >
+              <CreditCard size={15} /> Suscripción
             </button>
           )}
 

@@ -11,6 +11,7 @@ import { normalizeBusinessUnit } from "../modules/shared/contracts";
 let onUnauthorized: (() => void) | null = null;
 let onModuleDisabled: ((moduleId: string | undefined) => void) | null = null;
 let onPermissionDenied: (() => void) | null = null;
+let onSubscriptionInactive: (() => void) | null = null;
 
 /**
  * An HTTP failure that keeps the status and the server's `code`.
@@ -40,6 +41,14 @@ export class ApiError extends Error {
   /** The module is enabled, but this user was not granted what the action needs. */
   get isPermissionDenied(): boolean {
     return this.code === "PERMISSION_DENIED";
+  }
+
+  /**
+   * The daycare's subscription lapsed: everything but its own billing answers 402 until it is
+   * paid. The session is still good, so this is not a reason to sign anyone out.
+   */
+  get isSubscriptionInactive(): boolean {
+    return this.code === "SUBSCRIPTION_INACTIVE";
   }
 
   /**
@@ -96,6 +105,10 @@ export function setPermissionDeniedHandler(handler: (() => void) | null) {
   onPermissionDenied = handler;
 }
 
+export function setSubscriptionInactiveHandler(handler: (() => void) | null) {
+  onSubscriptionInactive = handler;
+}
+
 /** The one endpoint whose 401 is an answer rather than an expiry. */
 function isAuthenticationAttempt(path: string): boolean {
   return path === "/auth/login";
@@ -134,6 +147,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     );
     if (error.isModuleDisabled) onModuleDisabled?.(err.module);
     if (error.isPermissionDenied) onPermissionDenied?.();
+    if (error.isSubscriptionInactive) onSubscriptionInactive?.();
     // A deactivated user or a suspended daycare ends the session. Without this the browser
     // would keep a dead token and show an error on every screen instead of returning to login.
     if (error.isSessionRevoked) onUnauthorized?.();

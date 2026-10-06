@@ -84,8 +84,16 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       DEFAULT_COUNTRY_CODE: ${DEFAULT_COUNTRY_CODE:-}
       REMINDERS_DAILY_CAP: ${REMINDERS_DAILY_CAP:-}
-      # Where the email finds the logo.
+      # Where the email finds the logo, and where PayPhone sends a customer back after paying.
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
+      # Self-service signup. Without PAYPHONE_TOKEN the public page offers no checkout.
+      PAYPHONE_TOKEN: ${PAYPHONE_TOKEN:-}
+      PAYPHONE_STORE_ID: ${PAYPHONE_STORE_ID:-}
+      PAYPHONE_CARD_KEY: ${PAYPHONE_CARD_KEY:-}
+      BILLING_ENCRYPTION_KEY: ${BILLING_ENCRYPTION_KEY:-}
+      BILLING_VAT_PERCENT: ${BILLING_VAT_PERCENT:-}
+      FOUNDER_SLOTS: ${FOUNDER_SLOTS:-}
+      RATE_LIMIT_SIGNUP: ${RATE_LIMIT_SIGNUP:-}
     expose:
       - "3001"
     ports:
@@ -143,6 +151,36 @@ services:
       MAIL_FROM: ${MAIL_FROM:-}
       DEFAULT_COUNTRY_CODE: ${DEFAULT_COUNTRY_CODE:-}
       REMINDERS_DAILY_CAP: ${REMINDERS_DAILY_CAP:-}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - jobs
+    restart: "no"
+
+  # Subscription billing, as a scheduled one-shot for the same reasons. Invoke it HOURLY from the
+  # host's cron:
+  #   docker compose -f docker-compose.prod.yml run --rm billing
+  # It renews what is due, retries declined cards, warns trials that are ending and suspends what
+  # stayed unpaid. Every charge is claimed in the database first, so an extra or an overlapping
+  # run charges nobody twice.
+  billing:
+    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
+    build:
+      context: ./backend
+    command: node dist/jobs/run-billing.js
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      PAYPHONE_TOKEN: ${PAYPHONE_TOKEN:-}
+      PAYPHONE_STORE_ID: ${PAYPHONE_STORE_ID:-}
+      PAYPHONE_CARD_KEY: ${PAYPHONE_CARD_KEY:-}
+      BILLING_ENCRYPTION_KEY: ${BILLING_ENCRYPTION_KEY:-}
+      BILLING_VAT_PERCENT: ${BILLING_VAT_PERCENT:-}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      DEFAULT_COUNTRY_CODE: ${DEFAULT_COUNTRY_CODE:-}
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
     depends_on:
       postgres:

@@ -30,8 +30,9 @@ export interface BackendModule {
   router: Router;
   description: string;
   /**
-   * Mounted without `requireAuth` and without the entitlement gate. Only the auth module,
-   * which is how a session is obtained in the first place, may set this.
+   * Mounted without `requireAuth` and without the entitlement gate. Only the modules named in
+   * `PUBLIC_MODULE_IDS` (how a session, or an account, is obtained in the first place) may set
+   * this.
    */
   public?: true;
   access?: {

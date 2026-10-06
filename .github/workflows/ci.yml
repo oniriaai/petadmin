@@ -125,6 +125,9 @@ jobs:
       # the default global ceiling of 600 requests a minute and the later ones get 429s. Raised
       # here only; test:ratelimit exercises the login limiter, which this does not touch.
       RATE_LIMIT_GLOBAL: "10000"
+      # test:signup starts several signups from one address; the default is sized for a public
+      # form, not for a suite.
+      RATE_LIMIT_SIGNUP: "1000"
 
     steps:
       - uses: actions/checkout@v7
@@ -218,6 +221,10 @@ jobs:
       - name: Reminders to tutors
         working-directory: backend
         run: npm run test:reminders
+
+      - name: Self-service signup and subscriptions
+        working-directory: backend
+        run: npm run test:signup
 
       # Last: it deliberately exhausts the login limiter, which would throttle the logins the
       # other suites need.

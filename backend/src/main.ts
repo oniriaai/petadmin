@@ -14,6 +14,7 @@ import { tenantGuardContext } from "./core/tenancy/guard";
 import { assertSecureConfig, corsOptions, globalLimiter } from "./middleware/security";
 import { startRecurringPlansScheduler } from "./modules/reservas";
 import { startRemindersScheduler } from "./modules/recordatorios";
+import { startBillingScheduler } from "./modules/suscripciones";
 import { registerBackendModules } from "./platform/module-registry";
 
 // Before anything is mounted: a production process with a default signing secret must not
@@ -99,14 +100,14 @@ registerBackendModules(app);
 app.use(errorHandler);
 
 /**
- * Whether this process also runs the scheduled work: the daily recurring-plan generation and
- * the hourly reminders.
+ * Whether this process also runs the scheduled work: the daily recurring-plan generation, the
+ * hourly reminders and the hourly subscription billing.
  *
  * In development it does, so `docker compose up` behaves as it always has. In production it
  * must not: N replicas would each run it, and a redeploy resets the timer so it may never
- * fire at all. There each is a scheduled one-shot instead (`dist/jobs/run-recurring-plans.js`
- * and `dist/jobs/run-reminders.js`, the `scheduler` and `reminders` services in
- * docker-compose.prod.yml).
+ * fire at all. There each is a scheduled one-shot instead (`dist/jobs/run-recurring-plans.js`,
+ * `dist/jobs/run-reminders.js` and `dist/jobs/run-billing.js`, the `scheduler`, `reminders` and
+ * `billing` services in docker-compose.prod.yml).
  */
 const runSchedulerInProcess = process.env.RUN_SCHEDULER_IN_PROCESS
   ? process.env.RUN_SCHEDULER_IN_PROCESS.toLowerCase() === "true"
@@ -117,9 +118,10 @@ app.listen(port, () => {
   if (runSchedulerInProcess) {
     startRecurringPlansScheduler();
     startRemindersScheduler();
+    startBillingScheduler();
   } else {
     logger.info(
-      "[recurring-plans] [reminders] schedulers en proceso desactivados; ejecútalos como jobs programados",
+      "[recurring-plans] [reminders] [billing] schedulers en proceso desactivados; ejecútalos como jobs programados",
     );
   }
 });

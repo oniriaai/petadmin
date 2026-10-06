@@ -20,8 +20,8 @@ assert.equal(mounted.length, backendModules.length, "every module must be mounte
 const publicModules = backendModules.filter((m) => m.public);
 assert.deepEqual(
   publicModules.map((m) => m.id),
-  ["auth"],
-  "auth must be the only module mounted without authentication",
+  ["auth", "signup"],
+  "auth and signup must be the only modules mounted without authentication",
 );
 
 for (const [index, module] of backendModules.entries()) {
@@ -119,6 +119,38 @@ async function main(): Promise<void> {
       `superadmin must reach ${moduleId}`,
     );
   }
+
+  // --- lapsed subscription -----------------------------------------------------
+  // Everything closes with a 402 except the module where the subscription is paid. A 403
+  // would read as "you may not"; this has to read as "pay".
+  const suspendedAdmin = {
+    role: "admin",
+    daycareId: "daycare_a",
+    businessUnit: "GLOBAL",
+    subscriptionSuspended: true,
+  };
+  for (const moduleId of ["clients", "reservations", "settings", "users"]) {
+    const refused = await runGate(moduleId, suspendedAdmin);
+    assert.equal(refused.status, 402, `${moduleId} must be closed while suspended`);
+    assert.equal(refused.body?.code, "SUBSCRIPTION_INACTIVE");
+  }
+  assert.equal(
+    (await runGate("billing", suspendedAdmin)).passed,
+    true,
+    "a suspended daycare must still reach the module where it pays",
+  );
+  // Staff of a suspended daycare are told the same thing, not that billing is not theirs.
+  assert.equal(
+    (await runGate("clients", { ...daycareUser, subscriptionSuspended: true })).status,
+    402,
+  );
+  // Billing is the account holder's: the operational roles never reach it.
+  assert.equal((await runGate("billing", daycareUser)).status, 403);
+  // The vendor is never locked out of a tenant it is supporting.
+  assert.equal(
+    (await runGate("clients", { ...superadmin, subscriptionSuspended: true })).passed,
+    true,
+  );
 
   // Role denial is 403 and never reveals whether the module was also unsold.
   const wrongRole = await runGate("guarderia", groomingUser);

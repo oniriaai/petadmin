@@ -7,6 +7,7 @@ import {
   type UnitReminderSettings,
 } from "../../core/tenancy/unit-settings";
 import { getEnabledProductModules } from "../../platform/module-access";
+import { isWhatsAppIncluded } from "../suscripciones";
 import { listReminders, type ClinicReminder } from "../veterinaria";
 import { REMINDER_KINDS, joinNames, renderReminder, type ReminderKind } from "./templates";
 
@@ -80,6 +81,11 @@ export interface TenantContext {
   hasClinic: boolean;
   /** The one unit that sends vaccine and other health reminders. */
   healthUnit: BusinessUnit | null;
+  /**
+   * False during a free trial, when reminders go out by email only: every WhatsApp message is
+   * paid for by the platform. Absent means included.
+   */
+  whatsAppIncluded?: boolean;
 }
 
 export function parseUnits(units: string): BusinessUnit[] {
@@ -102,7 +108,10 @@ export async function loadTenantContext(daycareId: string): Promise<TenantContex
   });
   if (!daycare || !daycare.isActive) return null;
   const units = parseUnits(daycare.units);
-  const modules = await getEnabledProductModules(daycareId);
+  const [modules, whatsAppIncluded] = await Promise.all([
+    getEnabledProductModules(daycareId),
+    isWhatsAppIncluded(daycareId),
+  ]);
   const hasClinic = units.includes("VETERINARY") && modules.has("veterinaria");
   return {
     daycareId,
@@ -110,6 +119,7 @@ export async function loadTenantContext(daycareId: string): Promise<TenantContex
     units,
     hasClinic,
     healthUnit: hasClinic ? "VETERINARY" : (units[0] ?? null),
+    whatsAppIncluded,
   };
 }
 
@@ -168,10 +178,13 @@ export function resolveChannel(
   return skip("El tutor no tiene WhatsApp ni correo válidos");
 }
 
-/** The channels this process can actually send on. */
-export function usableChannels(): Channel[] {
+/** The channels this process can actually send on, for this tenant. */
+export function usableChannels(tenant?: Pick<TenantContext, "whatsAppIncluded">): Channel[] {
   const modes = availableChannels();
-  return (Object.keys(modes) as Channel[]).filter((channel) => modes[channel] !== null);
+  return (Object.keys(modes) as Channel[]).filter(
+    (channel) =>
+      modes[channel] !== null && !(channel === "WHATSAPP" && tenant?.whatsAppIncluded === false),
+  );
 }
 
 interface Candidate {
@@ -317,7 +330,7 @@ export async function listDue(
     getUnitReminderSettings(tenant.daycareId, businessUnit),
     getUnitTimezone(tenant.daycareId, businessUnit),
   ]);
-  const usable = usableChannels();
+  const usable = usableChannels(tenant);
 
   return selected
     .sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime() || a.sourceKey.localeCompare(b.sourceKey))

@@ -132,3 +132,38 @@ export function NotFound() {
     </Shell>
   );
 }
+
+/**
+ * What the staff of a daycare see while its subscription is suspended. They cannot pay, so
+ * there is nothing for them to do here but know who can. The administrator never sees this:
+ * they are taken to the subscription page instead.
+ */
+export function SubscriptionSuspended() {
+  const { logout, daycare } = useAuth();
+  useDocumentTitle("Suscripción suspendida");
+  return (
+    <div className="min-h-[100dvh] bg-canvas grid place-items-center p-6">
+      <div className="card p-6 sm:p-8 max-w-xl">
+        <div
+          className="w-12 h-12 rounded-xl bg-sunken text-muted grid place-items-center mb-4"
+          aria-hidden="true"
+        >
+          <Lock size={22} />
+        </div>
+        <h1 className="font-display text-2xl leading-tight text-ink mb-2">
+          La suscripción de {daycare?.name ?? "tu negocio"} está suspendida
+        </h1>
+        <div className="text-sm text-muted space-y-3">
+          <p>
+            El acceso vuelve en cuanto se registre el pago. Quien administra la cuenta puede hacerlo
+            al iniciar sesión.
+          </p>
+          <p>Los datos de tu negocio siguen guardados.</p>
+        </div>
+        <button className="btn btn-secondary mt-6" onClick={logout}>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -148,7 +148,7 @@ export async function sendReminder(
     getUnitReminderSettings(daycareId, item.businessUnit),
     getUnitTimezone(daycareId, item.businessUnit),
   ]);
-  const decision = resolveChannel(item.client, settings, usableChannels(), options.channel);
+  const decision = resolveChannel(item.client, settings, usableChannels(tenant), options.channel);
 
   let id: string | null;
   if (options.trigger === "AUTO") {

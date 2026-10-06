@@ -3,12 +3,14 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { AppShell } from "./components/layout/AppShell";
 import { Login } from "./pages/Login";
-import { ModuleUnavailable, NotFound } from "./pages/StatusPages";
+import { ModuleUnavailable, NotFound, SubscriptionSuspended } from "./pages/StatusPages";
 import { frontendModules, ModuleRoute, validateFrontendModules } from "./modules/registry";
 import { Spinner } from "./components/ui/Spinner";
 import { useDocumentTitle } from "./lib/document-title";
 
 validateFrontendModules();
+
+const SUBSCRIPTION_PATH = "/suscripcion";
 
 /**
  * The vendor console is loaded lazily and lives outside `frontendModules`.
@@ -120,8 +122,17 @@ function ModuleRouteElement({ route }: { route: ModuleRoute }) {
 
 /** A superadmin that has not pinned a tenant belongs in the console, not in a daycare workspace. */
 function TenantWorkspace() {
-  const { user, pinnedDaycareId } = useAuth();
+  const { user, pinnedDaycareId, subscription, fullAccess } = useAuth();
+  const location = useLocation();
   if (user?.role === "superadmin" && !pinnedDaycareId) return <Navigate to="/platform" replace />;
+
+  // A lapsed subscription: the server answers 402 for everything but billing, so instead of a
+  // workspace of failing screens the admin gets the one page that fixes it and everyone else an
+  // explanation. The vendor is not restricted, as on the server.
+  if (subscription?.status === "SUSPENDED" && !fullAccess) {
+    if (user?.role !== "admin") return <SubscriptionSuspended />;
+    if (location.pathname !== SUBSCRIPTION_PATH) return <Navigate to={SUBSCRIPTION_PATH} replace />;
+  }
 
   return (
     <AppShell>

@@ -27,6 +27,11 @@ export interface PrincipalStatus {
   permissions: string[];
   /** True when the user has no daycare: there is no tenant to be suspended. */
   daycareActive: boolean;
+  /**
+   * The daycare's subscription lapsed (a trial that ended, a renewal left unpaid). Unlike an
+   * inactive daycare the session stays valid, so the admin can still reach the page to pay.
+   */
+  subscriptionSuspended: boolean;
 }
 
 interface CacheEntry {
@@ -47,7 +52,7 @@ async function loadPrincipalStatus(userId: string): Promise<PrincipalStatus | nu
       role: true,
       businessUnit: true,
       permissions: true,
-      daycare: { select: { isActive: true } },
+      daycare: { select: { isActive: true, subscription: { select: { status: true } } } },
     },
   });
   // A token naming a user that no longer exists is not a valid session.
@@ -60,6 +65,7 @@ async function loadPrincipalStatus(userId: string): Promise<PrincipalStatus | nu
     businessUnit: user.businessUnit,
     permissions: user.permissions,
     daycareActive: user.daycare ? user.daycare.isActive : true,
+    subscriptionSuspended: user.daycare?.subscription?.status === "SUSPENDED",
   };
 }
 

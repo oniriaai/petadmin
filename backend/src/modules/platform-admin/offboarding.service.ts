@@ -698,6 +698,13 @@ export async function deleteDaycare(
     count("veterinarians", await tx.veterinarian.deleteMany({ where: { daycareId } }));
     count("unitSettings", await tx.businessUnitSetting.deleteMany({ where: { daycareId } }));
     count("modules", await tx.daycareModule.deleteMany({ where: { daycareId } }));
+    count(
+      "subscriptionPayments",
+      await tx.subscriptionPayment.deleteMany({ where: { daycareId } }),
+    );
+    count("subscriptions", await tx.subscription.deleteMany({ where: { daycareId } }));
+    // The signup holds the business's tax id and its contact, and nothing points at it.
+    count("signupIntents", await tx.signupIntent.deleteMany({ where: { daycareId } }));
 
     // users.daycareId is onDelete: Restrict, so these must go before the daycare itself.
     count("users", await tx.user.deleteMany({ where: { daycareId } }));

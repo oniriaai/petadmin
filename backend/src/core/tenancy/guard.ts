@@ -105,6 +105,8 @@ const TENANT_OWNED = new Set([
   "VetLabResultValue",
   "VetConsent",
   "ReminderMessage",
+  "Subscription",
+  "SubscriptionPayment",
 ]);
 
 /**

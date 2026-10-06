@@ -3,17 +3,7 @@ import { X } from "lucide-react";
 import { platformApi, type ModuleCatalog } from "../../lib/platform-api";
 import { useAsync } from "./shared";
 import { businessUnitLabel } from "../../modules/shared/contracts";
-
-/** Turns a display name into a candidate url-safe identifier. */
-function slugify(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-}
+import { slugify } from "../../lib/billing";
 
 export function NewDaycareModal({
   catalog,

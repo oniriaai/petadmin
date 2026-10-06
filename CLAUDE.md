@@ -73,7 +73,7 @@ npx vitest run -t "name of the test"              # one test
 ### What CI runs
 
 `.github/workflows/ci.yml`: `static` (typecheck, lint, format check, architecture suite, frontend
-build + tests) → `e2e` (all fourteen suites, then greps the backend log for tenant-scope violations)
+build + tests) → `e2e` (all fifteen suites, then greps the backend log for tenant-scope violations)
 and `production-image`. Before pushing, at minimum run typecheck, lint, `format:check` and
 `test:architecture` in the backend, and typecheck, lint, `format:check`, build and test in the
 frontend.
@@ -97,7 +97,8 @@ Every backend module must be claimed by exactly one product module. `validateBac
 `registerBackendModules` mounts every non-public module as
 `requireAuth → requireModuleAccess(module) → router`. Consequences:
 
-- Never add `requireAuth` inside a router. Only `auth` is `public: true`.
+- Never add `requireAuth` inside a router. Only `auth` and `signup` are `public: true`
+  (`PUBLIC_MODULE_IDS`).
 - Role, business-unit, entitlement and permission checks live at the registry, not per route.
 - A module the tenant hasn't bought returns **403** with `code: "MODULE_DISABLED"`.
 
@@ -218,8 +219,29 @@ production it is a scheduled job (`npm run job:recurring-plans`), idempotent on
 - Outside production a channel with no credentials is **simulated** (logged, recorded as sent).
   `test:reminders` refuses to run against a backend with a live channel.
 
+### Self-service signup and subscriptions
+
+`modules/suscripciones` lets a business sign up from the public page, paying through PayPhone
+(`core/payments`, transport only) or starting a trial. `docs/suscripciones.md` has the rules.
+
+- A plan (`plans.ts`) is a price plus a preset of units and product modules. The amount is always
+  computed on the server; `tests/billing-plans.ts` pins the prices.
+- Nothing is provisioned until PayPhone confirms the charge to the server, or the trial's email
+  is verified. Daycare, admin and subscription are created in one transaction.
+- A daycare with no `Subscription` row is vendor-managed and is never billed or suspended.
+- A lapsed subscription is `SUSPENDED`, **not** `Daycare.isActive = false`: the session stays
+  valid and the gate answers **402** `SUBSCRIPTION_INACTIVE` for every module except `billing`.
+  The flag rides on the principal status, so writing it needs `invalidatePrincipalsForDaycare`.
+- The scheduled pass (`npm run job:billing`, hourly in production) claims every charge and
+  notice in the database first, so overlapping runs charge nobody twice.
+- Outside production a gateway with no credentials is **simulated**. `test:signup` refuses to
+  run against a real one.
+
 ### Frontend
 
+- The landing (`pages/Landing.tsx`) and the signup (`pages/signup/`) are their own chunks, chosen
+  in `main.tsx` before the application loads. They import nothing from the session or the
+  router; shared plan code lives in `lib/billing.ts` and `components/billing/`.
 - `src/modules/registry.tsx` is the single source for routes and navigation. Each route and nav
   item declares `roles`, `unit` and `requires` (product module ids, AND semantics). Derive
   `requires` from the endpoints the page actually calls, not the section it sits under. A route
@@ -246,4 +268,5 @@ test that the nav item disappears when its product module is absent.
 - `docs/alcance.md`, `docs/functional-design.md` — functional scope and flows.
 - `docs/recordatorios.md` — reminders to tutors: rules, requirements, setup and the WhatsApp
   templates to register.
+- `docs/suscripciones.md` — self-service signup, plans, renewals and the PayPhone setup.
 - `PRODUCT.md` — product and design context for UI work.

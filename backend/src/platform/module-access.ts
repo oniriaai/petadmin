@@ -147,6 +147,9 @@ export function requiredPermissions(
   return [...needed];
 }
 
+/** The one module a tenant with a lapsed subscription can still reach. */
+export const BILLING_MODULE_ID = "billing";
+
 export function requireModuleAccess(module: BackendModule) {
   const productModule = productModuleForBackendId(module.id);
   const isCore = productModule?.core === true;
@@ -168,6 +171,17 @@ export function requireModuleAccess(module: BackendModule) {
 
       if (user.role === "superadmin") {
         next();
+        return;
+      }
+
+      // A lapsed subscription closes everything except the module where it is paid. It is a
+      // 402 and not `DAYCARE_INACTIVE`: the session stays valid, and what the user needs to
+      // hear is "pay", not "you were removed". `requireAuth` reads it live.
+      if (user.subscriptionSuspended && module.id !== BILLING_MODULE_ID) {
+        res.status(402).json({
+          message: "La suscripción está suspendida. Renuévala para seguir usando Argos Suite.",
+          code: "SUBSCRIPTION_INACTIVE",
+        });
         return;
       }
 

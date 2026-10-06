@@ -516,6 +516,7 @@ describe("registry", () => {
       "/configuracion",
       "/guia",
       "/herramientas",
+      "/suscripcion",
     ]);
   });
 });

@@ -50,6 +50,28 @@ const LEGACY_ROLES: Record<string, UserRole> = {
   pethijos: "grooming",
 };
 
+/**
+ * Signs a session for a user. The one place a token is minted, shared by the login route and by
+ * the signup that ends with its new admin already signed in.
+ */
+export function issueSessionToken(user: {
+  id: string;
+  username: string;
+  businessUnit: string;
+  role: UserRole;
+  daycareId: string | null;
+}): string {
+  const payload: JwtPayload = {
+    userId: user.id,
+    username: user.username,
+    businessUnit: user.businessUnit,
+    role: user.role,
+    daycareId: user.daycareId,
+    tv: TOKEN_VERSION,
+  };
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "12h" });
+}
+
 interface JwtPayload {
   userId: string;
   username: string;
@@ -64,6 +86,8 @@ interface JwtPayload {
 interface AuthenticatedUser extends JwtPayload {
   /** Effective permissions, read live so a grant or a revocation bites on the next request. */
   permissions: readonly PermissionId[];
+  /** Read live too: the module gate answers 402 for everything but billing while this holds. */
+  subscriptionSuspended?: boolean;
 }
 
 declare global {
@@ -268,6 +292,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       role,
       daycareId,
       permissions: effectivePermissions(role, status.permissions),
+      subscriptionSuspended: status.subscriptionSuspended,
     };
     next();
   } catch (error) {
