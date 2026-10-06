@@ -50,6 +50,7 @@ export const PRODUCT_MODULE_IDS = [
   "inventario",
   "informes",
   "cumplimiento",
+  "recordatorios",
 ] as const;
 export type ProductModuleId = (typeof PRODUCT_MODULE_IDS)[number];
 

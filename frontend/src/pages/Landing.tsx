@@ -38,7 +38,7 @@ import marbleUrl from "../assets/landing/marble.webp";
  * The public product page (BRAND.md is the source for its copy, colours and type).
  *
  * It claims only what has shipped: no prices, customer figures, testimonials, electronic
- * invoicing or automatic reminders. The product views are screenshots of the seeded dev stack
+ * invoicing, or delivery receipts for reminders. The product views are screenshots of the seeded dev stack
  * under `src/assets/landing/`, not mock-ups.
  *
  * Icons here are Phosphor; the application itself still uses Lucide.

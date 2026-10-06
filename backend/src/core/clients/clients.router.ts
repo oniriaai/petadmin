@@ -21,6 +21,8 @@ const clientSchema = z.object({
   birthdate: z.string().optional(),
   notes: z.string().optional(),
   firstServiceDate: z.string().optional(),
+  // How the tutor wants reminders. Null is "whatever the business uses by default".
+  reminderChannel: z.enum(["WHATSAPP", "EMAIL", "NONE"]).nullable().optional(),
 });
 
 clientsRouter.get("/", async (req, res) => {

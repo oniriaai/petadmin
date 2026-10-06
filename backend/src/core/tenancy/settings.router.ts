@@ -4,7 +4,14 @@ import { z } from "zod";
 import { prisma } from "../../db";
 import { BUSINESS_UNITS, handleAuthzError, normalizeBusinessUnit } from "../../middleware/auth";
 import { getRequiredDaycareId } from "./scope";
-import { DEFAULT_TIMEZONE, DEFAULT_VAT_PERCENT, invalidateUnitSettings } from "./unit-settings";
+import {
+  DEFAULT_TIMEZONE,
+  DEFAULT_VAT_PERCENT,
+  REMINDER_CHANNELS,
+  invalidateUnitSettings,
+  reminderSettingsSelect,
+  toReminderSettings,
+} from "./unit-settings";
 
 export const settingsRouter = Router();
 
@@ -50,7 +57,13 @@ settingsRouter.get("/", async (req, res) => {
     const units = parseUnits(daycare.units);
     const rows = await prisma.businessUnitSetting.findMany({
       where: { daycareId, businessUnit: { in: units } },
-      select: { businessUnit: true, timezone: true, vatPercent: true, updatedAt: true },
+      select: {
+        businessUnit: true,
+        timezone: true,
+        vatPercent: true,
+        updatedAt: true,
+        ...reminderSettingsSelect,
+      },
     });
     const byUnit = new Map(rows.map((row) => [row.businessUnit, row]));
 
@@ -73,6 +86,7 @@ settingsRouter.get("/", async (req, res) => {
           businessUnit,
           timezone: row?.timezone ?? daycare.timezone ?? DEFAULT_TIMEZONE,
           vatPercent: row?.vatPercent ?? DEFAULT_VAT_PERCENT,
+          reminders: toReminderSettings(row),
           isConfigured: Boolean(row),
           updatedAt: row?.updatedAt ?? null,
         };
@@ -89,6 +103,18 @@ const updateSchema = z.object({
   // IANA zone names; validated against the runtime rather than a hard-coded list.
   timezone: z.string().min(1).max(64).optional(),
   vatPercent: z.number().min(0).max(100).optional(),
+  // How this unit reminds its tutors. Sent whole: the channels and their default are only
+  // valid together.
+  reminders: z
+    .object({
+      auto: z.boolean(),
+      channels: z.array(z.enum(REMINDER_CHANNELS)).min(1).max(REMINDER_CHANNELS.length),
+      defaultChannel: z.enum(REMINDER_CHANNELS),
+      leadDays: z.number().int().min(1).max(30),
+      contactPhone: z.string().trim().max(40).nullable(),
+      contactEmail: z.string().trim().email().max(200).nullable().or(z.literal("")),
+    })
+    .optional(),
 });
 
 function isValidTimezone(timezone: string): boolean {
@@ -135,22 +161,57 @@ settingsRouter.put("/:businessUnit", async (req, res) => {
       return;
     }
 
+    const { reminders } = parsed.data;
+    if (reminders && !reminders.channels.includes(reminders.defaultChannel)) {
+      // Otherwise a tutor with no preference would be sent by a channel the unit switched off.
+      res.status(400).json({ message: "El canal por defecto debe ser uno de los canales activos" });
+      return;
+    }
+    const reminderData = reminders
+      ? {
+          remindersAuto: reminders.auto,
+          reminderChannels: [...new Set(reminders.channels)],
+          reminderDefaultChannel: reminders.defaultChannel,
+          reminderLeadDays: reminders.leadDays,
+          contactPhone: reminders.contactPhone || null,
+          contactEmail: reminders.contactEmail || null,
+        }
+      : {};
+
     const setting = await prisma.businessUnitSetting.upsert({
       where: { daycareId_businessUnit: { daycareId, businessUnit } },
-      update: { timezone: parsed.data.timezone, vatPercent: parsed.data.vatPercent },
+      update: {
+        timezone: parsed.data.timezone,
+        vatPercent: parsed.data.vatPercent,
+        ...reminderData,
+      },
       create: {
         daycareId,
         businessUnit,
         timezone: parsed.data.timezone ?? daycare.timezone ?? DEFAULT_TIMEZONE,
         vatPercent: parsed.data.vatPercent ?? DEFAULT_VAT_PERCENT,
+        ...reminderData,
       },
-      select: { businessUnit: true, timezone: true, vatPercent: true, updatedAt: true },
+      select: {
+        businessUnit: true,
+        timezone: true,
+        vatPercent: true,
+        updatedAt: true,
+        ...reminderSettingsSelect,
+      },
     });
 
     // The scheduler and the pricing defaults read these through a short-lived cache.
     invalidateUnitSettings(daycareId, businessUnit);
 
-    res.json({ ...setting, isConfigured: true });
+    res.json({
+      businessUnit: setting.businessUnit,
+      timezone: setting.timezone,
+      vatPercent: setting.vatPercent,
+      updatedAt: setting.updatedAt,
+      reminders: toReminderSettings(setting),
+      isConfigured: true,
+    });
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

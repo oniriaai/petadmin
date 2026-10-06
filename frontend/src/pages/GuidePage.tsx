@@ -85,6 +85,7 @@ const sections = [
       "En **Farmacia**, entrega los medicamentos recetados: se descuentan del inventario de la clínica",
       "En **Laboratorio**, registra los resultados aunque la consulta ya esté cerrada",
       "En **Recordatorios**, escribe al tutor por WhatsApp cuando un refuerzo o un control está por vencer",
+      "Si tu plan incluye recordatorios automáticos, envíalos desde **Avisos a tutores** por WhatsApp o correo, y enciende el envío automático en **Configuración**",
     ],
   },
   {

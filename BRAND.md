@@ -146,7 +146,7 @@ The veterinary unit carries one message of its own: **one record for each pet ac
 | Veterinary line | Una sola ficha para cada mascota: de la consulta a la peluquería y la guardería. |
 | Elevator pitch | Argos Suite acompaña a las guarderías, peluquerías y veterinarias de mascotas de Ecuador para que administren su negocio con tranquilidad. Reservas, cupos, citas, fichas clínicas, personal, cobros e inventario en un solo lugar, con las cuentas de cada unidad por separado. Tú dedicas tu tiempo a las mascotas; nosotros te ayudamos con el resto. Contratas solo los módulos que usas. |
 
-**Claims the brand does not make.** Nothing that has not shipped: SRI electronic invoicing, automatic reminders (the clinic still sends them by hand from its own WhatsApp), a printable vaccination card or file attachments on lab results and consents. No medical advice in product copy, and no invented customer numbers, testimonials, time savings or prices (see `PRODUCT.md`).
+**Claims the brand does not make.** Nothing that has not shipped: SRI electronic invoicing, a printable vaccination card or file attachments on lab results and consents. Automatic reminders by WhatsApp and email have shipped as their own module, so they may be claimed, but only as what they are: a message the business's tutors receive, sent with Argos Suite. Do not promise delivery or read receipts, or replies from the tutor inside the product. No medical advice in product copy, and no invented customer numbers, testimonials, time savings or prices (see `PRODUCT.md`).
 
 ## Name and architecture
 
@@ -156,7 +156,7 @@ The veterinary unit carries one message of its own: **one record for each pet ac
 | Product | Argos Suite | Login screen, browser title, user guide, website, contracts, invoices |
 | Descriptor | Argos Suite · Gestión de guarderías, peluquerías y veterinarias | Login screen, website header |
 | Business units | Argos Guardería, Argos Peluquería, Argos Veterinaria | Pricing pages, unit selector, unit badges |
-| Modules | Argos Finanzas, Argos Inventario, Argos Informes, Argos Contratos | Pricing pages, module badges |
+| Modules | Argos Finanzas, Argos Inventario, Argos Informes, Argos Contratos, Argos Recordatorios | Pricing pages, module badges |
 | Tenant brands | Each customer's own name | Inside the app shell, which shows the tenant's name |
 
 - Write "Argos Suite" with a normal A everywhere in text. The Greek lambda (Λ) belongs only to the drawn logo.
@@ -174,6 +174,7 @@ Warm and close: a trusted colleague who loves animals and knows the business. Ne
 - **Honesta:** no invented figures or promises.
 - In the clinic, warmth never softens facts: diagnoses, doses and dates are written plainly and exactly.
 - Not cutesy: no baby talk, at most one exclamation mark, an emoji only in a celebration and never in an error.
+- **Messages to tutors** (reminders by WhatsApp and email) speak for the business, in the same voice and in **tú**: they name the business first, say what is due and how to answer, and are signed "Enviado con Argos Suite". No emoji, and nothing that reads as marketing.
 
 | Moment | Write | Avoid |
 | --- | --- | --- |
@@ -184,6 +185,7 @@ Warm and close: a trusted colleague who loves animals and knows the business. Ne
 | Vaccine due | La vacuna antirrábica de Max vence el 12 de octubre. ¿Le agendamos la cita? | Alerta: vacuna vencida. |
 | Consultation saved | Listo, la consulta de Toby quedó en su ficha. Su tutor puede verla cuando la necesite. | Registro guardado. |
 | Module not bought | Este módulo aún no está en tu plan. Escríbenos y te ayudamos a activarlo. | Acceso denegado (403). |
+| Reminder to a tutor | Hola Ana, te escribimos de Clínica Sur. Max tiene pendiente el refuerzo de Antirrábica, previsto para el 12 de octubre. Para agendar su cita, escríbenos al 099 123 4567. | Estimado cliente: su mascota tiene una vacuna vencida. |
 
 Names and numbers in these examples are illustrative; real copy reads them from data.
 
@@ -281,6 +283,7 @@ Contrast ratios are WCAG 2 values computed from the hex codes. Check the ratio o
 | Favicon set | The root of `frontend/public/` |
 | Chart colors | `frontend/src/lib/chart-theme.ts` |
 | Token check | `frontend/src/test/design-tokens.test.ts` fails on raw Tailwind palette classes |
+| Messages to tutors | Copy in `backend/src/modules/recordatorios/templates.ts`; the email's look in `email-layout.ts` beside it. The lockup it shows is `frontend/public/brand/argos-suite-lockup.png` |
 
 ## Open items
 

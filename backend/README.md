@@ -211,11 +211,15 @@ caducaba su token, hasta 12 horas después.
 | Método | Endpoint | Descripción |
 |---|---|---|
 | `GET` | `/settings` | Datos de la guardería (solo lectura) y una entrada por unidad contratada |
-| `PUT` | `/settings/:businessUnit` | IVA por defecto y zona horaria de esa unidad |
+| `PUT` | `/settings/:businessUnit` | IVA por defecto, zona horaria y recordatorios (`reminders`) de esa unidad |
 
 El IVA configurado es el que usan las reservas y citas nuevas que no indiquen otro; antes estaba
 escrito a mano como `15` en tres sitios. La zona horaria se valida contra el runtime, porque una
 zona inexistente desplazaría en silencio cada ocurrencia que genera el planificador.
+
+`reminders` se envía entero: `{ auto, channels, defaultChannel, leadDays, contactPhone,
+contactEmail }`. El canal por defecto debe ser uno de los activos y los días de aviso van de 1 a
+30. `auto` nace en `false`. La respuesta lo incluye siempre, también para una unidad sin fila.
 
 ### Autenticación (`/api/v1/auth`, público)
 
@@ -505,6 +509,37 @@ docker compose -f docker-compose.prod.yml run --rm scheduler
 `RUN_SCHEDULER_IN_PROCESS` fuerza cualquiera de los dos comportamientos. El job sale con código
 distinto de cero si alguna ocurrencia falla.
 
+### Recordatorios a tutores
+
+`/reminders` (módulo de producto `recordatorios`) envía por WhatsApp o correo lo que cada unidad
+tiene que recordar. `docs/recordatorios.md` explica las reglas y la puesta en marcha.
+
+| Método | Ruta | Qué hace |
+| --- | --- | --- |
+| `GET` | `/reminders/due?days=&kind=` | Lo que hay que recordar en las unidades de la sesión, con el canal resuelto, el mensaje ya redactado y el último envío. Array desnudo |
+| `POST` | `/reminders/send` | `{ sourceKey, channel? }`. Envía uno ahora. El destinatario sale de la ficha del tutor, nunca de la petición; una clave ajena o caducada es `404` |
+| `GET` | `/reminders/log` | Registro de envíos, paginado |
+| `GET` | `/reminders/channels` | Qué canales tiene la instalación: `live`, `simulated` o `null` |
+
+La configuración por unidad viaja en `/settings` (`reminders`), y la preferencia de cada tutor
+en `reminderChannel` de `/clients` (`WHATSAPP`, `EMAIL`, `NONE` o `null` para seguir a la unidad).
+
+Variables: `WHATSAPP_PHONE_NUMBER_ID` y `WHATSAPP_ACCESS_TOKEN` para WhatsApp; `SMTP_URL` y
+`MAIL_FROM` para correo; opcionales `WHATSAPP_API_VERSION`, `PUBLIC_SITE_URL`,
+`DEFAULT_COUNTRY_CODE` y `REMINDERS_DAILY_CAP`. Sin las de un canal, fuera de producción ese
+canal es simulado y en producción no está disponible. Los requisitos completos están en
+`docs/recordatorios.md`.
+
+El envío automático es un job, como el de planes recurrentes, pero **cada hora**:
+
+```bash
+npm run job:reminders                         # local
+docker compose -f docker-compose.prod.yml run --rm reminders
+```
+
+El transporte está en `src/core/messaging/` (Cloud API de Meta y SMTP) y no sabe nada de
+recordatorios; el texto de cada mensaje está en `src/modules/recordatorios/templates.ts`.
+
 ---
 
 ## Almacenamiento de objetos (Backblaze B2)
@@ -572,6 +607,7 @@ npm run typecheck:aux        # Solo seed/scripts/tests
 
 # Jobs
 npm run job:recurring-plans  # Generación de planes recurrentes, un solo uso
+npm run job:reminders        # Recordatorios automáticos a tutores, un solo uso (cada hora)
 
 # Base de datos
 npm run db:generate          # Prisma Client
@@ -599,6 +635,8 @@ npm run test:financial       # Transacciones y cuentas por pagar
 npm run test:checkin         # Check-in / check-out
 npm run test:settings        # Configuración por guardería y su efecto en el IVA
 npm run test:scheduler       # Idempotencia del generador de planes recurrentes
+npm run test:veterinaria     # La clínica veterinaria
+npm run test:reminders       # Recordatorios: envío, canal del tutor e idempotencia
 ```
 
 ---
@@ -608,9 +646,9 @@ npm run test:scheduler       # Idempotencia del generador de planes recurrentes
 ```bash
 docker compose up --build
 
-# Las doce suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
+# Las catorce suites; ejecuta `test:ratelimit` al final, porque agota el límite de inicios de
 # sesión a propósito y throttlearía los logins que necesitan las demás.
-for s in tenancy platform users offboarding suspension modular financial checkin settings scheduler veterinaria ratelimit; do
+for s in tenancy platform users permissions offboarding suspension modular financial checkin settings scheduler veterinaria reminders ratelimit; do
   docker exec argos-backend npm run "test:$s" || break
 done
 ```

@@ -13,6 +13,7 @@ import {
 import { tenantGuardContext } from "./core/tenancy/guard";
 import { assertSecureConfig, corsOptions, globalLimiter } from "./middleware/security";
 import { startRecurringPlansScheduler } from "./modules/reservas";
+import { startRemindersScheduler } from "./modules/recordatorios";
 import { registerBackendModules } from "./platform/module-registry";
 
 // Before anything is mounted: a production process with a default signing secret must not
@@ -98,12 +99,14 @@ registerBackendModules(app);
 app.use(errorHandler);
 
 /**
- * Whether this process also runs the daily recurring-plan generation.
+ * Whether this process also runs the scheduled work: the daily recurring-plan generation and
+ * the hourly reminders.
  *
  * In development it does, so `docker compose up` behaves as it always has. In production it
- * must not: N replicas would each run it, and a redeploy resets the 24h timer so it may never
- * fire at all. There it is a scheduled one-shot instead (`dist/jobs/run-recurring-plans.js`,
- * the `scheduler` service in docker-compose.prod.yml).
+ * must not: N replicas would each run it, and a redeploy resets the timer so it may never
+ * fire at all. There each is a scheduled one-shot instead (`dist/jobs/run-recurring-plans.js`
+ * and `dist/jobs/run-reminders.js`, the `scheduler` and `reminders` services in
+ * docker-compose.prod.yml).
  */
 const runSchedulerInProcess = process.env.RUN_SCHEDULER_IN_PROCESS
   ? process.env.RUN_SCHEDULER_IN_PROCESS.toLowerCase() === "true"
@@ -113,9 +116,10 @@ app.listen(port, () => {
   logger.info(`Argos Suite backend escuchando en http://localhost:${port}/api/v1`);
   if (runSchedulerInProcess) {
     startRecurringPlansScheduler();
+    startRemindersScheduler();
   } else {
     logger.info(
-      "[recurring-plans] scheduler en proceso desactivado; ejecútalo como job programado",
+      "[recurring-plans] [reminders] schedulers en proceso desactivados; ejecútalos como jobs programados",
     );
   }
 });

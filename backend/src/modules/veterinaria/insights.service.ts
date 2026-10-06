@@ -21,6 +21,9 @@ const tutorSelect = {
   lastName: true,
   phone: true,
   whatsapp: true,
+  email: true,
+  isActive: true,
+  reminderChannel: true,
 } as const;
 
 const patientSelect = { id: true, name: true, client: { select: tutorSelect } } as const;
@@ -28,12 +31,14 @@ const patientSelect = { id: true, name: true, client: { select: tutorSelect } } 
 /** Patients worth reminding: still with the clinic, and alive. */
 const remindablePet = (daycareId: string) => ({ daycareId, isActive: true, deceasedAt: null });
 
-interface Reminder {
+export interface Reminder {
   id: string;
   kind: ReminderKind;
   dueAt: Date;
   overdue: boolean;
   label: string;
+  /** What is due, on its own: the vaccine, the product, the reason or the test. */
+  subject: string;
   pet: { id: string; name: string };
   client: {
     id: string;
@@ -41,6 +46,9 @@ interface Reminder {
     lastName: string;
     phone: string | null;
     whatsapp: string | null;
+    email: string | null;
+    isActive: boolean;
+    reminderChannel: string | null;
   };
   visitId: string | null;
 }
@@ -174,6 +182,7 @@ export async function listReminders(
       dueAt: row.nextDue,
       overdue: row.nextDue < now,
       label: `Refuerzo de ${row.name}`,
+      subject: row.name,
       visitId: row.vetVisitId,
       ...patient(row),
     });
@@ -186,6 +195,7 @@ export async function listReminders(
       dueAt: row.nextDue,
       overdue: row.nextDue < now,
       label: `Próxima dosis de ${row.product}`,
+      subject: row.product,
       visitId: row.visitId,
       ...patient(row),
     });
@@ -199,6 +209,7 @@ export async function listReminders(
       dueAt: row.followUpDate,
       overdue: row.followUpDate < now,
       label: row.reason ? `Control: ${row.reason}` : "Control pendiente",
+      subject: row.reason ?? "",
       visitId: row.id,
       ...patient(row),
     });
@@ -211,6 +222,7 @@ export async function listReminders(
       // An order is late from the moment it is requested: the tutor is waiting on it.
       overdue: true,
       label: `Resultado pendiente: ${row.test}`,
+      subject: row.test,
       visitId: row.visitId,
       ...patient(row),
     });

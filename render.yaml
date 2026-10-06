@@ -45,7 +45,9 @@ services:
       - key: SEED_DEMO_RESET
         value: daily
       # No cron on the free plan. The generator runs once at each start instead, which for a
-      # service that sleeps after 15 idle minutes is several times a day.
+      # service that sleeps after 15 idle minutes is several times a day. The reminders pass
+      # starts with it and sends nothing: the demo has no WhatsApp or SMTP credentials, and in
+      # production a channel without them is unavailable rather than simulated.
       - key: RUN_SCHEDULER_IN_PROCESS
         value: "true"
       - key: JWT_SECRET

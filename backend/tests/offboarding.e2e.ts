@@ -297,6 +297,7 @@ async function cleanup(): Promise<void> {
       await prisma.petVaccination.deleteMany({ where: { pet: { daycareId: id } } });
       await prisma.petDocument.deleteMany({ where: { pet: { daycareId: id } } });
       await prisma.reservationPet.deleteMany({ where: { reservation: { daycareId: id } } });
+      await prisma.reminderMessage.deleteMany({ where: { daycareId: id } });
       await prisma.vetConsent.deleteMany({ where: { daycareId: id } });
       await prisma.vetProcedure.deleteMany({ where: { daycareId: id } });
       await prisma.vetLabResultValue.deleteMany({ where: { daycareId: id } });

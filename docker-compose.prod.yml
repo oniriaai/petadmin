@@ -76,6 +76,16 @@ services:
       B2_BUCKET_NAME: ${B2_BUCKET_NAME}
       B2_ENDPOINT: ${B2_ENDPOINT}
       B2_REGION: ${B2_REGION}
+      # Reminders sent by hand from the screen go out from this process.
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      DEFAULT_COUNTRY_CODE: ${DEFAULT_COUNTRY_CODE:-}
+      REMINDERS_DAILY_CAP: ${REMINDERS_DAILY_CAP:-}
+      # Where the email finds the logo.
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
     expose:
       - "3001"
     ports:
@@ -106,6 +116,34 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - jobs
+    restart: "no"
+
+  # The automatic reminders to tutors, as a scheduled one-shot for the same reasons. Invoke it
+  # HOURLY from the host's cron:
+  #   docker compose -f docker-compose.prod.yml run --rm reminders
+  # Each unit is only sent for during its own daytime, and every send is claimed in the database
+  # first, so an extra or an overlapping run sends nothing twice.
+  reminders:
+    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
+    build:
+      context: ./backend
+    command: node dist/jobs/run-reminders.js
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_API_VERSION: ${WHATSAPP_API_VERSION:-}
+      SMTP_URL: ${SMTP_URL:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      DEFAULT_COUNTRY_CODE: ${DEFAULT_COUNTRY_CODE:-}
+      REMINDERS_DAILY_CAP: ${REMINDERS_DAILY_CAP:-}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-}
     depends_on:
       postgres:
         condition: service_healthy

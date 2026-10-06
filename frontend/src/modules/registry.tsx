@@ -18,6 +18,7 @@ import {
   Pill,
   Repeat,
   Scissors,
+  Send,
   Settings,
   Stethoscope,
   Truck,
@@ -53,6 +54,7 @@ import { LaboratorioPage } from "../pages/veterinaria/LaboratorioPage";
 import { ConsentimientoPage } from "../pages/veterinaria/ConsentimientoPage";
 import { RecordatoriosPage } from "../pages/veterinaria/RecordatoriosPage";
 import { InformeClinicaPage } from "../pages/veterinaria/InformeClinicaPage";
+import { AvisosPage } from "../pages/recordatorios/AvisosPage";
 
 export type FrontendRole = TenantRole;
 export type FrontendUnit = BusinessUnit;
@@ -463,6 +465,14 @@ export const frontendModules: readonly FrontendModule[] = [
         requires: ["informes"],
         permissions: ["finanzas.read"],
       },
+      // Every unit has something to remind a tutor about, so this is not tied to one. Named
+      // apart from the clinic's "Recordatorios", which is its list of what to chase.
+      {
+        path: "/avisos",
+        title: "Avisos a tutores",
+        component: AvisosPage,
+        requires: ["recordatorios"],
+      },
       { path: "/herramientas", title: "Herramientas", component: HerramientasPage },
       {
         path: "/configuracion",
@@ -505,6 +515,7 @@ export const frontendModules: readonly FrontendModule[] = [
           requires: ["informes"],
           permissions: ["finanzas.read"],
         },
+        { to: "/avisos", label: "Avisos a tutores", icon: Send, requires: ["recordatorios"] },
         { to: "/herramientas", label: "Herramientas", icon: Wrench },
         {
           to: "/configuracion",

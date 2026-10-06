@@ -55,6 +55,71 @@ export async function getUnitVatPercent(daycareId: string, businessUnit: string)
   return (await getUnitSettings(daycareId, businessUnit)).vatPercent;
 }
 
+export const REMINDER_CHANNELS = ["WHATSAPP", "EMAIL"] as const;
+export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
+export const DEFAULT_REMINDER_LEAD_DAYS = 7;
+
+/** How one unit sends reminders to tutors. */
+export interface UnitReminderSettings {
+  /** Whether the scheduled job sends for this unit. Manual sending does not depend on it. */
+  auto: boolean;
+  channels: ReminderChannel[];
+  defaultChannel: ReminderChannel;
+  leadDays: number;
+  contactPhone: string | null;
+  contactEmail: string | null;
+}
+
+export const reminderSettingsSelect = {
+  remindersAuto: true,
+  reminderChannels: true,
+  reminderDefaultChannel: true,
+  reminderLeadDays: true,
+  contactPhone: true,
+  contactEmail: true,
+} as const;
+
+/**
+ * Reminder settings from a stored row, or the defaults for a unit that has none. Automatic
+ * sending is off by default: these messages reach real people.
+ */
+export function toReminderSettings(
+  row?: {
+    remindersAuto: boolean;
+    reminderChannels: string[];
+    reminderDefaultChannel: string;
+    reminderLeadDays: number;
+    contactPhone: string | null;
+    contactEmail: string | null;
+  } | null,
+): UnitReminderSettings {
+  const known = (value: string): value is ReminderChannel =>
+    (REMINDER_CHANNELS as readonly string[]).includes(value);
+  const channels = row ? row.reminderChannels.filter(known) : [...REMINDER_CHANNELS];
+  const stored = row?.reminderDefaultChannel ?? "WHATSAPP";
+  return {
+    auto: row?.remindersAuto ?? false,
+    channels,
+    defaultChannel:
+      known(stored) && channels.includes(stored) ? stored : (channels[0] ?? "WHATSAPP"),
+    leadDays: row?.reminderLeadDays ?? DEFAULT_REMINDER_LEAD_DAYS,
+    contactPhone: row?.contactPhone ?? null,
+    contactEmail: row?.contactEmail ?? null,
+  };
+}
+
+/** Not cached: it is read when a reminder is listed or sent, never on a request's hot path. */
+export async function getUnitReminderSettings(
+  daycareId: string,
+  businessUnit: string,
+): Promise<UnitReminderSettings> {
+  const row = await prisma.businessUnitSetting.findUnique({
+    where: { daycareId_businessUnit: { daycareId, businessUnit } },
+    select: reminderSettingsSelect,
+  });
+  return toReminderSettings(row);
+}
+
 export function invalidateUnitSettings(daycareId: string, businessUnit?: string): void {
   if (businessUnit) {
     cache.delete(keyFor(daycareId, businessUnit));

@@ -12,7 +12,8 @@ compartidos, y accede únicamente a los módulos de producto que contrató.
 - ✅ **Aislamiento por guardería**: toda fila operativa pertenece a un inquilino. Pedir un registro
   de otra guardería responde **404** (no se confirma que exista), no 403.
 - ✅ **Módulos de producto**: lo que se vende y se activa por cliente —`reservas`, `guarderia`,
-  `peluqueria`, `finanzas`, `inventario`, `informes`, `cumplimiento`— sobre un `nucleo` que toda
+  `peluqueria`, `veterinaria`, `finanzas`, `inventario`, `informes`, `cumplimiento`,
+  `recordatorios`— sobre un `nucleo` que toda
   guardería recibe. Un módulo no contratado responde **403** con `code: "MODULE_DISABLED"`.
 - ✅ **Cumplimiento en la API, no solo en la interfaz**: el control vive en el registro de módulos
   (`requireAuth → requireModuleAccess → router`), así que ocultar una pantalla nunca es suficiente
@@ -82,10 +83,10 @@ Centrado en citas y turnos individuales por servicio de estética:
 - ✅ **Laboratorio e Imagen**: Órdenes desde la consulta, mostrador de pendientes y resultados con valores, referencia e interpretación, registrables aunque la consulta ya esté cerrada.
 - ✅ **Consentimientos**: Textos por tipo editables, imprimibles y con registro de firma.
 - ✅ **Paciente Fallecido**: No admite nuevas consultas, reservas, citas ni check-in en ninguna unidad.
-- ✅ **Recordatorios**: Refuerzos de vacunas y preventivos por vencer, controles sin agendar y exámenes sin resultado, calculados al momento, con enlace de WhatsApp al tutor y resumen en el Dashboard.
+- ✅ **Recordatorios**: Refuerzos de vacunas y preventivos por vencer, controles sin agendar y exámenes sin resultado, calculados al momento, con enlace de WhatsApp al tutor y resumen en el Dashboard. Con el módulo `recordatorios`, el sistema los envía por WhatsApp o correo (sección 5).
 - ✅ **Informe Clínico**: Consultas por tipo y veterinario, facturación por categoría, cobrado, diagnósticos frecuentes y hospitalización del periodo. Solo administradores; no requiere el módulo de informes.
 - ✅ **Exportación**: La baja de una guardería exporta también la historia clínica, una hoja por tipo de registro.
-- ⏳ **Pendiente**: adjuntar archivos a resultados y consentimientos; envío automático de recordatorios. La lista completa de limitaciones conocidas está en `docs/futuras-implementaciones.md`, sección "Deuda Técnica Abierta".
+- ⏳ **Pendiente**: adjuntar archivos a resultados y consentimientos. La lista completa de limitaciones conocidas está en `docs/futuras-implementaciones.md`, sección "Deuda Técnica Abierta".
 
 ---
 
@@ -101,3 +102,26 @@ Centrado en citas y turnos individuales por servicio de estética:
   - Cuentas por pagar (`Payables`) y pagos parciales/totales categorizados por unidad.
 - ✅ **Inventario**: Control de stock e insumos clasificado por unidad de negocio.
 - ✅ **Exportación de Datos**: Reportes y exportación en formato tabular para integración con herramientas de analítica.
+
+---
+
+## 5. Recordatorios a Tutores
+
+Módulo de producto `recordatorios`, que se contrata aparte. Detalle y puesta en marcha en
+`docs/recordatorios.md`.
+
+- ✅ **Qué se recuerda**: la cita, reserva o consulta del día siguiente en las tres unidades;
+  vacunas, preventivos y controles por vencer; y exámenes sin resultado (solo a mano). Un negocio
+  sin clínica recuerda las vacunas igual, pidiendo el carnet al día.
+- ✅ **Dos canales**: WhatsApp (Cloud API de Meta, con plantillas aprobadas) y correo (SMTP), los
+  dos a nombre de Argos Suite y con el texto y la imagen de la marca.
+- ✅ **El tutor elige**: cada ficha guarda el canal preferido o que no quiere recordatorios; sin
+  preferencia vale el canal por defecto de la unidad, y si falta el dato se usa el otro canal.
+- ✅ **Automático y a mano**: un job cada hora envía por las unidades que lo encendieron, en su
+  horario diurno y sin repetir; desde **Avisos a tutores** se envía o reenvía uno eligiendo canal.
+- ✅ **Registro**: cada envío, fallo u omisión queda anotado con su motivo, y se entrega en la
+  exportación de la guardería.
+- ✅ **Números con código de país**: los teléfonos se normalizan al formato internacional antes
+  de enviar.
+- ⏳ **Pendiente**: confirmación de entrega y lectura, respuestas del tutor dentro del sistema,
+  aviso de "mascota lista" en peluquería y confirmación al agendar.
