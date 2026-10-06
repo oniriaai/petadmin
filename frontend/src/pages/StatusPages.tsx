@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeftRight, Lock, PackageX, SearchX } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
+import { useDocumentTitle } from "../lib/document-title";
 import { businessUnitLabel } from "../modules/shared/contracts";
 import type { BusinessUnit, ProductModuleId } from "../modules/shared/contracts";
 
@@ -120,6 +121,7 @@ function WrongUnit({ unit }: { unit?: BusinessUnit }) {
 }
 
 export function NotFound() {
+  useDocumentTitle("Página no encontrada");
   return (
     <Shell icon={<SearchX size={22} />} title="No encontramos esta página">
       <p>

@@ -86,9 +86,23 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    # The application is not search material, whatever the page itself says. The workspace's
+    # own routes are covered by the tag the application adds once it runs (src/App.tsx).
+    headers:
+      - path: /login
+        name: X-Robots-Tag
+        value: noindex
+      - path: /platform/*
+        name: X-Robots-Tag
+        value: noindex
     envVars:
       # Baked into the bundle at build time: the API's URL followed by /api/v1, e.g.
       # https://argos-demo-api.onrender.com/api/v1. Left empty or without the suffix, every
       # request the page makes 404s; redeploy after setting it.
       - key: VITE_API_URL
+        sync: false
+      # The site's own URL, no trailing slash. Leave it empty: without it the build disallows
+      # every crawler (frontend/vite.config.ts), which is what a demo with public passwords
+      # wants. Setting it publishes a sitemap and lets the landing be indexed.
+      - key: VITE_SITE_URL
         sync: false

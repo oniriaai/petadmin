@@ -13,6 +13,7 @@ import { useAuth } from "../lib/auth-context";
 import { ApiError } from "../lib/api";
 import { Spinner } from "../components/ui/Spinner";
 import { Lockup } from "../components/brand/Logo";
+import { useDocumentTitle } from "../lib/document-title";
 
 /**
  * Sign-in.
@@ -53,6 +54,7 @@ const CAPABILITIES = [
 ];
 
 export function Login() {
+  useDocumentTitle("Iniciar sesión");
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

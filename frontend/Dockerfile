@@ -9,16 +9,26 @@ RUN npm ci
 COPY . .
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+# The address the site is published at. It decides whether the build may be indexed: without
+# it robots.txt disallows everything (vite.config.ts).
+ARG VITE_SITE_URL
+ENV VITE_SITE_URL=$VITE_SITE_URL
 RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
 COPY --from=build /app/dist /usr/share/nginx/html
-# A single-page app: unknown paths are routes, not missing files.
+# A single-page app: unknown paths are routes, not missing files. Those routes are the
+# application, which no search engine should list; the landing at / and real files are not
+# touched.
 RUN printf 'server {\n\
   listen 80;\n\
   root /usr/share/nginx/html;\n\
   index index.html;\n\
   location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; }\n\
-  location / { try_files $uri $uri/ /index.html; }\n\
+  location / { try_files $uri $uri/ @spa; }\n\
+  location @spa {\n\
+    add_header X-Robots-Tag "noindex";\n\
+    try_files /index.html =404;\n\
+  }\n\
 }\n' > /etc/nginx/conf.d/default.conf
 EXPOSE 80

@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { AppShell } from "./components/layout/AppShell";
@@ -6,6 +6,7 @@ import { Login } from "./pages/Login";
 import { ModuleUnavailable, NotFound } from "./pages/StatusPages";
 import { frontendModules, ModuleRoute, validateFrontendModules } from "./modules/registry";
 import { Spinner } from "./components/ui/Spinner";
+import { useDocumentTitle } from "./lib/document-title";
 
 validateFrontendModules();
 
@@ -108,6 +109,7 @@ export function GuardedRoute({
 }
 
 function ModuleRouteElement({ route }: { route: ModuleRoute }) {
+  useDocumentTitle(route.title);
   const Component = route.component;
   return (
     <GuardedRoute route={route}>
@@ -139,7 +141,23 @@ function TenantWorkspace() {
   );
 }
 
+/**
+ * Nothing in the application belongs in a search result: it is a login form and what sits behind
+ * it. The landing is a separate chunk (src/main.tsx) and never runs this. A build that is not
+ * meant to be indexed at all already carries the tag (vite.config.ts).
+ */
+function useNoIndex() {
+  useEffect(() => {
+    if (document.head.querySelector('meta[name="robots"]')) return;
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, nofollow";
+    document.head.appendChild(meta);
+  }, []);
+}
+
 export function App() {
+  useNoIndex();
   return (
     <AuthProvider>
       <BrowserRouter>

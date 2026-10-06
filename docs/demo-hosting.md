@@ -44,9 +44,10 @@ marcados para introducir a mano:
 | `argos-demo-api` | `B2_KEY_ID`, `B2_APPLICATION_KEY`, `B2_BUCKET_NAME`, `B2_ENDPOINT`, `B2_REGION` | Los del bucket de la demo |
 | `argos-demo-api` | `CORS_ORIGINS` | La URL del sitio estático, sin barra final |
 | `argos-demo` | `VITE_API_URL` | La URL de la API seguida de `/api/v1` |
+| `argos-demo` | `VITE_SITE_URL` | Vacía: así la demo queda fuera de los buscadores |
 
-Las dos últimas dependen de las URLs que Render asigne, que solo se conocen tras crear los
-servicios: si el nombre ya está ocupado añade un sufijo, así que cópialas del panel en lugar de
+`CORS_ORIGINS` y `VITE_API_URL` dependen de las URLs que Render asigne, que solo se conocen
+tras crear los servicios: si el nombre ya está ocupado añade un sufijo, así que cópialas del panel en lugar de
 suponerlas. Si no coinciden con lo
 que pusiste, corrígelas y vuelve a desplegar: la API lee `CORS_ORIGINS` al arrancar y el frontend
 incrusta `VITE_API_URL` al compilar, así que un cambio en esta última exige un *Manual Deploy* del
