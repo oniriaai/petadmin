@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { Check, UserPlus, Users } from "lucide-react";
+import { Check, UserPlus, Users, X } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
+import { Badge } from "../../components/ui/Badge";
+import { SectionCard } from "../../components/ui/SectionCard";
 import { ListSkeleton, Spinner } from "../../components/ui/Spinner";
 import { PermissionChecklist } from "../../components/access/PermissionChecklist";
 import { DEFAULT_STAFF_PERMISSIONS, PERMISSIONS } from "../../modules/shared/contracts";
@@ -52,7 +54,7 @@ function summary(user: StaffUser): string {
  * had a screen for it. Permissions make that screen necessary: they are a decision the owner of
  * the business takes about its own people, not a support request.
  */
-export function EquipoSection() {
+export function EquipoSection({ onCount }: { onCount?: (count: number) => void }) {
   const { user: me, units } = useAuth();
   const [users, setUsers] = useState<StaffUser[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,27 +68,37 @@ export function EquipoSection() {
 
   const load = useCallback(async () => {
     try {
-      setUsers(await api.get<StaffUser[]>("/users"));
+      const list = await api.get<StaffUser[]>("/users");
+      // Whoever cannot sign in goes last; the order within each group is the server's.
+      setUsers([...list].sort((a, b) => Number(b.isActive) - Number(a.isActive)));
+      onCount?.(list.filter((user) => user.isActive).length);
       setError(null);
     } catch (err) {
       setError(message(err));
     }
-  }, []);
+  }, [onCount]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   return (
-    <div className="card p-5 space-y-4">
-      <div className="flex items-center justify-between gap-3 border-b border-line-subtle pb-3">
-        <h2 className="font-semibold text-ink flex items-center gap-2">
-          <Users size={17} /> Equipo
-        </h2>
-        <button className="btn-secondary btn-sm" onClick={() => setShowNew((open) => !open)}>
-          <UserPlus size={14} /> Nueva cuenta
+    <SectionCard
+      title="Equipo"
+      icon={<Users size={16} aria-hidden />}
+      bodyClassName="space-y-4 px-4 py-4 sm:px-5"
+      action={
+        <button
+          type="button"
+          className="btn-secondary btn-sm"
+          aria-expanded={showNew}
+          onClick={() => setShowNew((open) => !open)}
+        >
+          {showNew ? <X size={14} aria-hidden /> : <UserPlus size={14} aria-hidden />}
+          {showNew ? "Cancelar" : "Nueva cuenta"}
         </button>
-      </div>
+      }
+    >
       <p className="text-sm text-muted">
         Cada persona entra con su cuenta. El rol decide en qué unidad trabaja; los permisos, si
         además puede ver las finanzas, mover el inventario, exportar o eliminar registros.
@@ -115,12 +127,11 @@ export function EquipoSection() {
           {users.map((user) => (
             <li key={user.id} className="py-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-ink">
+                <div className={user.isActive ? "min-w-0" : "min-w-0 opacity-70"}>
+                  <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-ink">
                     {user.name}
-                    {!user.isActive && (
-                      <span className="badge bg-danger-soft text-danger ml-2">Inactiva</span>
-                    )}
+                    {user.id === me?.id && <Badge tone="info">Tú</Badge>}
+                    {!user.isActive && <Badge tone="danger">Inactiva</Badge>}
                   </p>
                   <p className="text-xs text-muted">
                     <span className="font-mono">{user.username}</span> · {ROLE_LABELS[user.role]}
@@ -151,7 +162,7 @@ export function EquipoSection() {
           ))}
         </ul>
       )}
-    </div>
+    </SectionCard>
   );
 }
 
