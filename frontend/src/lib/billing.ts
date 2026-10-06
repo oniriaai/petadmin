@@ -141,7 +141,8 @@ async function publicRequest<T>(path: string, body?: unknown): Promise<T> {
   try {
     res = await fetch(`${BASE}${path}`, {
       method: body === undefined ? "GET" : "POST",
-      headers: { "Content-Type": "application/json" },
+      // Only with a body: on a GET the header would cost a CORS preflight for nothing.
+      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -196,8 +197,26 @@ export type SignupCompleted =
     }
   | { status: "already"; daycare: { slug: string } };
 
+/**
+ * The catalog asked for before the page that shows it has loaded (src/main.tsx). The first
+ * reader takes it; anyone after that, a retry included, asks the server again.
+ */
+let primedCatalog: Promise<Catalog> | null = null;
+
+export function primeCatalog(): void {
+  primedCatalog = publicRequest<Catalog>("/signup/plans");
+  // Whoever takes it handles the failure; until then it must not count as unhandled.
+  primedCatalog.catch(() => {});
+}
+
+function readCatalog(): Promise<Catalog> {
+  const primed = primedCatalog;
+  primedCatalog = null;
+  return primed ?? publicRequest<Catalog>("/signup/plans");
+}
+
 export const signupApi = {
-  catalog: () => publicRequest<Catalog>("/signup/plans"),
+  catalog: readCatalog,
   start: (body: SignupRequest) => publicRequest<SignupStarted>("/signup/intents", body),
   confirm: (body: { id: string; clientTransactionId: string; ctoken: string | null }) =>
     publicRequest<SignupCompleted>("/signup/confirm", body),

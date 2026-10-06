@@ -9,32 +9,32 @@ import {
   useScroll,
   useSpring,
 } from "motion/react";
-// One module per icon: the package's index holds every glyph, and the dev server would bundle
-// all of them.
-import { ArrowRightIcon as ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight";
-import { ArrowsClockwiseIcon as ArrowsClockwise } from "@phosphor-icons/react/dist/csr/ArrowsClockwise";
-import { BedIcon as Bed } from "@phosphor-icons/react/dist/csr/Bed";
-import { CalendarBlankIcon as CalendarBlank } from "@phosphor-icons/react/dist/csr/CalendarBlank";
-import { CalendarCheckIcon as CalendarCheck } from "@phosphor-icons/react/dist/csr/CalendarCheck";
-import { ChartBarIcon as ChartBar } from "@phosphor-icons/react/dist/csr/ChartBar";
-import { ClipboardTextIcon as ClipboardText } from "@phosphor-icons/react/dist/csr/ClipboardText";
-import { FileTextIcon as FileText } from "@phosphor-icons/react/dist/csr/FileText";
-import { KanbanIcon as Kanban } from "@phosphor-icons/react/dist/csr/Kanban";
-import { NotepadIcon as Notepad } from "@phosphor-icons/react/dist/csr/Notepad";
-import { PackageIcon as Package } from "@phosphor-icons/react/dist/csr/Package";
-import { ReceiptIcon as Receipt } from "@phosphor-icons/react/dist/csr/Receipt";
-import { ScissorsIcon as Scissors } from "@phosphor-icons/react/dist/csr/Scissors";
-import { SignInIcon as SignIn } from "@phosphor-icons/react/dist/csr/SignIn";
-import { SquaresFourIcon as SquaresFour } from "@phosphor-icons/react/dist/csr/SquaresFour";
-import { VanIcon as Van } from "@phosphor-icons/react/dist/csr/Van";
-import { WalletIcon as Wallet } from "@phosphor-icons/react/dist/csr/Wallet";
-import type { Icon } from "@phosphor-icons/react";
+import {
+  ArrowRightBold,
+  ArrowsClockwise,
+  Bed,
+  CalendarBlank,
+  CalendarCheck,
+  ChartBar,
+  ClipboardText,
+  FileText,
+  Kanban,
+  Notepad,
+  Package,
+  Receipt,
+  Scissors,
+  SignIn,
+  SquaresFour,
+  Van,
+  Wallet,
+} from "../components/icons/PublicIcons";
+import type { Icon } from "../components/icons/PublicIcons";
 import { Lockup } from "../components/brand/Logo";
 import { Meander } from "../components/brand/Meander";
 import { cls } from "../lib/cls";
 import marbleUrl from "../assets/landing/marble.webp";
 import { Pricing } from "./LandingPricing";
-import { EASE, Reveal } from "./LandingReveal";
+import { EASE, REVEAL_STYLES, Reveal, useSlidingPill } from "./LandingReveal";
 
 /**
  * The public product page (BRAND.md is the source for its copy, colours and type).
@@ -44,7 +44,8 @@ import { EASE, Reveal } from "./LandingReveal";
  * from the catalog the checkout charges from. The product views are screenshots of the seeded dev stack
  * under `src/assets/landing/`, not mock-ups.
  *
- * Icons here are Phosphor; the application itself still uses Lucide.
+ * Icons here are Phosphor, drawn inline (`components/icons/PublicIcons.tsx`); the application
+ * itself still uses Lucide.
  *
  * `main.tsx` mounts this page on its own, outside the application's router and session, so it
  * links to the application with plain anchors.
@@ -55,7 +56,8 @@ const CONTACT_HREF = (import.meta.env.VITE_CONTACT_URL as string | undefined) ??
 
 /**
  * Motion's animation engine arrives in its own chunk, after the page has painted. Until then an
- * `m` element simply holds its initial style, which is why nothing above the fold depends on it.
+ * `m` element simply holds its initial style, which is why nothing depends on it to be seen: the
+ * hero's entrance and the sections' are CSS, and what Motion animates starts out visible.
  */
 const loadMotionFeatures = () => import("./LandingMotion").then((module) => module.default);
 
@@ -83,7 +85,9 @@ function shotSources(name: string) {
  * The dark palette, derived from the shell tokens in BRAND.md (Tinta, its ink and its muted
  * text). Scoped to this page: the application has no dark canvas of its own.
  *
- * The hero's entrance is here too, in CSS, so the first screen does not wait for Motion.
+ * The hero's entrance is here too, in CSS, so the first screen does not wait for Motion. The
+ * headline and the screenshot only rise: an element that starts transparent is not counted as
+ * the page's largest paint, and those two are it.
  *
  * The marble is one seamless tile of veins stored as transparency and used as a mask over the
  * ink colour, so the same file veins the light canvas dark and the dark canvas light. It lies
@@ -121,12 +125,20 @@ const PAGE_STYLES = `
 @keyframes landing-rise {
   from { opacity: 0; transform: translateY(16px); }
 }
+@keyframes landing-rise-solid {
+  from { transform: translateY(16px); }
+}
 @media (prefers-reduced-motion: no-preference) {
-  .landing-rise {
+  .landing-rise,
+  .landing-rise-solid {
     animation: landing-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: calc(var(--rise-order) * 90ms);
   }
-}`;
+  .landing-rise-solid {
+    animation-name: landing-rise-solid;
+  }
+}
+${REVEAL_STYLES}`;
 
 type UnitId = "guarderia" | "peluqueria" | "veterinaria";
 
@@ -255,7 +267,7 @@ function ContactButton({ className }: { className?: string }) {
   return (
     <a href={CONTACT_HREF} className={cls("btn-primary whitespace-nowrap", className)}>
       Escríbenos
-      <ArrowRight size={16} weight="bold" aria-hidden="true" />
+      <ArrowRightBold size={16} aria-hidden="true" />
     </a>
   );
 }
@@ -309,7 +321,7 @@ function Hero() {
       </p>
       <h1
         style={rise(1)}
-        className="landing-rise mt-4 max-w-5xl font-display text-4xl leading-[1.1] text-ink md:text-5xl lg:text-6xl"
+        className="landing-rise-solid mt-4 max-w-5xl font-display text-4xl leading-[1.1] text-ink md:text-5xl lg:text-6xl"
       >
         Cuidamos tu negocio, para que tú cuides de ellos.
       </h1>
@@ -327,7 +339,7 @@ function Hero() {
             </a>
           </div>
         </div>
-        <div style={rise(3)} className="landing-rise">
+        <div style={rise(3)} className="landing-rise-solid">
           <Shot
             eager
             name="panel"
@@ -343,6 +355,7 @@ function Hero() {
 function Units() {
   const [activeId, setActiveId] = useState<UnitId>("guarderia");
   const tabRefs = useRef<Partial<Record<UnitId, HTMLButtonElement | null>>>({});
+  const slider = useSlidingPill(activeId);
   const active = UNITS.find((unit) => unit.id === activeId) ?? UNITS[0];
 
   /** Arrow keys move between tabs, as the tablist pattern expects. */
@@ -370,11 +383,13 @@ function Units() {
         </Reveal>
 
         <div
+          ref={slider.group}
           role="tablist"
           aria-label="Unidades de negocio"
           onKeyDown={onKeyDown}
-          className="mt-8 flex flex-wrap gap-2"
+          className="relative mt-8 flex flex-wrap gap-2"
         >
+          {slider.pill(cls("rounded-lg", active.tab))}
           {UNITS.map((unit) => {
             const selected = unit.id === activeId;
             return (
@@ -382,6 +397,7 @@ function Units() {
                 key={unit.id}
                 ref={(node) => {
                   tabRefs.current[unit.id] = node;
+                  slider.option(unit.id)(node);
                 }}
                 type="button"
                 role="tab"
@@ -395,14 +411,7 @@ function Units() {
                   selected ? "text-white" : "text-muted hover:bg-sunken hover:text-ink",
                 )}
               >
-                {selected && (
-                  <m.span
-                    layoutId="unit-tab"
-                    className={cls("absolute inset-0 rounded-lg", unit.tab)}
-                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                  />
-                )}
-                <span className="relative">{unit.name}</span>
+                {unit.name}
               </button>
             );
           })}
@@ -444,7 +453,7 @@ function Units() {
               <Shot
                 name={active.shot}
                 alt={active.shotAlt}
-                sizes="(min-width: 1280px) 1150px, 90vw"
+                sizes="(min-width: 1280px) 1150px, (min-width: 640px) calc(100vw - 7rem), calc(100vw - 4.5rem)"
                 className="mt-8"
               />
             </m.div>
@@ -532,7 +541,7 @@ function Modules() {
             <div className="pl-6 sm:pl-8">
               <img
                 {...shotSources("finanzas")}
-                sizes="(min-width: 768px) min(62vw, 775px), 100vw"
+                sizes="(min-width: 768px) min(62vw, 775px), calc(100vw - 3.5rem)"
                 alt="Pantalla de gestión financiera con los cobros del periodo"
                 width={1440}
                 height={900}
@@ -578,7 +587,7 @@ function Modules() {
             <div className="pl-6 sm:pl-8">
               <img
                 {...shotSources("informes")}
-                sizes="(min-width: 768px) min(62vw, 775px), 100vw"
+                sizes="(min-width: 768px) min(62vw, 775px), calc(100vw - 3.5rem)"
                 alt="Pantalla de informes con los gráficos del periodo"
                 width={1440}
                 height={900}

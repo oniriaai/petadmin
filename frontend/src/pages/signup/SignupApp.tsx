@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
-import { ArrowRightIcon as ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight";
-import { EnvelopeSimpleIcon as Envelope } from "@phosphor-icons/react/dist/csr/EnvelopeSimple";
-import { WarningCircleIcon as Warning } from "@phosphor-icons/react/dist/csr/WarningCircle";
+import {
+  ArrowRight,
+  ArrowRightBold,
+  EnvelopeSimple as Envelope,
+  WarningCircle as Warning,
+} from "../../components/icons/PublicIcons";
 import { Lockup } from "../../components/brand/Logo";
 import { Spinner } from "../../components/ui/Spinner";
 import {
@@ -555,7 +558,7 @@ function SignupForm({ catalog }: { catalog: Catalog }) {
                 : isSubmitting
                   ? "Creando tu prueba…"
                   : "Empezar la prueba"}
-              {!isSubmitting && <ArrowRight size={16} weight="bold" aria-hidden="true" />}
+              {!isSubmitting && <ArrowRightBold size={16} aria-hidden="true" />}
             </button>
             {mode === "PAID" && (
               <p className="mt-3 text-xs leading-relaxed text-muted">

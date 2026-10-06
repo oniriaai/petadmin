@@ -1,8 +1,25 @@
 import React, { useState, useRef } from "react";
-import axios from "axios";
 import { X, UploadCloud } from "lucide-react";
 import { api } from "../../lib/api";
 import { Spinner } from "./Spinner";
+
+/** A PUT with upload progress, which `fetch` cannot report. */
+function putWithProgress(url: string, file: File, onProgress: (percent: number) => void) {
+  return new Promise<void>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url);
+    xhr.setRequestHeader("Content-Type", file.type);
+    xhr.upload.onprogress = (event) => {
+      onProgress(Math.round((event.loaded * 100) / (event.total || 1)));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(xhr.responseText || `HTTP ${xhr.status}`));
+    };
+    xhr.onerror = () => reject(new Error("Network error"));
+    xhr.send(file);
+  });
+}
 
 interface Props {
   value?: string;
@@ -47,19 +64,9 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
 
       // 2. Upload to B2 directly
       try {
-        await axios.put(uploadUrl, file, {
-          headers: {
-            "Content-Type": file.type,
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / (progressEvent.total || 1),
-            );
-            setProgress(percentCompleted);
-          },
-        });
+        await putWithProgress(uploadUrl, file, setProgress);
       } catch (uploadErr: any) {
-        console.error("Direct B2 upload failed:", uploadErr.response?.data || uploadErr.message);
+        console.error("Direct B2 upload failed:", uploadErr.message);
         throw new Error("No pudimos subir el archivo al almacenamiento. Inténtalo de nuevo.");
       }
 
