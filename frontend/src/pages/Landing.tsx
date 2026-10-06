@@ -45,8 +45,9 @@ import { EASE, REVEAL_STYLES, Reveal, useSlidingPill } from "./LandingReveal";
  *
  * It claims only what has shipped: no customer figures, testimonials, electronic invoicing, or
  * delivery receipts for reminders. The prices are not written here: `LandingPricing` reads them
- * from the catalog the checkout charges from. The product views are screenshots of the seeded dev stack
- * under `src/assets/landing/`, not mock-ups.
+ * from the catalog the checkout charges from. The product views under `src/assets/landing/` are
+ * screenshots of the main demo tenant, not mock-ups. Take them from a database seeded for the
+ * purpose: one the e2e suites have run against shows their test rooms and tutors.
  *
  * Icons here are Phosphor, drawn inline (`components/icons/PublicIcons.tsx`); the application
  * itself still uses Lucide.
