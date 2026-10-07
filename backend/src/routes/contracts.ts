@@ -4,6 +4,7 @@ import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 import { readPage, sendPage } from "../utils/pagination";
+import { assertClientInTenant } from "../utils/validation";
 
 export const contractsRouter = Router();
 
@@ -53,11 +54,26 @@ contractsRouter.post("/", async (req, res) => {
       return;
     }
     const { startDate, endDate, ...rest } = parsed.data;
+    // clientId and petId come from the request body: both are resolved against this daycare
+    // before they are stored, or the contract would point at another tenant's tutor and echo
+    // the name back.
+    const daycareId = getRequiredDaycareId(req);
+    await assertClientInTenant(rest.clientId, daycareId);
+    if (rest.petId) {
+      const pet = await prisma.pet.findFirst({
+        where: { id: rest.petId, clientId: rest.clientId, daycareId },
+        select: { id: true },
+      });
+      if (!pet) {
+        res.status(404).json({ message: "Animal no encontrado" });
+        return;
+      }
+    }
     const contract = await prisma.contract.create({
       data: {
         ...rest,
         businessUnit: bu,
-        daycareId: getRequiredDaycareId(req),
+        daycareId,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
       },

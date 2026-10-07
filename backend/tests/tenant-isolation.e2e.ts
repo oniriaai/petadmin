@@ -351,6 +351,169 @@ async function run() {
     }
   });
 
+  await test("Un identificador del cuerpo no enlaza registros de otra guardería", async () => {
+    // Every one of these handlers took a foreign key from the body and stored it without
+    // resolving it against the caller's daycare. The row landed in the attacker's tenant
+    // pointing at the victim's record, and the response (or the next read) carried the
+    // victim's data back: a tutor's name on a contract, the whole provider on a payable, the
+    // full client and pet rows on a daycare check-in.
+    const { prisma } = await import("../src/db");
+    const attacker = clientFor(await loginAs("admin_global", "admin123"), undefined, "DAYCARE");
+    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+    const nextMonth = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+    const ids = { client: "", pet: "", provider: "", room: "", reservation: "" };
+
+    try {
+      // The victim's records are written straight to the demo tenant, which is seeded without
+      // clients, and removed again below whatever happens.
+      const victim = await prisma.client.create({
+        data: { daycareId: DEMO_ID, firstName: "Aislamiento", lastName: "Ajeno" },
+      });
+      ids.client = victim.id;
+      const victimPet = await prisma.pet.create({
+        data: { daycareId: DEMO_ID, clientId: victim.id, name: "Ajena", sex: "F" },
+      });
+      ids.pet = victimPet.id;
+      ids.provider = (
+        await prisma.provider.create({ data: { daycareId: DEMO_ID, name: "Aislamiento Ajeno" } })
+      ).id;
+      ids.room = (
+        await prisma.room.create({
+          data: { daycareId: DEMO_ID, name: "Aislamiento Ajeno", businessUnit: "DAYCARE" },
+        })
+      ).id;
+      ids.reservation = (
+        await prisma.reservation.create({
+          data: {
+            daycareId: DEMO_ID,
+            businessUnit: "DAYCARE",
+            clientId: victim.id,
+            service: "GUARDERIA",
+            pets: { create: [{ petId: victimPet.id }] },
+          },
+        })
+      ).id;
+
+      const ownPet = await prisma.pet.findFirst({
+        where: { daycareId: MAIN_ID, isActive: true, deceasedAt: null },
+        select: { id: true, clientId: true },
+      });
+      const ownRoom = await prisma.room.findFirst({
+        where: { daycareId: MAIN_ID, businessUnit: "DAYCARE", isActive: true },
+        select: { id: true },
+      });
+      if (!ownPet || !ownRoom) throw new Error("Faltan mascotas o salas sembradas");
+
+      const plan = {
+        startDate: tomorrow,
+        endDate: nextMonth,
+        startTime: "08:00",
+        endTime: "17:00",
+        daysOfWeek: "1",
+      };
+      const attempts: Array<[string, string, Record<string, unknown>]> = [
+        ["Contrato con tutor ajeno", "/contracts", { clientId: ids.client, name: "Aislamiento" }],
+        [
+          "Contrato con mascota ajena",
+          "/contracts",
+          { clientId: ownPet.clientId, petId: ids.pet, name: "Aislamiento" },
+        ],
+        [
+          "Alerta sobre mascota ajena",
+          "/alerts",
+          { petId: ids.pet, type: "SALUD", title: "Aislamiento", description: "Aislamiento" },
+        ],
+        [
+          "Cuenta por pagar con proveedor ajeno",
+          "/payables",
+          {
+            providerId: ids.provider,
+            type: "GASTO",
+            category: "Aislamiento",
+            description: "Aislamiento",
+            subtotal: 1,
+          },
+        ],
+        [
+          "Ingreso con reserva ajena",
+          "/incomes",
+          { reservationId: ids.reservation, concept: "Aislamiento", amount: 1 },
+        ],
+        [
+          "Plan recurrente con tutor ajeno",
+          "/recurring-plans",
+          { ...plan, clientId: ids.client, petIds: ids.pet },
+        ],
+        [
+          "Plan recurrente con mascota ajena",
+          "/recurring-plans",
+          { ...plan, clientId: ownPet.clientId, petIds: ids.pet },
+        ],
+        [
+          "Plan recurrente en sala ajena",
+          "/recurring-plans",
+          { ...plan, clientId: ownPet.clientId, petIds: ownPet.id, roomId: ids.room },
+        ],
+        [
+          "Check-in de guardería con mascota ajena",
+          "/guarderia/attendance/check-in",
+          { petId: ids.pet, clientId: ids.client, roomId: ownRoom.id },
+        ],
+        [
+          "Check-in de guardería contra reserva ajena",
+          "/guarderia/attendance/check-in",
+          {
+            petId: ownPet.id,
+            clientId: ownPet.clientId,
+            roomId: ownRoom.id,
+            reservationId: ids.reservation,
+          },
+        ],
+      ];
+
+      for (const [what, path, body] of attempts) {
+        const denied = await attacker.post(path, body);
+        if (denied.status !== 404 && denied.status !== 400) {
+          throw new Error(`${what}: esperaba 404 o 400, recibió ${denied.status}`);
+        }
+        const answer = JSON.stringify(denied.data);
+        if (answer.includes("Ajeno") || answer.includes("Ajena")) {
+          throw new Error(`${what}: la respuesta filtró datos de otra guardería`);
+        }
+      }
+
+      const untouched = await prisma.reservation.findUnique({
+        where: { id: ids.reservation },
+        select: { status: true },
+      });
+      if (untouched?.status !== "PENDIENTE") {
+        throw new Error("El check-in cambió el estado de la reserva de otra guardería");
+      }
+    } finally {
+      // Whatever an attempt managed to write goes first: it holds a foreign key to the fixture.
+      const pet = ids.pet || "none";
+      const client = ids.client || "none";
+      const reservation = ids.reservation || "none";
+      await prisma.checkInOut.deleteMany({
+        where: { OR: [{ petId: pet }, { clientId: client }, { reservationId: reservation }] },
+      });
+      await prisma.contract.deleteMany({ where: { OR: [{ clientId: client }, { petId: pet }] } });
+      await prisma.alert.deleteMany({ where: { petId: pet } });
+      await prisma.payable.deleteMany({ where: { providerId: ids.provider || "none" } });
+      await prisma.income.deleteMany({ where: { reservationId: reservation } });
+      await prisma.recurringPlan.deleteMany({
+        where: { OR: [{ clientId: client }, { petIds: pet }, { roomId: ids.room || "none" }] },
+      });
+      await prisma.reservationPet.deleteMany({ where: { reservationId: reservation } });
+      await prisma.reservation.deleteMany({ where: { id: reservation } });
+      await prisma.room.deleteMany({ where: { id: ids.room || "none" } });
+      await prisma.provider.deleteMany({ where: { id: ids.provider || "none" } });
+      await prisma.pet.deleteMany({ where: { id: pet } });
+      await prisma.client.deleteMany({ where: { id: client } });
+      await prisma.$disconnect();
+    }
+  });
+
   await test("La clínica no lee ni escribe sobre registros de otra guardería", async () => {
     // `demo` did not buy the clinic, so the gate answers before tenancy is ever consulted. A
     // second tenant that DID buy it is the only way to exercise the clinic's own scoping.
@@ -959,6 +1122,28 @@ async function run() {
       404,
       "Borrado de un archivo de otra guardería",
     );
+
+    // The bucket also holds what belongs to no tenant: the database backups. A reference to
+    // one (on another host, so it is accepted as a plain link) must not authorize deleting it.
+    const backupKey = "backups/argos-aislamiento.dump";
+    try {
+      expectStatus(
+        (
+          await attacker.put(`/pets/${petId}`, {
+            photoUrl: `https://evil.example.com/${backupKey}`,
+          })
+        ).status,
+        200,
+        "Foto que enlaza fuera del almacenamiento",
+      );
+      expectStatus(
+        (await attacker.post("/storage/remove", { key: backupKey })).status,
+        404,
+        "Borrado de una copia de seguridad referenciada desde una mascota",
+      );
+    } finally {
+      await attacker.put(`/pets/${petId}`, { photoUrl: before ?? "" });
+    }
   });
 
   const passed = results.filter((r) => r.passed).length;

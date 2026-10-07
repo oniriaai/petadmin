@@ -3,6 +3,7 @@ import {
   buildPetPhotoKey,
   daycarePrefix,
   isOwnKey,
+  isTenantReferableKey,
   namesForeignPrefix,
   resolveObjectKey,
   sanitizeSegment,
@@ -172,5 +173,14 @@ assert.equal(
 );
 assert.equal(namesForeignPrefix("pets/Max_M/1-a.jpg", "daycare_b"), false);
 assert.equal(namesForeignPrefix("https://images.example.com/dog.jpg", "daycare_b"), false);
+
+// --- isTenantReferableKey ------------------------------------------------------
+// What a daycare's rows may reference, and so delete: its own prefix and pre-tenancy pet
+// photos. Everything else in the bucket (the database backups) belongs to no tenant.
+assert.equal(isTenantReferableKey(a, "daycare_a"), true);
+assert.equal(isTenantReferableKey(a, "daycare_b"), false);
+assert.equal(isTenantReferableKey("pets/Max_M/1-a.jpg", "daycare_b"), true);
+assert.equal(isTenantReferableKey("backups/argos-20260101T000000Z.dump", "daycare_a"), false);
+assert.equal(isTenantReferableKey("petsx/1-a.jpg", "daycare_a"), false);
 
 console.log("✓ storage object-key construction and resolution");

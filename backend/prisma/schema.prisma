@@ -105,6 +105,8 @@ model User {
   /// Granted permission ids (src/core/tenancy/permissions.ts). Ignored for an admin, which
   /// holds every permission.
   permissions   String[]                     @default([])
+  /// Moved on when the password is reset; a token issued in an earlier epoch is refused.
+  sessionEpoch  Int                          @default(0)
   createdAt     DateTime                     @default(now())
   checkInOuts   CheckInOut[]
   veterinarian  Veterinarian?

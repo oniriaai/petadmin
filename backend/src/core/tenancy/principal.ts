@@ -25,6 +25,8 @@ export interface PrincipalStatus {
   businessUnit: string;
   /** As stored. `effectivePermissions` turns it into what the caller actually holds. */
   permissions: string[];
+  /** Moved on by a password reset. A token from an earlier epoch is no longer a session. */
+  sessionEpoch: number;
   /** True when the user has no daycare: there is no tenant to be suspended. */
   daycareActive: boolean;
   /**
@@ -52,6 +54,7 @@ async function loadPrincipalStatus(userId: string): Promise<PrincipalStatus | nu
       role: true,
       businessUnit: true,
       permissions: true,
+      sessionEpoch: true,
       daycare: { select: { isActive: true, subscription: { select: { status: true } } } },
     },
   });
@@ -64,6 +67,7 @@ async function loadPrincipalStatus(userId: string): Promise<PrincipalStatus | nu
     role: user.role,
     businessUnit: user.businessUnit,
     permissions: user.permissions,
+    sessionEpoch: user.sessionEpoch,
     daycareActive: user.daycare ? user.daycare.isActive : true,
     subscriptionSuspended: user.daycare?.subscription?.status === "SUSPENDED",
   };

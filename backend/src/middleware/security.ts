@@ -67,28 +67,54 @@ export const globalLimiter = rateLimit({
   handler: tooMany("Demasiadas peticiones. Espera un momento e inténtalo de nuevo."),
 });
 
+const LOGIN_WINDOW_MS = 10 * 60_000;
+const LOGIN_LIMIT = Number(process.env.RATE_LIMIT_LOGIN ?? 10);
+
+function submittedAccount(req: Request): string {
+  const field = (value: unknown) => (typeof value === "string" ? value.trim().toLowerCase() : "");
+  // Usernames are unique per daycare, so the slug is part of which account is being guessed.
+  return `${field(req.body?.daycare)}|${field(req.body?.username)}`;
+}
+
+function failedLoginLimiter(limit: number, keyGenerator: (req: Request) => string) {
+  return rateLimit({
+    windowMs: LOGIN_WINDOW_MS,
+    limit,
+    // Successful logins are not counted, so a busy shift signing in on a shared NAT is
+    // unaffected.
+    skipSuccessfulRequests: true,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator,
+    handler: tooMany("Demasiados intentos de inicio de sesión. Espera unos minutos."),
+  });
+}
+
+// ipKeyGenerator normalises IPv6 into a subnet key; a raw req.ip would let an attacker rotate
+// through a /64 they control for free.
+const clientKey = (req: Request) => ipKeyGenerator(req.ip ?? "");
+
 /**
- * Sign-in attempts, keyed by IP **and** submitted username.
+ * Failed sign-in attempts, counted three ways.
  *
- * Both halves matter: the IP key stops one host working through a list of accounts, and the
- * username key stops a distributed attempt at one known account. Successful logins are not
- * counted, so a busy shift signing in on a shared NAT is unaffected.
+ * There used to be one counter, keyed by IP and username together, described as covering both
+ * a host working through a list of accounts and a distributed attempt at one account. It
+ * covered neither: every new username was a fresh key for the same host, and every new host a
+ * fresh key for the same username. Each of those now has a counter of its own, wider than the
+ * first so that a front desk mistyping passwords behind one address is not what trips it:
+ *
+ *   - one host at one account: RATE_LIMIT_LOGIN (10);
+ *   - one host at any number of accounts: RATE_LIMIT_LOGIN_IP (five times that);
+ *   - any number of hosts at one account: RATE_LIMIT_LOGIN_ACCOUNT (five times that).
  */
-export const loginLimiter = rateLimit({
-  windowMs: 10 * 60_000,
-  limit: Number(process.env.RATE_LIMIT_LOGIN ?? 10),
-  skipSuccessfulRequests: true,
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
-  keyGenerator(req) {
-    // ipKeyGenerator normalises IPv6 into a subnet key; a raw req.ip would let an attacker
-    // rotate through a /64 they control for free.
-    const ip = ipKeyGenerator(req.ip ?? "");
-    const username = typeof req.body?.username === "string" ? req.body.username.toLowerCase() : "";
-    return `${ip}|${username}`;
-  },
-  handler: tooMany("Demasiados intentos de inicio de sesión. Espera unos minutos."),
-});
+export const loginLimiter = [
+  failedLoginLimiter(Number(process.env.RATE_LIMIT_LOGIN_IP ?? LOGIN_LIMIT * 5), clientKey),
+  failedLoginLimiter(
+    Number(process.env.RATE_LIMIT_LOGIN_ACCOUNT ?? LOGIN_LIMIT * 5),
+    submittedAccount,
+  ),
+  failedLoginLimiter(LOGIN_LIMIT, (req) => `${clientKey(req)}|${submittedAccount(req)}`),
+];
 
 /**
  * Signups from the public page, keyed by IP.
@@ -135,13 +161,20 @@ export const storageLimiter = rateLimit({
  * could mint a superadmin token. `prisma/seed.ts` already refuses to run without
  * SUPERADMIN_PASSWORD outside development; this is the same rule for the rest.
  */
+/**
+ * Secrets that are published in this repository: the code's own fallback and the value in
+ * `.env.example`. The second is longer than 32 characters, so the length rule alone let a
+ * production deployment started from a copied `.env` sign its tokens with a public key.
+ */
+const KNOWN_JWT_SECRETS = ["change_me", "dev_only_insecure_secret"];
+
 export function assertSecureConfig(): void {
   if (!isProduction) return;
 
   const problems: string[] = [];
   const secret = process.env.JWT_SECRET;
-  if (!secret || secret === "change_me") {
-    problems.push("JWT_SECRET no está definido o conserva el valor de ejemplo 'change_me'");
+  if (!secret || KNOWN_JWT_SECRETS.some((known) => secret.includes(known))) {
+    problems.push("JWT_SECRET no está definido o conserva un valor de ejemplo");
   } else if (secret.length < 32) {
     problems.push("JWT_SECRET debe tener al menos 32 caracteres");
   }

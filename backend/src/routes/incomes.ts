@@ -1,11 +1,23 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
+import { AuthzError, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 import { readPage, sendPage } from "../utils/pagination";
 
 export const incomesRouter = Router();
+
+/**
+ * `reservationId` comes from the request body, so it is resolved against the caller's daycare
+ * before it is stored: the list returns the linked reservation with its tutor's name.
+ */
+async function assertReservationInTenant(reservationId: string, daycareId: string): Promise<void> {
+  const reservation = await prisma.reservation.findFirst({
+    where: { id: reservationId, daycareId },
+    select: { id: true },
+  });
+  if (!reservation) throw new AuthzError(404, "Reserva no encontrada");
+}
 
 const schema = z.object({
   reservationId: z.string().optional(),
@@ -71,11 +83,13 @@ incomesRouter.post("/", async (req, res) => {
     const { date, amount, vatPercent = 0, ...rest } = parsed.data;
     const vatAmount = amount * (vatPercent / 100);
     const total = amount + vatAmount;
+    const daycareId = getRequiredDaycareId(req);
+    if (rest.reservationId) await assertReservationInTenant(rest.reservationId, daycareId);
     const income = await prisma.income.create({
       data: {
         ...rest,
         businessUnit: bu,
-        daycareId: getRequiredDaycareId(req),
+        daycareId,
         amount,
         vatPercent,
         vatAmount,
@@ -105,6 +119,7 @@ incomesRouter.put("/:id", async (req, res) => {
       return;
     }
     assertRecordAccess(req, current);
+    if (rest.reservationId) await assertReservationInTenant(rest.reservationId, current.daycareId);
     const a = amount ?? current.amount;
     const vp = vatPercent ?? current.vatPercent;
     const vatAmount = a * (vp / 100);

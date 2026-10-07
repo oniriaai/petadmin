@@ -2,7 +2,12 @@ import { Router } from "express";
 import { z } from "zod";
 import { handleAuthzError } from "../../middleware/auth";
 import { buildChildScopeWhere, buildDaycareWhere } from "../../core/tenancy/scope";
-import { namesForeignPrefix } from "../../core/storage/object-keys";
+import {
+  isTenantReferableKey,
+  namesForeignPrefix,
+  resolveObjectKey,
+} from "../../core/storage/object-keys";
+import { B2_ENDPOINT, BUCKET_NAME } from "../../lib/s3";
 import { readPage, sendPage } from "../../utils/pagination";
 import { prisma } from "../../db";
 
@@ -30,6 +35,17 @@ const petSchema = z.object({
 // A photo reference is what authorizes deleting the object behind it, so it may never point
 // into another daycare's storage prefix.
 const FOREIGN_PHOTO_MESSAGE = "La foto no pertenece a esta guardería";
+
+/**
+ * A photo on some other host is only a link. One in this bucket must sit under the daycare's
+ * own prefix (or be a pre-tenancy pet photo): the bucket also holds what is nobody's to
+ * reference, the database backups among it.
+ */
+function isForeignPhoto(photoUrl: string, daycareId: string): boolean {
+  if (namesForeignPrefix(photoUrl, daycareId)) return true;
+  const key = resolveObjectKey(photoUrl, BUCKET_NAME ?? "", B2_ENDPOINT);
+  return key !== null && !isTenantReferableKey(key, daycareId);
+}
 
 petsRouter.get("/", async (req, res) => {
   try {
@@ -114,7 +130,7 @@ petsRouter.post("/", async (req, res) => {
       res.status(404).json({ message: "Cliente no encontrado" });
       return;
     }
-    if (rest.photoUrl && namesForeignPrefix(rest.photoUrl, owner.daycareId)) {
+    if (rest.photoUrl && isForeignPhoto(rest.photoUrl, owner.daycareId)) {
       res.status(400).json({ message: FOREIGN_PHOTO_MESSAGE });
       return;
     }
@@ -150,7 +166,7 @@ petsRouter.put("/:id", async (req, res) => {
       return;
     }
     const { birthdate, clientId, ...rest } = parsed.data;
-    if (rest.photoUrl && namesForeignPrefix(rest.photoUrl, existing.daycareId)) {
+    if (rest.photoUrl && isForeignPhoto(rest.photoUrl, existing.daycareId)) {
       res.status(400).json({ message: FOREIGN_PHOTO_MESSAGE });
       return;
     }

@@ -126,10 +126,21 @@ async function run() {
   });
 
   await test("El admin puede restablecer la contraseña de su personal", async () => {
+    // A session opened with the old password, as whoever prompted the reset would hold.
+    const before = await login(`recepcion_${SUFFIX}`, PASSWORD, "DAYCARE");
+    expectStatus(before.status, 200, "Login previo al restablecimiento");
+    const stale = clientFor(before.data.token, "DAYCARE");
+    expectStatus((await stale.get("/auth/me")).status, 200, "Sesión previa, aún válida");
+
     const reset = await clientFor(adminToken, "DAYCARE").patch(`/users/${staffId}`, {
       password: "contrasenanueva456",
     });
     expectStatus(reset.status, 200, "PATCH /users/:id");
+    expectStatus(
+      (await stale.get("/auth/me")).status,
+      401,
+      "La sesión abierta con la contraseña anterior debería terminar",
+    );
 
     const old = await login(`recepcion_${SUFFIX}`, PASSWORD, "DAYCARE");
     expectStatus(old.status, 401, "La contraseña anterior debería dejar de servir");
@@ -309,6 +320,48 @@ async function run() {
       // tests/tenant-isolation.e2e.ts count what that tenant has.
       const { prisma } = await import("../src/db");
       await prisma.user.deleteMany({ where: { daycareId: "daycare_demo", username: shared } });
+      await prisma.$disconnect();
+    }
+  });
+
+  await test("Un usuario de guardería con el nombre de la cuenta de plataforma no la bloquea", async () => {
+    // The platform account has no daycare and so no slug to give. Answering DAYCARE_REQUIRED
+    // to it meant that any tenant admin, or anyone starting a free trial, could lock the vendor
+    // out of the console by naming a user after it.
+    const platformUsername = process.env.SUPERADMIN_USERNAME || "superadmin";
+    const platformPassword = process.env.SUPERADMIN_PASSWORD || "superadmin123";
+
+    const squatter = await clientFor(adminToken, "DAYCARE").post("/users", {
+      username: platformUsername,
+      password: PASSWORD,
+      name: "Homónimo de la plataforma",
+      role: "daycare",
+    });
+    expectStatus(squatter.status, 201, "Usuario homónimo en la guardería de prueba");
+
+    try {
+      const platform = await login(platformUsername, platformPassword);
+      expectStatus(platform.status, 200, "Login de la cuenta de plataforma con homónimo");
+      if (platform.data.user.role !== "superadmin" || platform.data.user.daycareId !== null) {
+        throw new Error("El login sin slug no resolvió a la cuenta de plataforma");
+      }
+
+      // The tenant user's password does not open the platform account: without a slug it is
+      // still asked for one, and with it it lands in its own daycare.
+      const ambiguous = await login(platformUsername, PASSWORD);
+      expectStatus(ambiguous.status, 400, "Login del homónimo sin slug");
+      const resolved = await axios.post(
+        `${BASE_URL}/auth/login`,
+        { daycare: SLUG, username: platformUsername, password: PASSWORD },
+        { validateStatus: () => true } as any,
+      );
+      expectStatus(resolved.status, 200, "Login del homónimo con slug");
+      if (resolved.data.user.daycareId !== daycareId || resolved.data.user.role !== "daycare") {
+        throw new Error("El homónimo no resolvió a su propia guardería");
+      }
+    } finally {
+      const { prisma } = await import("../src/db");
+      await prisma.user.deleteMany({ where: { daycareId, username: platformUsername } });
       await prisma.$disconnect();
     }
   });

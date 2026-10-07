@@ -8,12 +8,21 @@ import {
   getRequiredDaycareId,
 } from "../../core/tenancy/scope";
 import { readPage, sendPage } from "../../utils/pagination";
+import { assertClientInTenant, validatePetOwnership } from "../../utils/validation";
 import {
   cancelFuturePendingReservationsForPlan,
   syncFuturePendingReservationsForPlan,
 } from "./recurring-plans.service";
 
 export const recurringPlansRouter = Router();
+
+/** `petIds` is stored as a comma-separated string, as the generator reads it. */
+function parsePlanPetIds(petIds: string): string[] {
+  return petIds
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
 
 const recurringPlanSchema = z.object({
   clientId: z.string().min(1),
@@ -109,16 +118,20 @@ recurringPlansRouter.post("/", async (req, res) => {
       return;
     }
 
-    // Verify client exists and belongs to business unit
-    const client = await prisma.client.findUnique({ where: { id: clientId } });
-    if (!client) {
-      res.status(404).json({ message: "Cliente no encontrado" });
+    // clientId, petIds and roomId all come from the request body, so each is resolved against
+    // this daycare before it is stored: looked up by id alone, another tenant's client was
+    // accepted here and its name echoed back in the response.
+    const daycareId = getRequiredDaycareId(req);
+    await assertClientInTenant(clientId, daycareId);
+    const petsCheck = await validatePetOwnership(parsePlanPetIds(petIds), clientId, daycareId);
+    if (!petsCheck.valid) {
+      res.status(petsCheck.deceased ? 409 : 400).json({ message: petsCheck.message });
       return;
     }
 
     // Verify room exists if provided
     if (roomId) {
-      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      const room = await prisma.room.findFirst({ where: { id: roomId, daycareId } });
       if (!room) {
         res.status(404).json({ message: "Sala no encontrada" });
         return;
@@ -132,7 +145,7 @@ recurringPlansRouter.post("/", async (req, res) => {
     const plan = await prisma.recurringPlan.create({
       data: {
         businessUnit: bu,
-        daycareId: getRequiredDaycareId(req),
+        daycareId,
         clientId,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
@@ -183,7 +196,9 @@ recurringPlansRouter.put("/:id", async (req, res) => {
 
     // Verify room exists if provided
     if (roomId) {
-      const room = await prisma.room.findUnique({ where: { id: roomId } });
+      const room = await prisma.room.findFirst({
+        where: { id: roomId, daycareId: plan.daycareId },
+      });
       if (!room) {
         res.status(404).json({ message: "Sala no encontrada" });
         return;
@@ -194,11 +209,17 @@ recurringPlansRouter.put("/:id", async (req, res) => {
       }
     }
 
-    // Verify client exists if changing
-    if (clientId) {
-      const client = await prisma.client.findUnique({ where: { id: clientId } });
-      if (!client) {
-        res.status(404).json({ message: "Cliente no encontrado" });
+    // A new client or a new set of pets is resolved against the plan's own daycare, already
+    // verified by assertRecordAccess above.
+    if (clientId) await assertClientInTenant(clientId, plan.daycareId);
+    if (clientId || rest.petIds !== undefined) {
+      const petsCheck = await validatePetOwnership(
+        parsePlanPetIds(rest.petIds ?? plan.petIds),
+        clientId ?? plan.clientId,
+        plan.daycareId,
+      );
+      if (!petsCheck.valid) {
+        res.status(petsCheck.deceased ? 409 : 400).json({ message: petsCheck.message });
         return;
       }
     }

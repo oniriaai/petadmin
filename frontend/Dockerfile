@@ -24,19 +24,42 @@ COPY --from=build /app/dist /usr/share/nginx/html
 # Text is compressed here: the stock image leaves gzip off. Hashed files under /assets/ never
 # change, so they cache for a year; the shell that names them is revalidated on every visit, or
 # a browser would keep asking for the chunks of a build that is gone.
-RUN printf 'server {\n\
+#
+# The browser-side hardening goes on every response. nginx drops the `add_header`s of an outer
+# block in any block that has one of its own, so they live in a file each such block includes.
+# The policy stops the page being framed (clickjacking) and closes plugins, <base> and form
+# targets; it does not restrict scripts yet, because the shell carries one inline script whose
+# text changes with every build and would need its hash published alongside.
+RUN printf 'add_header X-Content-Type-Options "nosniff" always;\n\
+add_header X-Frame-Options "DENY" always;\n\
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;\n\
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;\n\
+add_header Strict-Transport-Security "max-age=31536000" always;\n\
+add_header Content-Security-Policy "frame-ancestors '"'"'none'"'"'; object-src '"'"'none'"'"'; base-uri '"'"'self'"'"'; form-action '"'"'self'"'"'" always;\n' \
+  > /etc/nginx/security-headers.conf \
+ && printf 'server {\n\
   listen 80;\n\
   root /usr/share/nginx/html;\n\
   index index.html;\n\
+  server_tokens off;\n\
+  include /etc/nginx/security-headers.conf;\n\
   gzip on;\n\
   gzip_comp_level 6;\n\
   gzip_min_length 1024;\n\
   gzip_vary on;\n\
   gzip_types text/css text/plain application/javascript application/json image/svg+xml application/manifest+json application/xml;\n\
-  location /assets/ { expires 1y; add_header Cache-Control "public, immutable"; }\n\
-  location = /index.html { add_header Cache-Control "no-cache"; }\n\
+  location /assets/ {\n\
+    include /etc/nginx/security-headers.conf;\n\
+    expires 1y;\n\
+    add_header Cache-Control "public, immutable";\n\
+  }\n\
+  location = /index.html {\n\
+    include /etc/nginx/security-headers.conf;\n\
+    add_header Cache-Control "no-cache";\n\
+  }\n\
   location / { try_files $uri $uri/ @spa; }\n\
   location @spa {\n\
+    include /etc/nginx/security-headers.conf;\n\
     add_header X-Robots-Tag "noindex";\n\
     add_header Cache-Control "no-cache";\n\
     try_files /index.html =404;\n\

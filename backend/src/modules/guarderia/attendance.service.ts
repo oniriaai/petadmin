@@ -1,5 +1,7 @@
 import { prisma } from "../../db";
+import { AuthzError } from "../../middleware/auth";
 import type { BusinessUnit } from "../../middleware/auth";
+import { validatePetOwnership } from "../../utils/validation";
 
 /**
  * The accounting/brand slot this module books under. Declared once here so the per-tenant
@@ -153,6 +155,30 @@ export class DaycareAttendanceService {
       throw new Error("Sala de guardería inválida o inactiva");
     }
 
+    // petId, clientId and reservationId come from the request body. Each is resolved against
+    // this daycare before anything is written: unchecked, a check-in could be filed against
+    // another tenant's pet and tutor (and return both rows), and a reservation of any tenant
+    // could be marked active by id.
+    const ownership = await validatePetOwnership([petId], clientId, daycareId);
+    if (!ownership.valid) {
+      throw new AuthzError(
+        ownership.deceased ? 409 : 404,
+        ownership.message ?? "Mascota no encontrada",
+      );
+    }
+    if (reservationId) {
+      const reservation = await prisma.reservation.findFirst({
+        where: {
+          id: reservationId,
+          daycareId,
+          businessUnit: GUARDERIA_BUSINESS_UNIT,
+          pets: { some: { petId } },
+        },
+        select: { id: true },
+      });
+      if (!reservation) throw new AuthzError(404, "Reserva no encontrada");
+    }
+
     // 2. Validar que la mascota no esté ya en check-in activo
     const alreadyCheckedIn = await prisma.checkInOut.findFirst({
       where: {
@@ -189,7 +215,7 @@ export class DaycareAttendanceService {
       if (reservationId) {
         // Buscar si ya existe un registro de CheckInOut vinculado a esta reserva y mascota
         const existing = await tx.checkInOut.findFirst({
-          where: { reservationId, petId },
+          where: { reservationId, petId, daycareId },
         });
 
         if (existing) {
@@ -297,6 +323,7 @@ export class DaycareAttendanceService {
         const remainingActive = await tx.checkInOut.count({
           where: {
             reservationId: record.reservationId,
+            daycareId,
             checkOutTime: null,
             isActive: true,
           },

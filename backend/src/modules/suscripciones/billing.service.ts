@@ -530,7 +530,10 @@ export async function confirmCheckout(daycareId: string, input: ConfirmCheckoutI
     throw new AuthzError(status, message);
   };
 
-  if (charge.amountCents !== null && charge.amountCents !== payment.totalCents) {
+  // An approval that does not say how much was charged is not proof of this payment either:
+  // the check failed open on a missing amount, and it is the one thing tying the charge to
+  // the plan that was quoted.
+  if (charge.amountCents !== payment.totalCents) {
     await refuse(
       409,
       "El importe cobrado no coincide con el del plan. Reversamos el cobro; inténtalo de nuevo.",

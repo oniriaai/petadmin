@@ -11,7 +11,7 @@ import { handleAuthzError } from "../middleware/auth";
 import { storageLimiter } from "../middleware/security";
 import {
   buildPetPhotoKey,
-  isOwnKey,
+  isTenantReferableKey,
   resolveObjectKey,
   tenantOfKey,
 } from "../core/storage/object-keys";
@@ -29,11 +29,32 @@ export const storageRouter = Router();
 // Per-tenant, not per-IP: a daycare's staff share one budget and cannot exhaust another's.
 storageRouter.use(storageLimiter);
 
+/**
+ * What this endpoint signs an upload for: the pet photo, the only thing the product uploads
+ * through it. It used to sign any content type the caller named, so the media bucket would
+ * serve an HTML page or an SVG with script in it from a tenant's prefix.
+ */
+export const UPLOAD_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+] as const;
+/** A phone photo is a few megabytes. The declared size is refused above this. */
+export const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+/** The browser uploads right after asking; an hour left a signed URL usable long after. */
+const UPLOAD_URL_TTL_SECONDS = 300;
+
 const uploadUrlSchema = z.object({
-  fileName: z.string().min(1),
-  contentType: z.string().min(1),
-  petName: z.string().min(1),
-  ownerName: z.string().min(1),
+  fileName: z.string().min(1).max(255),
+  contentType: z.enum(UPLOAD_CONTENT_TYPES),
+  // Declared by the client, so it stops an honest mistake and not a determined caller: the
+  // bucket's own cap is what bounds what a signed URL can store.
+  size: z.number().int().positive().max(UPLOAD_MAX_BYTES).optional(),
+  petName: z.string().min(1).max(120),
+  ownerName: z.string().min(1).max(120),
 });
 
 const removeFileSchema = z.object({
@@ -44,9 +65,10 @@ storageRouter.post("/upload-url", async (req, res) => {
   try {
     const parsed = uploadUrlSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res
-        .status(400)
-        .json({ message: "Invalid parameters", errors: parsed.error.flatten() });
+      return res.status(400).json({
+        message: "Solo se admiten imágenes (JPG, PNG, WebP, GIF o HEIC) de hasta 10 MB",
+        errors: parsed.error.flatten(),
+      });
     }
 
     if (!BUCKET_NAME || !B2_ENDPOINT) {
@@ -70,7 +92,9 @@ storageRouter.post("/upload-url", async (req, res) => {
       ContentType: contentType,
     });
 
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const uploadUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: UPLOAD_URL_TTL_SECONDS,
+    });
     const publicUrl = `https://${B2_ENDPOINT}/${BUCKET_NAME}/${key}`;
 
     res.json({ uploadUrl, publicUrl, key });
@@ -108,8 +132,11 @@ storageRouter.post("/remove", async (req, res) => {
     // photoUrl, a document's filePath), so it could point one at another daycare's object and
     // then "delete its own file". A key filed under a daycare belongs to that daycare only.
     const daycareId = getRequiredDaycareId(req);
-    if (tenantOfKey(key) !== null && !isOwnKey(key, daycareId)) {
-      console.warn(`[Storage] Refused delete for another tenant's key: ${key}`);
+    //
+    // Nor is "not another daycare's" enough: anything else in the bucket (a database backup
+    // under `backups/`) was deletable by pointing a pet's photo at it first.
+    if (!isTenantReferableKey(key, daycareId)) {
+      console.warn(`[Storage] Refused delete for a key outside the tenant's reach: ${key}`);
       return res.status(404).json({ message: "Archivo no encontrado" });
     }
 

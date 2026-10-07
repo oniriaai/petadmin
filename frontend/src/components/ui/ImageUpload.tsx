@@ -21,6 +21,17 @@ function putWithProgress(url: string, file: File, onProgress: (percent: number) 
   });
 }
 
+/** Mirrors `UPLOAD_CONTENT_TYPES` and `UPLOAD_MAX_BYTES` in the backend's storage router. */
+const UPLOAD_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/heic",
+  "image/heif",
+];
+const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+
 interface Props {
   value?: string;
   onChange: (url: string) => void;
@@ -45,6 +56,12 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // The server refuses the same two things; saying so here spares the round trip.
+    if (!UPLOAD_CONTENT_TYPES.includes(file.type) || file.size > UPLOAD_MAX_BYTES) {
+      alert("Solo se admiten imágenes (JPG, PNG, WebP, GIF o HEIC) de hasta 10 MB.");
+      e.target.value = "";
+      return;
+    }
 
     // Show local preview immediately
     const localPreview = URL.createObjectURL(file);
@@ -58,6 +75,7 @@ export function ImageUpload({ value, onChange, onDelete, petName, ownerName }: P
       const { uploadUrl, publicUrl } = await api.post<any>("/storage/upload-url", {
         fileName: file.name,
         contentType: file.type,
+        size: file.size,
         petName: petName || "unknown",
         ownerName: ownerName || "unknown",
       });
