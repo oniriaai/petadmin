@@ -298,6 +298,12 @@ export async function confirm(input: ConfirmInput): Promise<ChargeResult> {
   const id = Number(input.id);
   if (!Number.isSafeInteger(id)) throw new PaymentError("PayPhone no reconoce esta transacción");
   const data = await post("/button/V2/Confirm", { id, clientTxId: input.clientTransactionId });
+  // The `id` comes from the browser. PayPhone answering for a different transaction than the
+  // one prepared here must not settle this one, whatever its status.
+  const echoed = text(data.clientTransactionId);
+  if (echoed && echoed !== input.clientTransactionId) {
+    throw new PaymentError("PayPhone no reconoce esta transacción");
+  }
   return toChargeResult(data, input.cardToken ?? null);
 }
 

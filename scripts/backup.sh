@@ -51,14 +51,22 @@ docker exec -i "${POSTGRES_CONTAINER:-argos-postgres}" pg_restore --list < "$FIL
 echo "[backup] ok: $SIZE bytes"
 
 # Off-box copy. A backup on the same host as the database does not survive losing the host.
-if [ -n "${B2_BUCKET_NAME:-}" ] && command -v aws > /dev/null 2>&1; then
-  echo "[backup] subiendo a s3://$B2_BUCKET_NAME/backups/"
-  AWS_ACCESS_KEY_ID="${B2_KEY_ID:-}" \
-  AWS_SECRET_ACCESS_KEY="${B2_APPLICATION_KEY:-}" \
-  aws s3 cp "$FILE" "s3://$B2_BUCKET_NAME/backups/$(basename "$FILE")" \
+# A bucket of its own when BACKUP_B2_BUCKET_NAME is set, which is what a production host should
+# have: the media bucket serves pet photos by URL, and a dump of every tenant's data does not
+# belong next to files that are read from a browser.
+REMOTE_BUCKET="${BACKUP_B2_BUCKET_NAME:-${B2_BUCKET_NAME:-}}"
+if [ -n "$REMOTE_BUCKET" ] && command -v aws > /dev/null 2>&1; then
+  if [ -z "${BACKUP_B2_BUCKET_NAME:-}" ]; then
+    echo "[backup] AVISO: BACKUP_B2_BUCKET_NAME no está definido; el volcado se sube al bucket" >&2
+    echo "[backup] de las fotos ($REMOTE_BUCKET). Si ese bucket es público, el volcado también." >&2
+  fi
+  echo "[backup] subiendo a s3://$REMOTE_BUCKET/backups/"
+  AWS_ACCESS_KEY_ID="${BACKUP_B2_KEY_ID:-${B2_KEY_ID:-}}" \
+  AWS_SECRET_ACCESS_KEY="${BACKUP_B2_APPLICATION_KEY:-${B2_APPLICATION_KEY:-}}" \
+  aws s3 cp "$FILE" "s3://$REMOTE_BUCKET/backups/$(basename "$FILE")" \
     --endpoint-url "https://${B2_ENDPOINT:-}"
 else
-  echo "[backup] aviso: sin copia remota (falta B2_BUCKET_NAME o el cliente aws)." >&2
+  echo "[backup] aviso: sin copia remota (falta BACKUP_B2_BUCKET_NAME o el cliente aws)." >&2
   echo "[backup] una copia en el mismo host que la base no sobrevive a perder el host." >&2
 fi
 

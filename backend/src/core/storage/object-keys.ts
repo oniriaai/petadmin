@@ -71,6 +71,22 @@ export function isOwnKey(key: string, daycareId: string): boolean {
   return key.startsWith(daycarePrefix(daycareId));
 }
 
+/** A photo key written before tenancy: `pets/...`, with no daycare segment. */
+export function isLegacyPetKey(key: string): boolean {
+  return key.startsWith(`${PET_PHOTO_PREFIX}/`);
+}
+
+/**
+ * Whether a daycare's rows may reference a key, and therefore delete the object behind it.
+ *
+ * The bucket holds more than what tenants upload (the database backups go to `backups/`), so
+ * "not another daycare's prefix" is not enough: a key is referable only when it is under the
+ * daycare's own prefix, or is a pre-tenancy pet photo.
+ */
+export function isTenantReferableKey(key: string, daycareId: string): boolean {
+  return isOwnKey(key, daycareId) || isLegacyPetKey(key);
+}
+
 const TENANT_PREFIX_ANYWHERE = /(?:^|\/)daycares\/([^/?#]+)\//g;
 
 /**

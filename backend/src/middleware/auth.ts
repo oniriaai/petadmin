@@ -60,6 +60,7 @@ export function issueSessionToken(user: {
   businessUnit: string;
   role: UserRole;
   daycareId: string | null;
+  sessionEpoch: number;
 }): string {
   const payload: JwtPayload = {
     userId: user.id,
@@ -68,6 +69,7 @@ export function issueSessionToken(user: {
     role: user.role,
     daycareId: user.daycareId,
     tv: TOKEN_VERSION,
+    se: user.sessionEpoch,
   };
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "12h" });
 }
@@ -80,6 +82,8 @@ interface JwtPayload {
   /** null only for a superadmin. */
   daycareId: string | null;
   tv: number;
+  /** The user's session epoch when the token was issued. Absent on older tokens: read as 0. */
+  se?: number;
 }
 
 /** The token plus what `requireAuth` re-reads on every request. */
@@ -275,6 +279,11 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     // modules open and whether permissions apply at all, so a demoted admin would otherwise
     // hold everything until the token expired.
     if (normalizeUserRole(status.role, status.businessUnit) !== role) {
+      res.status(401).json({ message: "Sesión caducada, inicia sesión nuevamente" });
+      return;
+    }
+    // Nor one minted before the password was reset: a reset is how a stolen session is ended.
+    if ((payload.se ?? 0) !== status.sessionEpoch) {
       res.status(401).json({ message: "Sesión caducada, inicia sesión nuevamente" });
       return;
     }

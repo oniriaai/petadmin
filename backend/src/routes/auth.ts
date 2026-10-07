@@ -27,7 +27,7 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-authRouter.post("/login", loginLimiter, async (req, res) => {
+authRouter.post("/login", ...loginLimiter, async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ message: "Datos inválidos" });
@@ -65,13 +65,23 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
   } else {
     const candidates = await prisma.user.findMany({ where: { username }, take: 2 });
     if (candidates.length > 1) {
+      // The platform account belongs to no daycare, so it has no slug to give: asked for one,
+      // it could never sign in again, and anyone able to create a tenant user with its
+      // username (a trial signup is enough) could lock the vendor out. It is therefore tried
+      // here, by its own password, before the slug is demanded.
+      const platform = await prisma.user.findFirst({ where: { username, daycareId: null } });
+      if (platform?.isActive && (await bcrypt.compare(password, platform.passwordHash))) {
+        user = platform;
+      }
+    }
+    if (candidates.length > 1 && !user) {
       res.status(400).json({
         message: "Este usuario existe en varias guarderías. Indica el identificador de la tuya.",
         code: "DAYCARE_REQUIRED",
       });
       return;
     }
-    user = candidates[0] ?? null;
+    user ??= candidates[0] ?? null;
   }
 
   // The asynchronous form: `compareSync` held the only thread for the whole comparison, so a
@@ -132,6 +142,7 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
     businessUnit: emittedUnit,
     role,
     daycareId: user.daycareId,
+    sessionEpoch: user.sessionEpoch,
   });
 
   res.json({

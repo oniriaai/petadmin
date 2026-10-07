@@ -376,6 +376,8 @@ async function provision(
       businessUnit,
       role: "admin",
       daycareId: daycare.id,
+      // A user created a moment ago: nothing has reset its password yet.
+      sessionEpoch: 0,
     }),
     user: {
       id: admin.id,
@@ -469,7 +471,10 @@ export async function confirmSignupPayment(input: ConfirmSignupInput): Promise<S
 
   // The amount is the server's, quoted when the signup started. PayPhone charging anything
   // else means the transaction is not the one that was prepared.
-  if (charge.amountCents !== null && charge.amountCents !== payment.totalCents) {
+  // An approval that does not say how much was charged is not proof of this payment either:
+  // the check failed open on a missing amount, and it is the one thing tying the charge to
+  // the plan that was quoted.
+  if (charge.amountCents !== payment.totalCents) {
     return refuse(
       "El importe cobrado no coincide con el del plan. Reversamos el cobro; vuelve a intentarlo.",
       "importe distinto del presupuestado",

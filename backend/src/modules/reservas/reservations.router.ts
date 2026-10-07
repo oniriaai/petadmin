@@ -321,6 +321,19 @@ reservationsRouter.put("/:id", async (req, res) => {
       assertPetsAlive(pets);
     }
 
+    // The capacity check below only runs for a reservation with both dates, so a room named
+    // in the body is resolved against the tenant on its own first.
+    if (roomId) {
+      const ownRoom = await prisma.room.findFirst({
+        where: { id: roomId, daycareId: current.daycareId },
+        select: { id: true },
+      });
+      if (!ownRoom) {
+        res.status(404).json({ message: "Sala no encontrada" });
+        return;
+      }
+    }
+
     // Validate room capacity and conflicts if room is being changed
     const newRoomId = roomId ?? current.roomId;
     const newCheckIn = checkIn ? new Date(checkIn) : current.checkIn;

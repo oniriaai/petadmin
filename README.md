@@ -187,7 +187,8 @@ cada una falla de forma silenciosa y peligrosa si se deja por defecto:
 
 Opcionales, con valores por defecto seguros: `TRUST_PROXY` (número de saltos de proxy inverso
 en los que confiar para resolver la IP real; sin definir, los límites por IP comparten contador),
-`RATE_LIMIT_GLOBAL`, `RATE_LIMIT_LOGIN`, `RATE_LIMIT_STORAGE`, `RATE_LIMIT_SIGNUP`,
+`RATE_LIMIT_GLOBAL`, `RATE_LIMIT_LOGIN`, `RATE_LIMIT_LOGIN_IP`, `RATE_LIMIT_LOGIN_ACCOUNT`,
+`RATE_LIMIT_STORAGE`, `RATE_LIMIT_SIGNUP`,
 `SEED_DEMO_DATA` (inactivo en producción) y `RUN_SCHEDULER_IN_PROCESS` (inactivo en producción).
 
 Para vender desde la página pública hacen falta `PAYPHONE_TOKEN`, `PAYPHONE_STORE_ID`,
@@ -445,6 +446,10 @@ ejecutándolo **dentro** del contenedor de Postgres para que la versión del cli
 coincida con la del servidor —un desajuste es el motivo habitual de que una restauración falle
 justo cuando se necesita—. Después comprueba que `pg_restore` puede leer el archivo: un volcado
 ilegible es peor que ninguno, porque se cree bueno.
+
+La copia remota va al bucket de `BACKUP_B2_BUCKET_NAME`, que debe ser **privado** y distinto
+del de las fotos: ese se lee desde el navegador, y un volcado contiene los datos de todos los
+negocios. Sin definirla, `backup.sh` sube al bucket de las fotos y lo avisa en cada ejecución.
 
 `restore.sh` restaura en una base **distinta** (`argos_restore_check` por defecto) y se niega
 a escribir sobre la base en uso. Luego cuenta filas y vuelve a comprobar la invariante

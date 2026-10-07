@@ -57,8 +57,21 @@ alertsRouter.post("/", async (req, res) => {
       res.status(400).json({ message: "Datos inválidos" });
       return;
     }
+    // petId comes from the request body: resolved against this daycare before it is stored,
+    // or the alert list would show another tenant's pet and tutor by name.
+    const daycareId = getRequiredDaycareId(req);
+    if (parsed.data.petId) {
+      const pet = await prisma.pet.findFirst({
+        where: { id: parsed.data.petId, daycareId },
+        select: { id: true },
+      });
+      if (!pet) {
+        res.status(404).json({ message: "Animal no encontrado" });
+        return;
+      }
+    }
     const alert = await prisma.alert.create({
-      data: { ...parsed.data, businessUnit: bu, daycareId: getRequiredDaycareId(req) },
+      data: { ...parsed.data, businessUnit: bu, daycareId },
     });
     res.status(201).json(alert);
   } catch (error) {

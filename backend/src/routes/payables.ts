@@ -1,11 +1,24 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
+import { AuthzError, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 import { readPage, sendPage } from "../utils/pagination";
 
 export const payablesRouter = Router();
+
+/**
+ * `providerId` comes from the request body, so it is resolved against the caller's daycare
+ * before it is stored: `GET /:id` returns the whole provider row, which made an unchecked id a
+ * way to read another tenant's supplier.
+ */
+async function assertProviderInTenant(providerId: string, daycareId: string): Promise<void> {
+  const provider = await prisma.provider.findFirst({
+    where: { id: providerId, daycareId },
+    select: { id: true },
+  });
+  if (!provider) throw new AuthzError(404, "Proveedor no encontrado");
+}
 
 const schema = z.object({
   providerId: z.string().optional(),
@@ -81,11 +94,13 @@ payablesRouter.post("/", async (req, res) => {
     const { invoiceDate, dueDate, nextPayment, subtotal, vatPercent = 0, ...rest } = parsed.data;
     const vatAmount = subtotal * (vatPercent / 100);
     const total = subtotal + vatAmount;
+    const daycareId = getRequiredDaycareId(req);
+    if (rest.providerId) await assertProviderInTenant(rest.providerId, daycareId);
     const p = await prisma.payable.create({
       data: {
         ...rest,
         businessUnit: bu,
-        daycareId: getRequiredDaycareId(req),
+        daycareId,
         subtotal,
         vatPercent,
         vatAmount,
@@ -120,6 +135,7 @@ payablesRouter.put("/:id", async (req, res) => {
       return;
     }
     assertRecordAccess(req, current);
+    if (rest.providerId) await assertProviderInTenant(rest.providerId, current.daycareId);
 
     const sb = subtotal ?? current.subtotal;
     const vp = vatPercent ?? current.vatPercent;

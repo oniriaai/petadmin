@@ -62,6 +62,14 @@ assert.throws(
   "A production boot with the example secret must be refused",
 );
 
+// The value in `.env.example` is longer than 32 characters, so the length rule alone let it
+// through: a production host started from a copied `.env` signed with a published key.
+assert.throws(
+  assertSecureConfigWith({ ...PRODUCTION_OK, JWT_SECRET: "dev_only_insecure_secret_change_me" }),
+  /JWT_SECRET/,
+  "A production boot with the secret from .env.example must be refused",
+);
+
 assert.throws(
   assertSecureConfigWith({ ...PRODUCTION_OK, JWT_SECRET: undefined }),
   /JWT_SECRET/,

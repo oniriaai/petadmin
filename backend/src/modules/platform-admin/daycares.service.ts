@@ -373,6 +373,9 @@ export async function updateUser(daycareId: string, userId: string, input: Updat
       role: input.role,
       businessUnit: input.role ? businessUnitForRole(input.role) : undefined,
       passwordHash: input.password ? await bcrypt.hash(input.password, BCRYPT_ROUNDS) : undefined,
+      // A reset ends the sessions opened with the old password: whoever held one of those
+      // tokens is usually the reason for the reset.
+      sessionEpoch: input.password ? { increment: 1 } : undefined,
       isActive: input.isActive,
       permissions: input.permissions ? normalizePermissions(input.permissions) : undefined,
     },
