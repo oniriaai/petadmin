@@ -200,6 +200,7 @@ model Pet {
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
   @@index([daycareId])
+  @@index([clientId])
   @@map("pets")
 }
 
@@ -219,6 +220,7 @@ model PetVaccination {
   veterinarian   Veterinarian? @relation(fields: [veterinarianId], references: [id], onDelete: SetNull)
   vetVisit       VetVisit?     @relation(fields: [vetVisitId], references: [id], onDelete: SetNull)
 
+  @@index([petId])
   @@index([vetVisitId])
   @@map("pet_vaccinations")
 }
@@ -235,6 +237,7 @@ model PetDocument {
   pet        Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
   vetVisit   VetVisit? @relation(fields: [vetVisitId], references: [id], onDelete: SetNull)
 
+  @@index([petId])
   @@index([vetVisitId])
   @@map("pet_documents")
 }
@@ -540,8 +543,10 @@ model Reservation {
   daycare          Daycare          @relation(fields: [daycareId], references: [id])
 
   @@unique([recurringPlanId, checkIn])
-  @@index([daycareId])
-  @@index([daycareId, businessUnit])
+  @@index([daycareId, businessUnit, checkIn])
+  @@index([daycareId, status])
+  @@index([roomId, checkIn])
+  @@index([clientId])
   @@map("reservations")
 }
 
@@ -553,6 +558,7 @@ model ReservationPet {
   reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@unique([reservationId, petId])
+  @@index([petId])
   @@map("reservation_pets")
 }
 
@@ -610,8 +616,8 @@ model Income {
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
-  @@index([daycareId])
-  @@index([daycareId, businessUnit])
+  @@index([daycareId, businessUnit, date])
+  @@index([reservationId])
   @@map("incomes")
 }
 
@@ -643,7 +649,8 @@ model Payable {
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
-  @@index([daycareId])
+  @@index([daycareId, createdAt])
+  @@index([providerId])
   @@map("payables")
 }
 
@@ -659,6 +666,7 @@ model Payment {
   createdAt    DateTime @default(now())
   payable      Payable  @relation(fields: [payableId], references: [id], onDelete: Cascade)
 
+  @@index([payableId])
   @@map("payments")
 }
 
@@ -722,7 +730,7 @@ model Alert {
 
   daycare Daycare @relation(fields: [daycareId], references: [id])
 
-  @@index([daycareId])
+  @@index([daycareId, isResolved])
   @@map("alerts")
 }
 

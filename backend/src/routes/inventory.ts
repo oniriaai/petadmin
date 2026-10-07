@@ -3,7 +3,7 @@ import { z } from "zod";
 import { getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
-import { DEFAULT_LIMIT } from "../utils/pagination";
+import { DEFAULT_LIMIT, readPage, sendPage } from "../utils/pagination";
 import { recordStockMovement } from "../core/inventory/stock";
 
 export const inventoryRouter = Router();
@@ -128,11 +128,20 @@ inventoryRouter.get("/items/:id/movements", async (req, res) => {
       return;
     }
     assertRecordAccess(req, item);
-    const movements = await prisma.inventoryMovement.findMany({
-      where: { itemId: req.params.id },
-      orderBy: { date: "desc" },
-    });
-    res.json(movements);
+    // Newest first and capped like every other list: a product dispensed daily accumulates
+    // movements for as long as the tenant exists.
+    const page = readPage(req);
+    const where = { itemId: req.params.id };
+    const [movements, total] = await Promise.all([
+      prisma.inventoryMovement.findMany({
+        where,
+        orderBy: [{ date: "desc" }, { id: "desc" }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.inventoryMovement.count({ where }),
+    ]);
+    sendPage(res, page, movements, total);
   } catch (error) {
     if (handleAuthzError(res, error)) return;
     console.error(error);

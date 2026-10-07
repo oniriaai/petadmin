@@ -74,7 +74,9 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
     user = candidates[0] ?? null;
   }
 
-  if (!user || !user.isActive || !bcrypt.compareSync(password, user.passwordHash)) {
+  // The asynchronous form: `compareSync` held the only thread for the whole comparison, so a
+  // burst of sign-ins at opening time stalled every other tenant's requests behind it.
+  if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) {
     res.status(401).json({ message: "Credenciales incorrectas" });
     return;
   }

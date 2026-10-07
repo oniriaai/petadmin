@@ -40,7 +40,9 @@ app.use(helmet());
 // Nothing in front of the API compresses for it, and the list endpoints answer with large JSON.
 app.use(compression());
 app.use(cors(corsOptions()));
-app.use(express.json({ limit: "10mb" }));
+// Files go straight to object storage through presigned URLs, so no request body here is more
+// than a form. The limit was 10mb, parsed synchronously on the only thread.
+app.use(express.json({ limit: "1mb" }));
 app.use(globalLimiter);
 // Establishes the per-request context the tenant-scope guard in db.ts reads. Must wrap the
 // routers, so it is mounted before them and after the body parser.
@@ -116,7 +118,7 @@ const runSchedulerInProcess = process.env.RUN_SCHEDULER_IN_PROCESS
   ? process.env.RUN_SCHEDULER_IN_PROCESS.toLowerCase() === "true"
   : process.env.NODE_ENV !== "production";
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   logger.info(`Argos Suite backend escuchando en http://localhost:${port}/api/v1`);
   if (runSchedulerInProcess) {
     startRecurringPlansScheduler();
@@ -128,3 +130,34 @@ app.listen(port, () => {
     );
   }
 });
+
+/**
+ * Stops taking connections, lets the requests in flight finish, then closes the pool.
+ *
+ * Without this a redeploy or a scale-down killed the process mid-request: the orchestrator
+ * sends SIGTERM and follows with SIGKILL, and whatever was being written at that moment was
+ * cut off. The timer is the backstop for a connection that never ends.
+ */
+const SHUTDOWN_GRACE_MS = 15_000;
+let shuttingDown = false;
+
+function shutdown(signal: string) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info(`${signal} recibido; cerrando el servidor`);
+
+  const force = setTimeout(() => {
+    logger.warn("El servidor no cerró a tiempo; saliendo de todos modos");
+    process.exit(1);
+  }, SHUTDOWN_GRACE_MS);
+  force.unref();
+
+  server.close(() => {
+    void prisma.$disconnect().finally(() => process.exit(0));
+  });
+  // Idle keep-alive sockets would otherwise hold `close` open until the proxy drops them.
+  server.closeIdleConnections();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
