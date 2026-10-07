@@ -6,13 +6,74 @@ import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
 
 export const exportRouter = Router();
 
-async function sendWorkbook(res: Response, wb: ExcelJS.Workbook, filename: string) {
+/** Rows read from the database, and held in memory, at a time. */
+const EXPORT_BATCH_SIZE = 500;
+
+/**
+ * Writes one worksheet to the response as it is read, a batch at a time.
+ *
+ * These exports used to read the tenant's whole table, build the workbook in memory and only
+ * then send it, so one customer's accumulated history decided how much memory the process
+ * needed, for every tenant sharing it. Nothing is truncated: an export that silently stopped at
+ * a cap would be believed. The rows are paged by cursor instead, and each is flushed to the
+ * response once written.
+ *
+ * `fetchBatch` receives the id of the last row already written. The first batch is read before
+ * any header goes out, so a query that fails still answers with a proper status.
+ */
+async function streamSheet<T extends { id: string }>(
+  res: Response,
+  options: {
+    filename: string;
+    sheet: string;
+    headers: string[];
+    fetchBatch: (cursor: string | undefined) => Promise<T[]>;
+    toRow: (record: T) => unknown[];
+  },
+) {
+  let batch = await options.fetchBatch(undefined);
+
   res.setHeader(
     "Content-Type",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   );
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  await wb.xlsx.write(res);
+  res.setHeader("Content-Disposition", `attachment; filename="${options.filename}"`);
+  const wb = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res, useStyles: true });
+  const ws = wb.addWorksheet(options.sheet);
+  const header = ws.addRow(options.headers);
+  header.font = { bold: true };
+  header.commit();
+
+  while (batch.length > 0) {
+    for (const record of batch) ws.addRow(options.toRow(record)).commit();
+    if (batch.length < EXPORT_BATCH_SIZE) break;
+    batch = await options.fetchBatch(batch[batch.length - 1].id);
+  }
+  ws.commit();
+  await wb.commit();
+}
+
+/** The `cursor`/`skip`/`take` of one batch, for a `findMany` ordered with `id` as tiebreak. */
+function batchArgs(cursor: string | undefined) {
+  return {
+    take: EXPORT_BATCH_SIZE,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+  };
+}
+
+/**
+ * Once the file has started there is no status left to change: the only honest signal that an
+ * export broke halfway is a download that fails, not a truncated workbook that opens.
+ */
+function failExport(res: Response, error: unknown) {
+  if (res.headersSent) {
+    console.error(error);
+    res.destroy();
+    return;
+  }
+  if (handleAuthzError(res, error)) return;
+  console.error(error);
+  res.status(500).json({ message: "Error interno del servidor" });
 }
 
 exportRouter.get("/clients", async (req, res) => {
@@ -22,29 +83,30 @@ exportRouter.get("/clients", async (req, res) => {
     // below were scoped; this one was missed, and no e2e test reached /export, so nothing
     // caught it until the tenant-scope guard did. `Client` has no businessUnit, so the daycare
     // filter alone is the right one, as in clients.router.ts.
-    const clients = await prisma.client.findMany({
-      where: buildDaycareWhere(req),
-      include: { pets: { where: { isActive: true } } },
-      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    });
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Clientes");
-    ws.addRow([
-      "Apellido",
-      "Nombre",
-      "Cédula",
-      "Teléfono",
-      "WhatsApp",
-      "Email",
-      "Ciudad",
-      "Provincia",
-      "Estado",
-      "Mascotas",
-    ]);
-    ws.getRow(1).font = { bold: true };
-    clients.forEach((c) => {
-      ws.addRow([
+    const where = buildDaycareWhere(req);
+    await streamSheet(res, {
+      filename: "clientes.xlsx",
+      sheet: "Clientes",
+      headers: [
+        "Apellido",
+        "Nombre",
+        "Cédula",
+        "Teléfono",
+        "WhatsApp",
+        "Email",
+        "Ciudad",
+        "Provincia",
+        "Estado",
+        "Mascotas",
+      ],
+      fetchBatch: (cursor) =>
+        prisma.client.findMany({
+          where,
+          include: { pets: { where: { isActive: true } } },
+          orderBy: [{ lastName: "asc" }, { firstName: "asc" }, { id: "asc" }],
+          ...batchArgs(cursor),
+        }),
+      toRow: (c) => [
         c.lastName,
         c.firstName,
         c.idNumber,
@@ -55,15 +117,12 @@ exportRouter.get("/clients", async (req, res) => {
         c.province,
         c.isActive ? "Activo" : "Inactivo",
         c.pets.map((p) => p.name).join(", "),
-      ]);
+      ],
     });
-    await sendWorkbook(res, wb, "clientes.xlsx");
   } catch (error) {
     // It also had no catch. Express 4 does not handle a rejected async handler, so anything
     // thrown in here became an unhandled rejection and took the process down with it.
-    if (handleAuthzError(res, error)) return;
-    console.error(error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    failExport(res, error);
   }
 });
 
@@ -76,34 +135,34 @@ exportRouter.get("/reservations", async (req, res) => {
       if (from) (where.checkIn as Record<string, unknown>).gte = new Date(from);
       if (to) (where.checkIn as Record<string, unknown>).lte = new Date(to);
     }
-    const reservations = await prisma.reservation.findMany({
-      where,
-      include: {
-        client: true,
-        pets: { include: { pet: { select: { name: true } } } },
-        room: { select: { name: true } },
-      },
-      orderBy: { checkIn: "asc" },
-    });
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Reservas");
-    ws.addRow([
-      "ID",
-      "Cliente",
-      "Mascotas",
-      "Servicio",
-      "Sala",
-      "Entrada",
-      "Salida",
-      "Estado",
-      "Total",
-      "Pendiente",
-      "Forma de Pago",
-    ]);
-    ws.getRow(1).font = { bold: true };
-    reservations.forEach((r) => {
-      ws.addRow([
+    await streamSheet(res, {
+      filename: "reservas.xlsx",
+      sheet: "Reservas",
+      headers: [
+        "ID",
+        "Cliente",
+        "Mascotas",
+        "Servicio",
+        "Sala",
+        "Entrada",
+        "Salida",
+        "Estado",
+        "Total",
+        "Pendiente",
+        "Forma de Pago",
+      ],
+      fetchBatch: (cursor) =>
+        prisma.reservation.findMany({
+          where,
+          include: {
+            client: { select: { firstName: true, lastName: true } },
+            pets: { include: { pet: { select: { name: true } } } },
+            room: { select: { name: true } },
+          },
+          orderBy: [{ checkIn: "asc" }, { id: "asc" }],
+          ...batchArgs(cursor),
+        }),
+      toRow: (r) => [
         r.id.slice(-8),
         `${r.client.lastName}, ${r.client.firstName}`,
         r.pets.map((p) => p.pet.name).join(", "),
@@ -115,13 +174,10 @@ exportRouter.get("/reservations", async (req, res) => {
         r.totalAmount,
         r.pendingAmount,
         r.paymentMethod,
-      ]);
+      ],
     });
-    await sendWorkbook(res, wb, "reservas.xlsx");
   } catch (error) {
-    if (handleAuthzError(res, error)) return;
-    console.error(error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    failExport(res, error);
   }
 });
 
@@ -134,25 +190,28 @@ exportRouter.get("/incomes", async (req, res) => {
       if (from) (where.date as Record<string, unknown>).gte = new Date(from);
       if (to) (where.date as Record<string, unknown>).lte = new Date(to);
     }
-    const incomes = await prisma.income.findMany({ where, orderBy: { date: "desc" } });
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Ingresos");
-    ws.addRow([
-      "Fecha",
-      "Tipo",
-      "Concepto",
-      "Monto",
-      "IVA %",
-      "IVA",
-      "Total",
-      "Forma de Pago",
-      "No. Factura",
-      "Estado Factura",
-    ]);
-    ws.getRow(1).font = { bold: true };
-    incomes.forEach((i) => {
-      ws.addRow([
+    await streamSheet(res, {
+      filename: "ingresos.xlsx",
+      sheet: "Ingresos",
+      headers: [
+        "Fecha",
+        "Tipo",
+        "Concepto",
+        "Monto",
+        "IVA %",
+        "IVA",
+        "Total",
+        "Forma de Pago",
+        "No. Factura",
+        "Estado Factura",
+      ],
+      fetchBatch: (cursor) =>
+        prisma.income.findMany({
+          where,
+          orderBy: [{ date: "desc" }, { id: "desc" }],
+          ...batchArgs(cursor),
+        }),
+      toRow: (i) => [
         i.date.toLocaleDateString("es-EC"),
         i.type,
         i.concept,
@@ -163,44 +222,42 @@ exportRouter.get("/incomes", async (req, res) => {
         i.paymentMethod,
         i.invoiceNumber,
         i.invoiceStatus,
-      ]);
+      ],
     });
-    await sendWorkbook(res, wb, "ingresos.xlsx");
   } catch (error) {
-    if (handleAuthzError(res, error)) return;
-    console.error(error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    failExport(res, error);
   }
 });
 
 exportRouter.get("/expenses", async (req, res) => {
   try {
-    const payables = await prisma.payable.findMany({
-      where: buildScopeWhere(req),
-      include: { provider: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-    });
-
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Gastos y Compras");
-    ws.addRow([
-      "Tipo",
-      "Categoría",
-      "Descripción",
-      "Proveedor",
-      "No. Factura",
-      "Subtotal",
-      "IVA %",
-      "IVA",
-      "Total",
-      "Pagado",
-      "Saldo",
-      "Estado",
-      "Vence",
-    ]);
-    ws.getRow(1).font = { bold: true };
-    payables.forEach((p) => {
-      ws.addRow([
+    const where = buildScopeWhere(req);
+    await streamSheet(res, {
+      filename: "gastos-compras.xlsx",
+      sheet: "Gastos y Compras",
+      headers: [
+        "Tipo",
+        "Categoría",
+        "Descripción",
+        "Proveedor",
+        "No. Factura",
+        "Subtotal",
+        "IVA %",
+        "IVA",
+        "Total",
+        "Pagado",
+        "Saldo",
+        "Estado",
+        "Vence",
+      ],
+      fetchBatch: (cursor) =>
+        prisma.payable.findMany({
+          where,
+          include: { provider: { select: { name: true } } },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          ...batchArgs(cursor),
+        }),
+      toRow: (p) => [
         p.type,
         p.category,
         p.description,
@@ -214,12 +271,9 @@ exportRouter.get("/expenses", async (req, res) => {
         p.balance,
         p.status,
         p.dueDate?.toLocaleDateString("es-EC"),
-      ]);
+      ],
     });
-    await sendWorkbook(res, wb, "gastos-compras.xlsx");
   } catch (error) {
-    if (handleAuthzError(res, error)) return;
-    console.error(error);
-    res.status(500).json({ message: "Error interno del servidor" });
+    failExport(res, error);
   }
 });

@@ -189,7 +189,7 @@ export async function createDaycare(input: CreateDaycareInput, tx?: Prisma.Trans
         role: "admin",
         businessUnit: businessUnitForRole("admin"),
         passwordHash:
-          input.admin.passwordHash ?? bcrypt.hashSync(input.admin.password, BCRYPT_ROUNDS),
+          input.admin.passwordHash ?? (await bcrypt.hash(input.admin.password, BCRYPT_ROUNDS)),
         isActive: true,
       },
       select: {
@@ -309,7 +309,7 @@ export async function provisionUser(daycareId: string, input: ProvisionUserInput
       name: input.name.trim(),
       role: input.role,
       businessUnit: businessUnitForRole(input.role),
-      passwordHash: bcrypt.hashSync(input.password, BCRYPT_ROUNDS),
+      passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
       isActive: true,
       permissions: normalizePermissions(input.permissions ?? DEFAULT_STAFF_PERMISSIONS),
     },
@@ -372,7 +372,7 @@ export async function updateUser(daycareId: string, userId: string, input: Updat
       name: input.name?.trim(),
       role: input.role,
       businessUnit: input.role ? businessUnitForRole(input.role) : undefined,
-      passwordHash: input.password ? bcrypt.hashSync(input.password, BCRYPT_ROUNDS) : undefined,
+      passwordHash: input.password ? await bcrypt.hash(input.password, BCRYPT_ROUNDS) : undefined,
       isActive: input.isActive,
       permissions: input.permissions ? normalizePermissions(input.permissions) : undefined,
     },

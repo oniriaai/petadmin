@@ -194,7 +194,7 @@ export async function startSignup(input: SignupInput): Promise<SignupStarted> {
       phone: input.phone.trim(),
       adminName: input.adminName.trim(),
       adminUsername: input.adminUsername.trim(),
-      passwordHash: bcrypt.hashSync(input.password, BCRYPT_ROUNDS),
+      passwordHash: await bcrypt.hash(input.password, BCRYPT_ROUNDS),
       planId: plan.id,
       units: units.join(","),
       period: input.period,

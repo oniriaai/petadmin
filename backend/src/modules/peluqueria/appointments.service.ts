@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { AuthzError, type BusinessUnit } from "../../middleware/auth";
 import { localDayBoundsUtc } from "../../core/tenancy/local-time";
 import { getUnitTimezone, getUnitVatPercent } from "../../core/tenancy/unit-settings";
+import { DEFAULT_LIMIT } from "../../utils/pagination";
 import { assertClientInTenant, assertPetsAlive } from "../../utils/validation";
 import { DEFAULT_GROOMING_SERVICES } from "./services";
 
@@ -81,8 +82,12 @@ export class GroomingAppointmentsService {
         },
         incomes: true,
       },
-      orderBy: { checkIn: "asc" },
+      // Newest first when the list has to be cut: without a date this is the salon's whole
+      // history, and the appointments someone is looking for are the recent ones.
+      orderBy: query.date ? { checkIn: "asc" } : [{ checkIn: "desc" }, { id: "desc" }],
+      take: DEFAULT_LIMIT,
     });
+    if (!query.date) reservations.reverse();
 
     return reservations.map((r) => {
       const checkInTime = r.checkIn ? new Date(r.checkIn).getTime() : 0;
