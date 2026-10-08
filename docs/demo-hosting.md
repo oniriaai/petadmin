@@ -61,7 +61,7 @@ consultan en *Environment* del servicio de la API (ver "Cuentas de la demo").
 
 ### 4. Comprobación
 
-`https://<api>/api/v1/health` debe responder `200` con `migrations.pending: 0`. Después, entra en
+`https://<api>/api/v1/health` debe responder `200` con `{"ok":true}`. Después, entra en
 el sitio estático con cualquiera de las cuentas de abajo.
 
 ---

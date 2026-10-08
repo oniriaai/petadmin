@@ -48,42 +48,13 @@ app.use(globalLimiter);
 // routers, so it is mounted before them and after the body parser.
 app.use(tenantGuardContext);
 
-/**
- * Liveness and schema state.
- *
- * The database ping alone answered "can I reach Postgres", which is not the same as "can I
- * serve": a process running against a schema it has not migrated will fail on real routes
- * while reporting itself healthy. `_prisma_migrations` is read directly because that is the
- * record `migrate deploy` writes.
- */
+/** Public liveness probe. Detailed deployment state stays out of unauthenticated responses. */
 app.get("/api/v1/health", async (_req, res) => {
   try {
-    const [migrations] = await prisma.$queryRaw<Array<{ applied: bigint; pending: bigint }>>`
-      SELECT
-        count(*) FILTER (WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL) AS applied,
-        count(*) FILTER (WHERE "finished_at" IS NULL OR "rolled_back_at" IS NOT NULL) AS pending
-      FROM "_prisma_migrations"
-    `;
-
-    const pending = Number(migrations?.pending ?? 0);
-    res.status(pending > 0 ? 503 : 200).json({
-      ok: pending === 0,
-      db: true,
-      migrations: { applied: Number(migrations?.applied ?? 0), pending },
-      service: "argos-backend",
-      // Set by the host on Render; the demo's deploy workflow polls it to know when the commit
-      // it asked for is the one answering. Null anywhere else.
-      commit: process.env.RENDER_GIT_COMMIT ?? null,
-      ts: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(503).json({
-      ok: false,
-      db: false,
-      error: error instanceof Error ? error.message : "Database connection failed",
-      service: "argos-backend",
-      ts: new Date().toISOString(),
-    });
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true });
+  } catch {
+    res.status(503).json({ ok: false });
   }
 });
 

@@ -138,6 +138,10 @@ export function initErrorReporting(): void {
  */
 export function errorHandler(err: Error, req: Request, res: Response, next: NextFunction): void {
   const requestId = req.id ?? "unknown";
+  const isMalformedJson =
+    err instanceof SyntaxError &&
+    "body" in err &&
+    typeof (err as SyntaxError & { body?: unknown }).body !== "undefined";
   const context = {
     requestId,
     method: req.method,
@@ -145,6 +149,12 @@ export function errorHandler(err: Error, req: Request, res: Response, next: Next
     daycareId: req.user?.daycareId,
     userId: req.user?.userId,
   };
+
+  if (isMalformedJson) {
+    (req.log ?? logger).warn({ ...context }, "JSON de solicitud inválido");
+    res.status(400).json({ message: "Datos inválidos", requestId });
+    return;
+  }
 
   (req.log ?? logger).error({ err, ...context }, "Error no controlado");
   reportError(err, context);
