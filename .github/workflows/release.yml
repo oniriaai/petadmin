@@ -5,10 +5,7 @@ name: Release
 # and cuts a GitHub Release.
 #
 # Nothing here ever contacts the production host and there are no SSH credentials in this
-# repository. The host pulls a published tag by hand:
-#
-#   APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml pull
-#   APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml up -d
+# repository. The host deploys the exact image digests emitted in the GitHub Release notes.
 #
 # The point is that production runs the artefact CI verified, instead of compiling TypeScript
 # on the box and hoping it matches.
@@ -37,7 +34,8 @@ jobs:
       contents: read
       packages: write
     outputs:
-      version: ${{ steps.meta-backend.outputs.version }}
+      backend_digest: ${{ steps.build-backend.outputs.digest }}
+      frontend_digest: ${{ steps.build-frontend.outputs.digest }}
     steps:
       - uses: actions/checkout@v7
 
@@ -107,6 +105,7 @@ jobs:
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
 
       - name: Build and push backend
+        id: build-backend
         uses: docker/build-push-action@v7
         with:
           context: ./backend
@@ -117,6 +116,7 @@ jobs:
           cache-to: type=gha,scope=backend,mode=max
 
       - name: Build and push frontend
+        id: build-frontend
         uses: docker/build-push-action@v7
         with:
           context: ./frontend
@@ -155,7 +155,9 @@ jobs:
           ## Despliegue
 
           \`\`\`bash
-          export APP_VERSION=$TAG
+          export BACKEND_DIGEST=${{ needs.publish.outputs.backend_digest }}
+          export FRONTEND_DIGEST=${{ needs.publish.outputs.frontend_digest }}
+          export POSTGRES_DIGEST=sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551
           docker compose -f docker-compose.prod.yml pull
           docker compose -f docker-compose.prod.yml up -d
           \`\`\`
@@ -166,12 +168,13 @@ jobs:
 
           ### Imágenes
 
-          - \`ghcr.io/$REPO-backend:$TAG\`
-          - \`ghcr.io/$REPO-frontend:$TAG\`
+          - \`ghcr.io/$REPO-backend@${{ needs.publish.outputs.backend_digest }}\`
+          - \`ghcr.io/$REPO-frontend@${{ needs.publish.outputs.frontend_digest }}\`
+          - \`postgres@sha256:1a66d744c1b459e13b05a8fca341da84cb63383e99ce262210efee5a319d4551\`
 
-          **Reversión:** apunta \`APP_VERSION\` a la etiqueta anterior y repite los dos comandos.
-          Esto **no** revierte las migraciones; si esta versión cambió el esquema de forma
-          incompatible, hace falta \`scripts/restore.sh\`.
+          **Reversión:** sustituye los dos digests de la aplicación por los de la release anterior
+          y repite los dos comandos. Esto **no** revierte las migraciones; si esta versión cambió
+          el esquema de forma incompatible, hace falta \`scripts/restore.sh\`.
           NOTES
 
           gh release create "$TAG" \

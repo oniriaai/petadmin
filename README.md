@@ -154,24 +154,24 @@ El contenedor del backend ejecuta:
 publica el puerto de Postgres, incluye pgAdmin y siembra las guarderías de demostración en cada
 arranque. No debe apuntarse nunca a datos de clientes.
 
-Para producción se usa `docker-compose.prod.yml`, que construye imágenes
-(`backend/Dockerfile`, `frontend/Dockerfile`), no monta código, no expone la base de datos, no
-incluye pgAdmin y **no siembra datos de demostración**: un servicio `migrate` de un solo uso
-aplica `prisma migrate deploy` y provisiona únicamente la cuenta de plataforma.
+Para producción se usa `docker-compose.prod.yml`, que consume imágenes verificadas por digest, no
+monta código, no expone la base de datos, no incluye pgAdmin y **no siembra datos de demostración**:
+un servicio `migrate` de un solo uso aplica `prisma migrate deploy` y provisiona únicamente la
+cuenta de plataforma.
 
-Cada servicio declara `image:` y `build:`, de modo que hay dos caminos y `APP_VERSION` elige:
+El stack exige los digests inmutables de las imágenes de la aplicación y de Postgres:
 
 ```bash
-# Correr una release publicada (preferido): el artefacto que CI verificó.
-APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml pull
-APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml up -d
-
-# Construir en este host (sigue funcionando, p. ej. para un hotfix sin etiquetar).
-docker compose -f docker-compose.prod.yml up --build -d
+export BACKEND_DIGEST=sha256:...
+export FRONTEND_DIGEST=sha256:...
+export POSTGRES_DIGEST=sha256:...
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-`pull` descarga la etiqueta indicada y el `up -d` posterior la usa sin construir. Ver
-«Releases» más abajo para cómo se publican esas etiquetas.
+Los dos primeros valores aparecen en las notas de cada release; el digest de Postgres debe
+obtenerse de una fuente oficial y fijarse en la configuración operativa. Si falta cualquier
+variable, Compose falla antes de iniciar servicios. Ver «Releases» más abajo.
 
 ### Variables obligatorias en producción
 
@@ -344,16 +344,20 @@ git tag v1.2.3
 git push origin v1.2.3
 ```
 
-Produce `ghcr.io/oniriaai/petadmin-backend:v1.2.3` y `…-frontend:v1.2.3` (más `1.2`, el sha, y
-`latest` solo si no es una prerelease: una etiqueta con guion, `v1.2.3-rc1`, publica sus
-versiones pero no mueve `latest`).
+Produce las imágenes versionadas de backend y frontend en GHCR, además de sus etiquetas
+auxiliares (`1.2`, el SHA y `latest` solo para releases estables). Las etiquetas de versión siguen
+publicándose para facilitar la navegación en GHCR, pero producción no las usa: el despliegue se
+hace por digest.
 
 **Nada de este pipeline toca el servidor de producción, y no hay credenciales SSH en el
-repositorio.** El host tira de la versión que quiera, cuando quiera:
+repositorio.** El host despliega los digests exactos publicados por el workflow:
 
 ```bash
-APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml pull
-APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml up -d
+export BACKEND_DIGEST=sha256:...
+export FRONTEND_DIGEST=sha256:...
+export POSTGRES_DIGEST=sha256:...
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 Lo que esto cambia: producción dejaba de compilar TypeScript en la propia máquina, así que lo
@@ -370,9 +374,9 @@ Lo mismo con **`PUBLIC_SITE_URL`**, la dirección pública del sitio sin barra f
 canónico y los datos estructurados de la página de presentación. Sin ella el sitio se publica
 cerrado a los buscadores, que es lo que se quiere en la demo y en local pero no en producción.
 
-**Reversión:** apuntar `APP_VERSION` a la etiqueta anterior y repetir los dos comandos. Esto
-**no** revierte las migraciones; si la versión que se retira cambió el esquema de forma
-incompatible hace falta `scripts/restore.sh`.
+**Reversión:** sustituir los digests de backend y frontend por los de la release anterior y
+repetir los dos comandos. Esto **no** revierte las migraciones; si la versión que se retira cambió
+el esquema de forma incompatible hace falta `scripts/restore.sh`.
 
 ---
 
