@@ -12,21 +12,13 @@
 # Required in .env: DATABASE_URL, JWT_SECRET (>= 32 chars, not "change_me"), CORS_ORIGINS,
 # SUPERADMIN_PASSWORD, and the B2_* credentials. The backend refuses to start otherwise.
 #
-# Two ways to get the images, and APP_VERSION picks between them:
-#
-#   Run a published release (preferred) -- the artefact CI actually verified:
-#     APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml pull
-#     APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml up -d
-#
-#   Build on this host (unchanged, still works, e.g. for an unreleased hotfix):
-#     docker compose -f docker-compose.prod.yml up --build -d
-#
-# Every service keeps both `image:` and `build:`. `pull` fetches the named tag and a later
-# `up -d` uses it without building; `up --build` builds from source and tags it the same.
+# Production requires immutable image digests. Set BACKEND_DIGEST, FRONTEND_DIGEST and
+# POSTGRES_DIGEST to values obtained from the verified release or trusted upstream registry.
+# A missing digest is a hard Compose error; tags such as `latest` are intentionally unsupported.
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres@${POSTGRES_DIGEST:?Set POSTGRES_DIGEST to a verified sha256 digest}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -43,9 +35,7 @@ services:
   # Runs to completion before the backend starts, so no web process ever serves against a
   # schema it has not migrated. Provisions the platform superadmin and nothing else.
   migrate:
-    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
-    build:
-      context: ./backend
+    image: ghcr.io/oniriaai/petadmin-backend@${BACKEND_DIGEST:?Set BACKEND_DIGEST to the verified backend sha256 digest}
     command: sh -c "npx prisma migrate deploy && node dist-seed/prisma/seed.js"
     environment:
       NODE_ENV: production
@@ -60,9 +50,7 @@ services:
     restart: "no"
 
   backend:
-    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
-    build:
-      context: ./backend
+    image: ghcr.io/oniriaai/petadmin-backend@${BACKEND_DIGEST:?Set BACKEND_DIGEST to the verified backend sha256 digest}
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -117,9 +105,7 @@ services:
   # but running it from N web replicas, or never because a deploy reset a 24h setInterval, is
   # what this avoids.
   scheduler:
-    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
-    build:
-      context: ./backend
+    image: ghcr.io/oniriaai/petadmin-backend@${BACKEND_DIGEST:?Set BACKEND_DIGEST to the verified backend sha256 digest}
     command: node dist/jobs/run-recurring-plans.js
     environment:
       NODE_ENV: production
@@ -137,9 +123,7 @@ services:
   # Each unit is only sent for during its own daytime, and every send is claimed in the database
   # first, so an extra or an overlapping run sends nothing twice.
   reminders:
-    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
-    build:
-      context: ./backend
+    image: ghcr.io/oniriaai/petadmin-backend@${BACKEND_DIGEST:?Set BACKEND_DIGEST to the verified backend sha256 digest}
     command: node dist/jobs/run-reminders.js
     environment:
       NODE_ENV: production
@@ -166,9 +150,7 @@ services:
   # stayed unpaid. Every charge is claimed in the database first, so an extra or an overlapping
   # run charges nobody twice.
   billing:
-    image: ghcr.io/oniriaai/petadmin-backend:${APP_VERSION:-latest}
-    build:
-      context: ./backend
+    image: ghcr.io/oniriaai/petadmin-backend@${BACKEND_DIGEST:?Set BACKEND_DIGEST to the verified backend sha256 digest}
     command: node dist/jobs/run-billing.js
     environment:
       NODE_ENV: production
@@ -190,12 +172,7 @@ services:
     restart: "no"
 
   frontend:
-    image: ghcr.io/oniriaai/petadmin-frontend:${APP_VERSION:-latest}
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: ${PUBLIC_API_URL}
-        VITE_SITE_URL: ${PUBLIC_SITE_URL:-}
+    image: ghcr.io/oniriaai/petadmin-frontend@${FRONTEND_DIGEST:?Set FRONTEND_DIGEST to the verified frontend sha256 digest}
     restart: unless-stopped
     ports:
       - "127.0.0.1:8080:80"
