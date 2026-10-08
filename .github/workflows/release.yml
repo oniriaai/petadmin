@@ -163,8 +163,8 @@ jobs:
           \`\`\`
 
           El servicio \`migrate\` aplica \`prisma migrate deploy\` y termina antes de que arranque
-          el backend. Comprobación: \`curl localhost:3001/api/v1/health\` responde 503 mientras
-          quede alguna migración pendiente.
+          el backend. Comprobación: \`curl localhost:3001/api/v1/health\` responde \`{"ok":true}\`
+          cuando el servicio está disponible.
 
           ### Imágenes
 

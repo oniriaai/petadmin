@@ -148,8 +148,8 @@ jobs:
       # No `prisma migrate diff` drift gate on purpose: the partial unique index in
       # 20260906000000_per_tenant_usernames cannot be expressed in schema.prisma (see
       # prisma/migrations/README.md), so a drift check would fail permanently. Applying the
-      # history to an empty database here, plus /api/v1/health returning 503 while any
-      # migration is pending, is what actually covers migration correctness.
+      # history to an empty database here, plus the backend health probe confirming database
+      # reachability, is what covers startup readiness before the API is exercised.
       - name: Apply migrations
         working-directory: backend
         run: npx prisma migrate deploy

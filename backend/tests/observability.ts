@@ -37,7 +37,7 @@ function fakeRes(headersSent = false): FakeRes {
   };
 }
 
-const silent = { error: () => {}, debug: () => {}, info: () => {} };
+const silent = { error: () => {}, warn: () => {}, debug: () => {}, info: () => {} };
 
 function fakeReq(overrides: Record<string, unknown> = {}) {
   return {
@@ -72,6 +72,23 @@ function fakeReq(overrides: Record<string, unknown> = {}) {
     "The error's own text must never reach the caller",
   );
   assert.equal(nextCalled, false, "A handled error must not fall through to Express");
+}
+
+// Express's JSON parser marks malformed request bodies as SyntaxError with a body property.
+{
+  const res = fakeRes();
+  errorHandler(
+    Object.assign(new SyntaxError("Unexpected token"), { body: "{" }),
+    fakeReq({ method: "POST", originalUrl: "/api/v1/auth/login" }),
+    res as any,
+    () => {},
+  );
+
+  assert.equal(res.statusCode, 400, "Malformed JSON must be a client error");
+  assert.deepEqual(res.body, {
+    message: "Datos inválidos",
+    requestId: "req-abc-123",
+  });
 }
 
 // An authenticated request: the handler reads tenant context without assuming it exists.
