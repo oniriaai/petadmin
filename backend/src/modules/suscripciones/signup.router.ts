@@ -1,7 +1,7 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
 
-import { handleAuthzError } from "../../middleware/auth";
+import { handleAuthzError, requestsCookieSession, setSessionCookie } from "../../middleware/auth";
 import { logger } from "../../middleware/observability";
 import { signupLimiter } from "../../middleware/security";
 import { BILLING_PERIODS } from "./plans";
@@ -94,7 +94,13 @@ signupRouter.post("/confirm", async (req, res) => {
   try {
     const parsed = confirmSchema.safeParse(req.body);
     if (!parsed.success) return invalid(res, parsed);
-    res.json(await confirmSignupPayment(parsed.data));
+    const result = await confirmSignupPayment(parsed.data);
+    if (result.status === "provisioned") setSessionCookie(res, result.token);
+    res.json(
+      result.status === "provisioned" && requestsCookieSession(req)
+        ? { ...result, token: undefined }
+        : result,
+    );
   } catch (error) {
     fail(res, error);
   }
@@ -106,7 +112,13 @@ signupRouter.post("/verify", async (req, res) => {
   try {
     const parsed = verifySchema.safeParse(req.body);
     if (!parsed.success) return invalid(res, parsed);
-    res.json(await verifyTrialSignup(parsed.data.token));
+    const result = await verifyTrialSignup(parsed.data.token);
+    if (result.status === "provisioned") setSessionCookie(res, result.token);
+    res.json(
+      result.status === "provisioned" && requestsCookieSession(req)
+        ? { ...result, token: undefined }
+        : result,
+    );
   } catch (error) {
     fail(res, error);
   }

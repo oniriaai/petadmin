@@ -134,8 +134,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const clearSession = useCallback(() => {
-    // Only the auth keys — localStorage.clear() also wiped unrelated UI preferences.
+    // The JWT is an HttpOnly cookie; localStorage only keeps a non-sensitive bootstrap marker.
     localStorage.removeItem("token");
+    localStorage.removeItem("hasSession");
     localStorage.removeItem("user");
     localStorage.removeItem("activeBusinessUnit");
     persistPinnedDaycareId(null);
@@ -175,7 +176,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    if (!localStorage.getItem("token")) return;
     setIsSessionLoading(true);
     try {
       applySession(await api.get<SessionResponse>("/auth/me"));
@@ -190,8 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
-    if (stored && token) {
+    const hasSession = localStorage.getItem("hasSession") === "1";
+    if (stored && hasSession) {
       try {
         const parsedUser = normalizeStoredUser(JSON.parse(stored));
         if (!parsedUser) {
@@ -221,7 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         clearSession();
       }
-    } else if (stored || token) {
+    } else if (stored || hasSession) {
       clearSession();
     }
     setIsLoading(false);
@@ -274,10 +274,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // it on its own and nobody has to know their daycare's identifier.
       ...(daycare ? { daycare } : {}),
     };
-    const data = await api.post<{ token: string; user: User }>("/auth/login", payload);
+    const data = await api.post<{ token?: string; user: User }>("/auth/login", payload);
     const normalized = normalizeStoredUser(data.user);
     if (!normalized) throw new Error("El servidor devolvió un rol no reconocido.");
-    localStorage.setItem("token", data.token);
+    localStorage.setItem("hasSession", "1");
     localStorage.setItem("user", JSON.stringify(normalized));
     // A previous superadmin session could have left a pin behind; it must not carry into a
     // different login.
@@ -298,6 +298,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   function logout() {
+    void api.post("/auth/logout", undefined);
     clearSession();
   }
 

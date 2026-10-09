@@ -8,6 +8,9 @@ import {
   normalizeBusinessUnit,
   normalizeUserRole,
   requireAuth,
+  clearSessionCookie,
+  requestsCookieSession,
+  setSessionCookie,
 } from "../middleware/auth";
 import { loginLimiter } from "../middleware/security";
 import { resolveDaycareScope } from "../core/tenancy/scope";
@@ -145,8 +148,9 @@ authRouter.post("/login", ...loginLimiter, async (req, res) => {
     sessionEpoch: user.sessionEpoch,
   });
 
+  setSessionCookie(res, token);
   res.json({
-    token,
+    ...(requestsCookieSession(req) ? {} : { token }),
     user: {
       id: user.id,
       username: user.username,
@@ -156,6 +160,11 @@ authRouter.post("/login", ...loginLimiter, async (req, res) => {
       daycareId: user.daycareId,
     },
   });
+});
+
+authRouter.post("/logout", (_req, res) => {
+  clearSessionCookie(res);
+  res.status(204).end();
 });
 
 /**

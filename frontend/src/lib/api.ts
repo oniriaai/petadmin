@@ -63,10 +63,6 @@ export class ApiError extends Error {
   }
 }
 
-function getToken() {
-  return localStorage.getItem("token");
-}
-
 function getActiveBusinessUnit() {
   return normalizeBusinessUnit(localStorage.getItem("activeBusinessUnit"));
 }
@@ -115,14 +111,14 @@ function isAuthenticationAttempt(path: string): boolean {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
   const activeBusinessUnit = getActiveBusinessUnit();
   const pinnedDaycareId = getPinnedDaycareId();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "X-Session-Mode": "cookie",
       ...(activeBusinessUnit ? { "X-Business-Unit": activeBusinessUnit } : {}),
       ...(pinnedDaycareId ? { "X-Daycare-Id": pinnedDaycareId } : {}),
       ...options.headers,
@@ -258,14 +254,13 @@ export const checkInOutApi = {
 };
 
 export async function downloadFile(path: string, filename: string) {
-  const token = getToken();
   const activeBusinessUnit = getActiveBusinessUnit();
   // The tenant pin has to travel here too: without it a superadmin's export would be scoped to
   // every tenant at once rather than the one it is operating inside.
   const pinnedDaycareId = getPinnedDaycareId();
   const res = await fetch(`${BASE}${path}`, {
+    credentials: "include",
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(activeBusinessUnit ? { "X-Business-Unit": activeBusinessUnit } : {}),
       ...(pinnedDaycareId ? { "X-Daycare-Id": pinnedDaycareId } : {}),
     },

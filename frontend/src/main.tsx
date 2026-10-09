@@ -19,7 +19,7 @@ import { primeCatalog } from "./lib/billing";
  */
 function hasSession() {
   try {
-    return localStorage.getItem("token") !== null;
+    return localStorage.getItem("hasSession") === "1";
   } catch {
     return false;
   }

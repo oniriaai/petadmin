@@ -610,7 +610,7 @@ let completion: Promise<SignupCompleted> | null = null;
 /** Hands the new session to the application, the way its own login stores one. */
 function enterWorkspace(result: Extract<SignupCompleted, { status: "provisioned" }>) {
   try {
-    localStorage.setItem("token", result.token);
+    localStorage.setItem("hasSession", "1");
     localStorage.setItem("user", JSON.stringify(result.user));
     localStorage.removeItem("activeBusinessUnit");
     localStorage.removeItem("pinnedDaycareId");

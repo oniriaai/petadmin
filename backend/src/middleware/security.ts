@@ -43,7 +43,13 @@ export function corsOptions() {
       callback(null, false);
     },
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization", "X-Business-Unit", "X-Daycare-Id"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Session-Mode",
+      "X-Business-Unit",
+      "X-Daycare-Id",
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     maxAge: 600,
   };

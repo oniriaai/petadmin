@@ -34,6 +34,48 @@ export const TOKEN_VERSION = 2;
  * development; this constant makes sure there is only one place the value can come from.
  */
 export const JWT_SECRET = process.env.JWT_SECRET ?? "change_me";
+export const SESSION_COOKIE = "argos_session";
+
+export function requestsCookieSession(req: Request): boolean {
+  return req.headers["x-session-mode"] === "cookie";
+}
+
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  maxAge: 12 * 60 * 60 * 1000,
+  path: "/",
+};
+
+export function setSessionCookie(res: Response, token: string): void {
+  res.cookie(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);
+}
+
+export function clearSessionCookie(res: Response): void {
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: SESSION_COOKIE_OPTIONS.secure,
+    path: "/",
+  });
+}
+
+function readCookie(raw: string | undefined, name: string): string | undefined {
+  if (!raw) return undefined;
+  for (const part of raw.split(";")) {
+    const separator = part.indexOf("=");
+    if (separator < 0) continue;
+    const key = part.slice(0, separator).trim();
+    if (key !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(separator + 1).trim());
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
 
 /**
  * Transitional aliases for the pre-rename Kinderdog/Pethijos identifiers. Accepted on input
@@ -229,14 +271,16 @@ export function handleAuthzError(res: Response, error: unknown): boolean {
  */
 export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const auth = req.headers.authorization;
-  if (!auth?.startsWith("Bearer ")) {
+  const token = auth?.startsWith("Bearer ")
+    ? auth.slice(7)
+    : readCookie(req.headers.cookie, SESSION_COOKIE);
+  if (!token) {
     res.status(401).json({ message: "No autorizado" });
     return;
   }
 
   let payload: Omit<JwtPayload, "role"> & { role: string };
   try {
-    const token = auth.slice(7);
     payload = jwt.verify(token, JWT_SECRET) as Omit<JwtPayload, "role"> & { role: string };
   } catch {
     res.status(401).json({ message: "Token inválido" });
