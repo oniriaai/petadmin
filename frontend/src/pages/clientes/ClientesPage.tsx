@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
 import { Plus, Search, Eye, Edit2, UserX, PawPrint, Phone, Dog, Cat } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
-import { fmt } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
-import { Modal } from "../../components/ui/Modal";
 import { PageLoader } from "../../components/ui/Spinner";
 import { ClienteForm } from "./ClienteForm";
 import { PetForm } from "./PetForm";
@@ -50,7 +49,6 @@ export function ClientesPage() {
   const [statusFilter, setStatusFilter] = useState("active");
   const [showForm, setShowForm] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [showPetForm, setShowPetForm] = useState(false);
   const [petFormClient, setPetFormClient] = useState<Client | null>(null);
 
@@ -108,7 +106,7 @@ export function ClientesPage() {
   return (
     <div className="p-4 sm:p-6 space-y-5">
       <PageHeader
-        title="Perfil del Cliente"
+        title="Clientes"
         subtitle={<>{clients.length} clientes</>}
         actions={
           <button
@@ -167,9 +165,12 @@ export function ClientesPage() {
                   {pageClients.map((c) => (
                     <tr key={c.id} className="table-tr">
                       <td className="table-td">
-                        <p className="font-semibold text-ink">
+                        <Link
+                          to={`/clientes/${c.id}`}
+                          className="font-semibold text-ink hover:text-action hover:underline"
+                        >
                           {c.lastName}, {c.firstName}
-                        </p>
+                        </Link>
                         {c.idNumber && <p className="text-xs text-muted">CI: {c.idNumber}</p>}
                       </td>
                       <td className="table-td">
@@ -189,9 +190,13 @@ export function ClientesPage() {
                       <td className="table-td">
                         <div className="flex flex-wrap gap-1">
                           {c.pets.slice(0, 3).map((p) => (
-                            <span key={p.id} className="badge bg-info-soft text-info-ink">
+                            <Link
+                              key={p.id}
+                              to={`/animales/${p.id}`}
+                              className="badge bg-info-soft text-info-ink hover:underline"
+                            >
                               {p.species === "dog" ? <Dog size={14} /> : <Cat size={14} />} {p.name}
-                            </span>
+                            </Link>
                           ))}
                           {c.pets.length > 3 && (
                             <span className="badge bg-sunken text-muted">+{c.pets.length - 3}</span>
@@ -209,13 +214,13 @@ export function ClientesPage() {
                       </td>
                       <td className="table-td">
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setSelectedClient(c)}
+                          <Link
+                            to={`/clientes/${c.id}`}
                             className="btn-ghost btn-sm p-1.5"
                             title="Ver detalle"
                           >
                             <Eye size={14} />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => {
                               setEditClient(c);
@@ -297,82 +302,6 @@ export function ClientesPage() {
         onSaved={load}
         client={petFormClient}
       />
-
-      <Modal
-        open={!!selectedClient}
-        onClose={() => setSelectedClient(null)}
-        title="Perfil del Cliente"
-        size="lg"
-      >
-        {selectedClient && (
-          <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="label">Nombre completo</p>
-                <p className="font-semibold">
-                  {selectedClient.firstName} {selectedClient.lastName}
-                </p>
-              </div>
-              <div>
-                <p className="label">Cédula</p>
-                <p>{selectedClient.idNumber ?? "—"}</p>
-              </div>
-              <div>
-                <p className="label">Teléfono</p>
-                <p>{selectedClient.phone ?? "—"}</p>
-              </div>
-              <div>
-                <p className="label">WhatsApp</p>
-                <p>{selectedClient.whatsapp ?? "—"}</p>
-              </div>
-              <div>
-                <p className="label">Email</p>
-                <p>{selectedClient.email ?? "—"}</p>
-              </div>
-              <div>
-                <p className="label">Fecha de nacimiento</p>
-                <p>
-                  {selectedClient.birthdate
-                    ? new Date(selectedClient.birthdate).toLocaleDateString("es-ES")
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="label">Ciudad / Provincia</p>
-                <p>
-                  {[selectedClient.city, selectedClient.province].filter(Boolean).join(", ") || "—"}
-                </p>
-              </div>
-              <div>
-                <p className="label">Cliente desde</p>
-                <p>{fmt(selectedClient.createdAt)}</p>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-ink mb-3">Mascotas registradas</h3>
-              {selectedClient.pets.length === 0 ? (
-                <p className="text-muted text-sm">
-                  Este tutor todavía no tiene mascotas registradas.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedClient.pets.map((p) => (
-                    <div key={p.id} className="flex items-center gap-2 p-2 bg-sunken rounded-lg">
-                      {p.species === "dog" ? <Dog size={20} /> : <Cat size={20} />}
-                      <div>
-                        <p className="font-medium text-sm">{p.name}</p>
-                        <p className="text-xs text-muted">
-                          {p.breed ?? p.species} · {p.sex === "M" ? "Macho" : "Hembra"}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

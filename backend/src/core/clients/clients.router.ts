@@ -78,6 +78,7 @@ clientsRouter.get("/:id", async (req, res) => {
           include: {
             pets: { include: { pet: { select: { name: true } } } },
             room: { select: { name: true } },
+            vetVisit: { select: { id: true, type: true, reason: true, status: true } },
           },
         },
       },

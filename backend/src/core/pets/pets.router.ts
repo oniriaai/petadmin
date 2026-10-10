@@ -92,10 +92,40 @@ petsRouter.get("/:id", async (req, res) => {
         vaccinations: { orderBy: { date: "desc" } },
         documents: { orderBy: { uploadedAt: "desc" } },
         alerts: { where: { isResolved: false }, orderBy: { createdAt: "desc" } },
+        // The pet's history across every unit, on purpose not narrowed to the caller's unit.
+        // It is a summary any staff member may read: no clinical text, no notes, no amounts.
+        // shortcut: last 100 per source, paginate when a pet outgrows it
         reservationPets: {
-          include: { reservation: { include: { room: { select: { name: true } } } } },
-          orderBy: { reservation: { createdAt: "desc" } },
-          take: 10,
+          select: {
+            reservation: {
+              select: {
+                id: true,
+                businessUnit: true,
+                service: true,
+                status: true,
+                checkIn: true,
+                checkOut: true,
+                createdAt: true,
+                room: { select: { name: true } },
+                vetVisit: { select: { id: true, type: true, reason: true, status: true } },
+              },
+            },
+          },
+          orderBy: { reservation: { checkIn: { sort: "desc", nulls: "last" } } },
+          take: 100,
+        },
+        // A walk-in daycare stay has no reservation behind it.
+        checkInOuts: {
+          where: { reservationId: null },
+          select: {
+            id: true,
+            businessUnit: true,
+            checkInTime: true,
+            checkOutTime: true,
+            room: { select: { name: true } },
+          },
+          orderBy: { checkInTime: "desc" },
+          take: 100,
         },
       },
     });

@@ -518,7 +518,9 @@ describe("registry", () => {
     expect(free).toEqual([
       "/",
       "/animales",
+      "/animales/:petId",
       "/clientes",
+      "/clientes/:clientId",
       "/configuracion",
       "/guia",
       "/suscripcion",

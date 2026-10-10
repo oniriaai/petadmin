@@ -42,7 +42,9 @@ function page<M extends Record<K, ComponentType>, K extends string>(
 }
 
 const ClientesPage = page(() => import("../pages/clientes/ClientesPage"), "ClientesPage");
+const ClientePage = page(() => import("../pages/clientes/ClientePage"), "ClientePage");
 const AnimalesPage = page(() => import("../pages/animales/AnimalesPage"), "AnimalesPage");
+const AnimalPage = page(() => import("../pages/animales/AnimalPage"), "AnimalPage");
 const OperacionesPage = page(
   () => import("../pages/operaciones/OperacionesPage"),
   "OperacionesPage",
@@ -491,7 +493,9 @@ export const frontendModules: readonly FrontendModule[] = [
     label: "Gestión",
     routes: [
       { path: "/clientes", title: "Clientes", component: ClientesPage },
+      { path: "/clientes/:clientId", title: "Cliente", component: ClientePage },
       { path: "/animales", title: "Animales", component: AnimalesPage },
+      { path: "/animales/:petId", title: "Animal", component: AnimalPage },
       {
         path: "/operaciones",
         title: "Operaciones",
