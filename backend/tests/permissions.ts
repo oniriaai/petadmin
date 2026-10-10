@@ -77,6 +77,7 @@ function needs(moduleId: string, method: string, path: string): string[] {
 for (const moduleId of ["incomes", "payables", "providers"]) {
   assert.deepEqual(needs(moduleId, "GET", "/"), ["finanzas.read"]);
   assert.deepEqual(needs(moduleId, "GET", "/abc"), ["finanzas.read"]);
+  assert.deepEqual(needs(moduleId, "GET", "/summary"), ["finanzas.read"]);
   assert.deepEqual(needs(moduleId, "POST", "/"), ["finanzas.write"]);
   assert.deepEqual(needs(moduleId, "PUT", "/abc"), ["finanzas.write"]);
   assert.deepEqual(needs(moduleId, "DELETE", "/abc"), ["finanzas.write"]);
@@ -88,9 +89,9 @@ assert.deepEqual(needs("inventory", "GET", "/items/abc/movements"), ["inventario
 assert.deepEqual(needs("inventory", "POST", "/items/abc/movements"), ["inventario.write"]);
 assert.deepEqual(needs("inventory", "DELETE", "/items/abc"), ["inventario.write"]);
 
-for (const path of ["/incomes", "/expenses", "/kpis"]) {
-  assert.deepEqual(needs("reports", "GET", path), ["finanzas.read"]);
-}
+assert.deepEqual(needs("reports", "GET", "/finance"), ["finanzas.read"]);
+// A prefix matches on a segment boundary, not on a string that merely starts the same way.
+assert.deepEqual(needs("reports", "GET", "/finances"), []);
 assert.deepEqual(needs("reports", "GET", "/transport"), [], "the transport route stays open");
 
 assert.deepEqual(needs("export", "GET", "/clients"), ["datos.export"]);
@@ -99,11 +100,6 @@ assert.deepEqual(needs("export", "GET", "/incomes"), ["datos.export", "finanzas.
 assert.deepEqual(needs("export", "GET", "/expenses"), ["datos.export", "finanzas.read"]);
 
 assert.deepEqual(needs("dashboard", "GET", "/summary"), [], "the summary filters in the handler");
-assert.deepEqual(needs("dashboard", "GET", "/financial/summary"), ["finanzas.read"]);
-assert.deepEqual(needs("dashboard", "GET", "/financial/trends"), ["finanzas.read"]);
-assert.deepEqual(needs("dashboard", "GET", "/analytics/occupancy"), []);
-// A prefix matches on a segment boundary, not on a string that merely starts the same way.
-assert.deepEqual(needs("dashboard", "GET", "/financials"), []);
 
 for (const moduleId of ["clients", "pets", "reservations", "recurring-plans", "rooms"]) {
   assert.deepEqual(needs(moduleId, "DELETE", "/abc"), ["registros.delete"], moduleId);

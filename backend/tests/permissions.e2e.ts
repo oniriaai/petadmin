@@ -136,7 +136,7 @@ async function run() {
     const me = await admin.get("/auth/me");
     expectStatus(me.status, 200, "GET /auth/me");
     expectSame(me.data.permissions, ALL_PERMISSIONS, "permisos del admin");
-    for (const path of ["/incomes", "/inventory/items", "/reports/kpis", "/export/clients"]) {
+    for (const path of ["/incomes", "/inventory/items", "/reports/finance", "/export/clients"]) {
       expectStatus((await admin.get(path)).status, 200, `GET ${path} (admin)`);
     }
   });
@@ -165,11 +165,9 @@ async function run() {
       "/incomes",
       "/payables",
       "/providers",
-      "/reports/incomes",
-      "/reports/expenses",
-      "/reports/kpis",
-      "/dashboard/financial/summary",
-      "/dashboard/financial/trends",
+      "/incomes/summary",
+      "/payables/summary",
+      "/reports/finance",
     ]) {
       expectDenied(await staff.get(path), "finanzas.read", `GET ${path}`);
     }
@@ -258,7 +256,7 @@ async function run() {
     );
 
     expectStatus((await staff.get("/incomes")).status, 200, "GET /incomes");
-    expectStatus((await staff.get("/reports/kpis")).status, 200, "GET /reports/kpis");
+    expectStatus((await staff.get("/reports/finance")).status, 200, "GET /reports/finance");
     const income = await staff.post("/incomes", {
       type: "OTRO",
       concept: `Ingreso permisos ${SUFFIX}`,

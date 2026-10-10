@@ -83,7 +83,6 @@ describe("dashboard links", () => {
   it("offers no link into a module the daycare has not bought", async () => {
     renderDashboard(["nucleo"]);
     expect(await screen.findByRole("link", { name: /Nuevo cliente/ })).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Informes/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Finanzas/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Nueva reserva/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Ver todas/ })).not.toBeInTheDocument();
@@ -92,8 +91,7 @@ describe("dashboard links", () => {
 
   it("offers them once the modules are enabled", async () => {
     renderDashboard(["nucleo", "reservas", "finanzas", "informes", "cumplimiento"]);
-    expect(await screen.findByRole("link", { name: /Informes/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Finanzas/ })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Finanzas/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Nueva reserva/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ver todas las alertas/ })).toBeInTheDocument();
   });

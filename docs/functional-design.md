@@ -107,7 +107,6 @@ núcleo y está siempre disponible.
     ├── Clientes (/clientes)
     ├── Animales (/animales)
     ├── Finanzas (/transacciones)           [finanzas]
-    ├── Informes (/informes)                [informes]
     ├── Avisos a tutores (/avisos)          [recordatorios]
     ├── Alertas (/herramientas)             [cumplimiento]
     ├── Configuración (/configuracion)      [admin]
@@ -117,6 +116,10 @@ núcleo y está siempre disponible.
 `Salas`, `Planes` y `Disponibilidad` dependen de `reservas` y no de `guarderia`: salas, asistencia y
 planes recurrentes son primitivos compartidos que las reservas de peluquería también usan.
 `Transporte` necesita además `informes` porque la página lee `/reports/transport`.
+
+`Informes` no tiene página propia: es la pestaña **Resumen** de `Finanzas`, que lee
+`/reports/finance`, y el botón **Excel** de sus pestañas Ingresos y Egresos. Una guardería con
+`finanzas` y sin `informes` ve el libro de ingresos y egresos, sin resumen ni exportación.
 
 La consola del proveedor vive fuera de este árbol, en `/platform`, con su propia navegación
 (Resumen, Guarderías, Auditoría) y carga diferida.
@@ -179,8 +182,16 @@ La consola del proveedor vive fuera de este árbol, en `/platform`, con su propi
 - `PUT /settings/:businessUnit` (`reminders`), `PUT /clients/:id` (`reminderChannel`): Configuración de la unidad y preferencia del tutor.
 
 ### Módulo Finanzas y Backoffice
-- `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable.
-- `GET, POST, PUT /payables`: Cuentas por pagar y gastos por unidad.
+- `GET, POST, PUT /incomes`: Ingresos categorizados por unidad contable. La lista se filtra por
+  `from`, `to`, `q`, `type`, `paymentMethod` y `status`; `/incomes/summary` da los totales de
+  esos mismos filtros.
+- `GET, POST, PUT /payables`: Cuentas por pagar y gastos por unidad. Filtros: `from`, `to`, `q`,
+  `type`, `category`, `providerId` y `status` (`VENCIDO` es un documento sin pagar con la fecha
+  de vencimiento pasada); `/payables/summary` da los totales. Un egreso se fecha por su factura
+  y, si no tiene, por el día en que se registró.
+- `GET /reports/finance`: Las cifras del resumen para un periodo (`from`, `to`; el mes en curso
+  por defecto) y el anterior: ingresos, gastos, utilidad, IVA, serie mensual, desgloses y
+  cuentas por pagar.
 - `GET, POST /inventory`: Control de insumos y productos clasificados por local.
 - `GET /dashboard/summary`: Resumen diario y métricas operativas.
 - `GET /reports/*`: Informes consolidados y exportaciones a Excel.

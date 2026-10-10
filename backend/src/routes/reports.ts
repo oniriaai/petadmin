@@ -1,180 +1,152 @@
 import { Router } from "express";
 import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
-import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
+import { buildScopeWhere } from "../core/tenancy/scope";
+import { localDayBoundsUtc } from "../core/tenancy/local-time";
+import {
+  monthsEndingAt,
+  type Period,
+  previousPeriod,
+  rangeWhere,
+  readPeriod,
+  requestTimezone,
+} from "../utils/period";
+import { overdueWhere, payableDateWhere } from "./payables";
 
-/**
- * How far back the monthly series reaches when the caller does not say. Two years covers
- * year-over-year comparison, which is what the chart is for.
- */
-const MONTHLY_SERIES_MONTHS = 24;
+/** How many months the income-against-expenses chart shows, ending with the period's last. */
+const MONTHLY_SERIES_MONTHS = 12;
+/** How far ahead "about to fall due" looks. */
+const UPCOMING_DAYS = 30;
 
 export const reportsRouter = Router();
 
-reportsRouter.get("/incomes", async (req, res) => {
+/**
+ * Every financial figure of the Finanzas summary, for one period and the one before it.
+ *
+ * It is the single source for those figures on purpose: they used to come from two sets of
+ * endpoints with different default windows, which showed two different "ingresos" on two pages.
+ * Nothing here reads rows except the short list of documents about to fall due.
+ */
+reportsRouter.get("/finance", async (req, res) => {
   try {
-    const buWhere = buildScopeWhere(req);
-    const { from, to } = req.query as Record<string, string>;
-    const where: Record<string, unknown> = { ...buWhere };
-    if (from || to) {
-      where.date = {};
-      if (from) (where.date as Record<string, unknown>).gte = new Date(from);
-      if (to) (where.date as Record<string, unknown>).lte = new Date(to);
-    }
+    const scope = buildScopeWhere(req);
+    const timezone = await requestTimezone(req);
+    const period = readPeriod(req, timezone);
+    const previous = previousPeriod(period, timezone);
 
-    /**
-     * The monthly series is bucketed in JS, so this read is the one query in the handler that
-     * is not an aggregate — the other three use `aggregate`/`groupBy` and touch no rows. With no
-     * `from`/`to` it scanned the tenant's entire income history on every report load, and that
-     * cost grows forever.
-     *
-     * Bounded by a default window when the caller gives none. Prisma cannot group by month
-     * (`date_trunc`) without raw SQL, and raw SQL here would mean hand-writing the tenant filter
-     * outside `buildScopeWhere` — the one thing worth avoiding in this codebase. An explicit
-     * `from`/`to` is still honoured in full, so nothing is unreachable; only the default is
-     * capped.
-     */
-    const monthlyWhere = { ...where };
-    if (!from && !to) {
-      const windowStart = new Date();
-      windowStart.setMonth(windowStart.getMonth() - MONTHLY_SERIES_MONTHS);
-      windowStart.setHours(0, 0, 0, 0);
-      monthlyWhere.date = { gte: windowStart };
-    }
+    const totals = async (range: Period) => {
+      const [income, expenses] = await Promise.all([
+        prisma.income.aggregate({
+          where: { ...scope, date: rangeWhere(range) },
+          _sum: { total: true, vatAmount: true },
+          _count: true,
+        }),
+        prisma.payable.aggregate({
+          where: { ...scope, ...payableDateWhere(range) },
+          _sum: { total: true, vatAmount: true },
+        }),
+      ]);
+      const incomeTotal = income._sum.total ?? 0;
+      const expenseTotal = expenses._sum.total ?? 0;
+      const profit = incomeTotal - expenseTotal;
+      return {
+        income: incomeTotal,
+        incomeVat: income._sum.vatAmount ?? 0,
+        incomeCount: income._count,
+        avgTicket: income._count > 0 ? incomeTotal / income._count : 0,
+        expenses: expenseTotal,
+        expenseVat: expenses._sum.vatAmount ?? 0,
+        profit,
+        margin: incomeTotal > 0 ? (profit / incomeTotal) * 100 : 0,
+      };
+    };
 
-    const monthlyRows = await prisma.income.findMany({
-      where: monthlyWhere,
-      select: { date: true, total: true },
-      orderBy: { date: "asc" },
-    });
-    const monthlyMap = new Map<string, number>();
-    for (const row of monthlyRows) {
-      const month = row.date.toISOString().slice(0, 7);
-      monthlyMap.set(month, (monthlyMap.get(month) ?? 0) + row.total);
-    }
-    const monthlySeries = Array.from(monthlyMap.entries()).map(([month, total]) => ({
-      month,
-      total,
-    }));
-
-    const [total, byService, byMethod, monthly] = await Promise.all([
-      prisma.income.aggregate({ where, _sum: { total: true, vatAmount: true }, _count: true }),
-      prisma.income.groupBy({ by: ["type"], where, _sum: { total: true }, _count: true }),
-      prisma.income.groupBy({ by: ["paymentMethod"], where, _sum: { total: true }, _count: true }),
-      Promise.resolve(monthlySeries),
-    ]);
-
-    res.json({
-      total: total._sum.total ?? 0,
-      count: total._count,
-      vatTotal: total._sum.vatAmount ?? 0,
-      byService,
-      byMethod,
-      monthly,
-    });
-  } catch (error) {
-    if (handleAuthzError(res, error)) return;
-    console.error(error);
-    res.status(500).json({ message: "Error interno del servidor" });
-  }
-});
-
-reportsRouter.get("/expenses", async (req, res) => {
-  try {
-    const buWhere = buildScopeWhere(req);
-    const { from, to } = req.query as Record<string, string>;
-    const where: Record<string, unknown> = { ...buWhere };
-    if (from || to) {
-      where.createdAt = {};
-      if (from) (where.createdAt as Record<string, unknown>).gte = new Date(from);
-      if (to) (where.createdAt as Record<string, unknown>).lte = new Date(to);
-    }
-
-    const [total, byCategory, byType, byStatus] = await Promise.all([
-      prisma.payable.aggregate({
-        where,
-        _sum: { total: true, paid: true, balance: true },
-        _count: true,
-      }),
-      prisma.payable.groupBy({ by: ["category"], where, _sum: { total: true } }),
-      prisma.payable.groupBy({ by: ["type"], where, _sum: { total: true } }),
-      prisma.payable.groupBy({ by: ["status"], where, _count: true }),
-    ]);
-
-    res.json({
-      total: total._sum.total ?? 0,
-      paid: total._sum.paid ?? 0,
-      balance: total._sum.balance ?? 0,
-      count: total._count,
-      byCategory,
-      byType,
-      byStatus,
-    });
-  } catch (error) {
-    if (handleAuthzError(res, error)) return;
-    console.error(error);
-    res.status(500).json({ message: "Error interno del servidor" });
-  }
-});
-
-reportsRouter.get("/kpis", async (req, res) => {
-  try {
-    const buWhere = buildScopeWhere(req);
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    const incomeWhere = { ...scope, date: rangeWhere(period) };
+    const today = localDayBoundsUtc(new Date(), timezone)!.start;
+    const upcomingEnd = new Date(today.getTime() + UPCOMING_DAYS * 24 * 60 * 60 * 1000);
+    const unpaid = { ...scope, status: { not: "PAGADO" } };
+    const due = (where: Record<string, unknown>) =>
+      prisma.payable.aggregate({ where, _sum: { balance: true }, _count: true });
 
     const [
-      incomeThisMonth,
-      incomeLastMonth,
-      expenseThisMonth,
-      reservationsThisMonth,
-      clientCount,
-      avgTicket,
+      current,
+      before,
+      monthly,
+      byService,
+      byMethod,
+      expensesByCategory,
+      overdue,
+      upcoming,
+      nextDue,
     ] = await Promise.all([
-      prisma.income.aggregate({
-        where: { ...buWhere, date: { gte: monthStart } },
+      totals(period),
+      totals(previous),
+      // Twelve small aggregates rather than one read of every row bucketed in JS: Prisma cannot
+      // group by month without raw SQL, and raw SQL would mean writing the tenant filter by hand.
+      Promise.all(
+        monthsEndingAt(period, timezone, MONTHLY_SERIES_MONTHS).map(async ({ month, ...range }) => {
+          const [income, expenses] = await Promise.all([
+            prisma.income.aggregate({
+              where: { ...scope, date: rangeWhere(range) },
+              _sum: { total: true },
+            }),
+            prisma.payable.aggregate({
+              where: { ...scope, ...payableDateWhere(range) },
+              _sum: { total: true },
+            }),
+          ]);
+          return { month, income: income._sum.total ?? 0, expenses: expenses._sum.total ?? 0 };
+        }),
+      ),
+      prisma.income.groupBy({ by: ["type"], where: incomeWhere, _sum: { total: true } }),
+      prisma.income.groupBy({ by: ["paymentMethod"], where: incomeWhere, _sum: { total: true } }),
+      prisma.payable.groupBy({
+        by: ["category"],
+        where: { ...scope, ...payableDateWhere(period) },
         _sum: { total: true },
-        _count: true,
       }),
-      prisma.income.aggregate({
-        where: { ...buWhere, date: { gte: lastMonthStart, lte: lastMonthEnd } },
-        _sum: { total: true },
+      due({ ...scope, ...overdueWhere(timezone) }),
+      due({ ...unpaid, dueDate: { gte: today, lt: upcomingEnd } }),
+      prisma.payable.findMany({
+        where: { ...unpaid, dueDate: { not: null, lt: upcomingEnd } },
+        select: {
+          id: true,
+          description: true,
+          dueDate: true,
+          balance: true,
+          provider: { select: { name: true } },
+        },
+        orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+        take: 10,
       }),
-      prisma.payable.aggregate({
-        where: { ...buWhere, createdAt: { gte: monthStart } },
-        _sum: { total: true },
-      }),
-      prisma.reservation.count({
-        where: { ...buWhere, createdAt: { gte: monthStart }, status: { not: "CANCELADA" } },
-      }),
-      prisma.client.count({ where: { isActive: true, ...buildDaycareWhere(req) } }),
-      prisma.income.aggregate({ where: { ...buWhere }, _avg: { total: true } }),
     ]);
 
-    const ingresosMes = incomeThisMonth._sum.total ?? 0;
-    const ingresosMesAnterior = incomeLastMonth._sum.total ?? 0;
-    const gastosMes = expenseThisMonth._sum.total ?? 0;
-    const utilidad = ingresosMes - gastosMes;
-    const crecimiento =
-      ingresosMesAnterior > 0
-        ? ((ingresosMes - ingresosMesAnterior) / ingresosMesAnterior) * 100
-        : 0;
-    const ticketPromedio = avgTicket._avg.total ?? 0;
-    const ingresoPorReserva = reservationsThisMonth > 0 ? ingresosMes / reservationsThisMonth : 0;
-
+    const byTotal = (a: { total: number }, b: { total: number }) => b.total - a.total;
     res.json({
-      ingresosMes,
-      ingresosMesAnterior,
-      gastosMes,
-      utilidad,
-      margenGanancia: ingresosMes > 0 ? (utilidad / ingresosMes) * 100 : 0,
-      crecimiento,
-      reservacionesMes: reservationsThisMonth,
-      ticketPromedio,
-      ingresoPorReserva,
-      totalClientes: clientCount,
+      from: period.start,
+      to: period.end,
+      period: current,
+      previous: before,
+      monthly,
+      byService: byService.map((r) => ({ type: r.type, total: r._sum.total ?? 0 })).sort(byTotal),
+      byMethod: byMethod
+        .map((r) => ({ paymentMethod: r.paymentMethod, total: r._sum.total ?? 0 }))
+        .sort(byTotal),
+      expensesByCategory: expensesByCategory
+        .map((r) => ({ category: r.category, total: r._sum.total ?? 0 }))
+        .sort(byTotal),
+      payables: {
+        overdue: { total: overdue._sum.balance ?? 0, count: overdue._count },
+        upcoming: { total: upcoming._sum.balance ?? 0, count: upcoming._count },
+        items: nextDue.map((p) => ({
+          id: p.id,
+          description: p.description,
+          provider: p.provider?.name ?? null,
+          dueDate: p.dueDate,
+          balance: p.balance,
+          overdue: p.dueDate! < today,
+        })),
+      },
     });
   } catch (error) {
     if (handleAuthzError(res, error)) return;

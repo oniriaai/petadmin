@@ -52,7 +52,6 @@ const DisponibilidadPage = page(
   "DisponibilidadPage",
 );
 const TransportePage = page(() => import("../pages/transporte/TransportePage"), "TransportePage");
-const InformesPage = page(() => import("../pages/informes/InformesPage"), "InformesPage");
 const HerramientasPage = page(
   () => import("../pages/herramientas/HerramientasPage"),
   "HerramientasPage",
@@ -521,14 +520,6 @@ export const frontendModules: readonly FrontendModule[] = [
         requires: ["inventario"],
         permissions: ["inventario.read"],
       },
-      // Every figure on the page is financial (`/reports/incomes`, `/expenses`, `/kpis`).
-      {
-        path: "/informes",
-        title: "Informes",
-        component: InformesPage,
-        requires: ["informes"],
-        permissions: ["finanzas.read"],
-      },
       // Every unit has something to remind a tutor about, so this is not tied to one. Named
       // apart from the clinic's "Recordatorios", which is its list of what to chase.
       {
@@ -584,13 +575,6 @@ export const frontendModules: readonly FrontendModule[] = [
           icon: Package,
           requires: ["inventario"],
           permissions: ["inventario.read"],
-        },
-        {
-          to: "/informes",
-          label: "Informes",
-          icon: BarChart3,
-          requires: ["informes"],
-          permissions: ["finanzas.read"],
         },
         { to: "/avisos", label: "Avisos a tutores", icon: Send, requires: ["recordatorios"] },
         { to: "/herramientas", label: "Alertas", icon: Bell, requires: ["cumplimiento"] },

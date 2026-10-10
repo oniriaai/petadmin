@@ -139,7 +139,6 @@ describe("permission gating", () => {
       </MemoryRouter>,
     );
     expect(screen.queryByText("Finanzas")).not.toBeInTheDocument();
-    expect(screen.queryByText("Informes")).not.toBeInTheDocument();
     expect(screen.getByText("Inventario")).toBeInTheDocument();
     expect(screen.getByText("Operaciones")).toBeInTheDocument();
   });
@@ -154,7 +153,6 @@ describe("permission gating", () => {
     expect(declared).toEqual({
       "/transacciones": ["finanzas.read"],
       "/inventario": ["inventario.read"],
-      "/informes": ["finanzas.read"],
     });
   });
 
@@ -274,14 +272,12 @@ describe("navigation gating", () => {
   it("hides nav items whose product module is absent", () => {
     renderSidebar({ modules: ["reservas"] });
     expect(screen.queryByText("Finanzas")).not.toBeInTheDocument();
-    expect(screen.queryByText("Informes")).not.toBeInTheDocument();
     expect(screen.getByText("Operaciones")).toBeInTheDocument();
   });
 
   it("shows them once the module is enabled", () => {
-    renderSidebar({ modules: ["reservas", "finanzas", "informes"] });
+    renderSidebar({ modules: ["reservas", "finanzas"] });
     expect(screen.getByText("Finanzas")).toBeInTheDocument();
-    expect(screen.getByText("Informes")).toBeInTheDocument();
   });
 
   it("hides alerts when cumplimiento is not enabled", () => {

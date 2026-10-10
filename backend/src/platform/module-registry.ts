@@ -77,11 +77,9 @@ export const backendModules: readonly BackendModule[] = [
     id: "dashboard",
     basePath: "/dashboard",
     router: dashboardRouter,
+    // `/summary` mixes two income figures with operational counts and leaves them out in the
+    // handler for a user without `finanzas.read`, so the module declares no rule of its own.
     description: "Cross-domain dashboard summaries",
-    // The money figures live in a core module, so without this they would be free for every
-    // user of every tenant. `/summary` mixes them with operational counts and leaves them out
-    // in the handler instead.
-    permissions: [{ path: "/financial", permission: "finanzas.read" }],
   },
   {
     id: "clients",
@@ -198,11 +196,7 @@ export const backendModules: readonly BackendModule[] = [
     router: reportsRouter,
     description: "Reports and analytics",
     // `/transport` is the day's pickup route, which the floor staff work from: not gated.
-    permissions: [
-      { path: "/incomes", permission: "finanzas.read" },
-      { path: "/expenses", permission: "finanzas.read" },
-      { path: "/kpis", permission: "finanzas.read" },
-    ],
+    permissions: [{ path: "/finance", permission: "finanzas.read" }],
   },
   {
     id: "alerts",
