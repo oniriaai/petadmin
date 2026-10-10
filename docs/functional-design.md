@@ -85,8 +85,7 @@ núcleo y está siempre disponible.
 │   ├── Control de guardería (/guarderia)   [guarderia]
 │   ├── Salas y cupos (/salas)              [reservas]
 │   ├── Planes recurrentes (/planes)        [reservas]
-│   ├── Transporte (/transporte)            [guarderia + informes]
-│   └── Disponibilidad (/disponibilidad)    [reservas]
+│   └── Transporte (/transporte)            [guarderia + informes]
 ├── ✂️ Módulo Peluquería (roles admin y grooming)
 │   └── Agenda de peluquería (/peluqueria)  [peluqueria]
 ├── 🩺 Módulo Veterinaria (roles admin y veterinary)
@@ -101,6 +100,7 @@ núcleo y está siempre disponible.
 │   ├── Consentimiento (/veterinaria/consentimientos/:id) [veterinaria]
 │   ├── Recordatorios (/veterinaria/recordatorios)    [veterinaria]
 │   ├── Informe clínico (/veterinaria/informe)        [veterinaria] (solo admin)
+│   ├── Salas de la clínica (/veterinaria/salas)      [veterinaria + reservas] (solo admin)
 │   └── Catálogo clínico (/veterinaria/catalogo)      [veterinaria] (solo admin)
 └── 💼 Gestión (todos los roles autorizados)
     ├── Operaciones (/operaciones)          [reservas]
@@ -113,7 +113,7 @@ núcleo y está siempre disponible.
     └── Guía de uso (/guia)
 ```
 
-`Salas`, `Planes` y `Disponibilidad` dependen de `reservas` y no de `guarderia`: salas, asistencia y
+`Salas` y `Planes` dependen de `reservas` y no de `guarderia`: salas, asistencia y
 planes recurrentes son primitivos compartidos que las reservas de peluquería también usan.
 `Transporte` necesita además `informes` porque la página lee `/reports/transport`.
 

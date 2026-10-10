@@ -47,10 +47,6 @@ const OperacionesPage = page(
   () => import("../pages/operaciones/OperacionesPage"),
   "OperacionesPage",
 );
-const DisponibilidadPage = page(
-  () => import("../pages/disponibilidad/DisponibilidadPage"),
-  "DisponibilidadPage",
-);
 const TransportePage = page(() => import("../pages/transporte/TransportePage"), "TransportePage");
 const HerramientasPage = page(
   () => import("../pages/herramientas/HerramientasPage"),
@@ -200,6 +196,7 @@ export const frontendModules: readonly FrontendModule[] = [
         component: RoomsPage,
         roles: ["admin", "daycare"],
         requires: ["reservas"],
+        unit: "DAYCARE",
       },
       {
         path: "/planes",
@@ -215,13 +212,6 @@ export const frontendModules: readonly FrontendModule[] = [
         roles: ["admin", "daycare"],
         requires: ["guarderia", "informes"],
         unit: "DAYCARE",
-      },
-      {
-        path: "/disponibilidad",
-        title: "Disponibilidad",
-        component: DisponibilidadPage,
-        roles: ["admin", "daycare"],
-        requires: ["reservas"],
       },
     ],
     navigation: {
@@ -259,14 +249,6 @@ export const frontendModules: readonly FrontendModule[] = [
           roles: ["admin", "daycare"],
           unit: "DAYCARE",
           requires: ["guarderia", "informes"],
-        },
-        {
-          to: "/disponibilidad",
-          label: "Disponibilidad",
-          icon: CalendarDays,
-          roles: ["admin", "daycare"],
-          unit: "DAYCARE",
-          requires: ["reservas"],
         },
       ],
     },
@@ -393,6 +375,16 @@ export const frontendModules: readonly FrontendModule[] = [
         requires: ["veterinaria"],
         unit: "VETERINARY",
       },
+      // The shared rooms screen under the clinic's own path, which is what tells it to list
+      // clinic rooms when an admin is working across every unit.
+      {
+        path: "/veterinaria/salas",
+        title: "Salas de la clínica",
+        component: RoomsPage,
+        roles: ["admin"],
+        requires: ["veterinaria", "reservas"],
+        unit: "VETERINARY",
+      },
       {
         path: "/veterinaria/informe",
         title: "Informe clínico",
@@ -476,7 +468,7 @@ export const frontendModules: readonly FrontendModule[] = [
         // The shared rooms screen, reached from the clinic's own group: its Guardería entry is
         // hidden while working in Veterinaria, and consulting rooms have to be managed somewhere.
         {
-          to: "/salas",
+          to: "/veterinaria/salas",
           label: "Salas de la clínica",
           icon: Grid3X3,
           roles: ["admin"],

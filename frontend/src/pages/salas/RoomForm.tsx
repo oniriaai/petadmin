@@ -2,6 +2,26 @@ import { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
+import type { BusinessUnit } from "../../modules/shared/contracts";
+
+export const ROOM_TYPE_LABELS: Record<string, string> = {
+  daycare: "Guardería",
+  grooming: "Peluquería",
+  consultorio: "Consultorio",
+  quirofano: "Quirófano",
+  hospital: "Hospitalización",
+  training: "Entrenamiento",
+  reception: "Recepción",
+  transport: "Transporte",
+  other: "Otro",
+};
+
+// The first type of each unit is the default for a new room.
+const UNIT_ROOM_TYPES: Record<BusinessUnit, string[]> = {
+  DAYCARE: ["daycare", "training", "reception", "transport", "other"],
+  GROOMING: ["grooming", "reception", "other"],
+  VETERINARY: ["consultorio", "quirofano", "hospital", "reception", "other"],
+};
 
 interface Room {
   id?: string;
@@ -15,12 +35,16 @@ interface Props {
   open: boolean;
   onClose: () => void;
   room?: Room | null;
+  unit: BusinessUnit;
   onSaved: () => void;
 }
 
-export function RoomForm({ open, onClose, room, onSaved }: Props) {
+export function RoomForm({ open, onClose, room, unit, onSaved }: Props) {
+  const unitTypes = UNIT_ROOM_TYPES[unit];
+  // A room saved with a type from outside its unit keeps it until someone changes it.
+  const types = room && !unitTypes.includes(room.type) ? [room.type, ...unitTypes] : unitTypes;
   const [name, setName] = useState("");
-  const [type, setType] = useState("daycare");
+  const [type, setType] = useState(unitTypes[0]);
   const [capacity, setCapacity] = useState(1);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -32,11 +56,11 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
       setCapacity(room.capacity);
     } else {
       setName("");
-      setType("daycare");
+      setType(UNIT_ROOM_TYPES[unit][0]);
       setCapacity(1);
     }
     setError("");
-  }, [room, open]);
+  }, [room, open, unit]);
 
   async function handleSave() {
     if (!name.trim()) {
@@ -55,7 +79,8 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
       if (room?.id) {
         await api.put(`/rooms/${room.id}`, data);
       } else {
-        await api.post("/rooms", data);
+        // An admin working across every unit sends no unit header, so the room names its own.
+        await api.post("/rooms", { ...data, businessUnit: unit });
       }
       onSaved();
       onClose();
@@ -106,14 +131,11 @@ export function RoomForm({ open, onClose, room, onSaved }: Props) {
         <div>
           <label className="label">Tipo de espacio</label>
           <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="daycare">Guardería</option>
-            <option value="grooming">Peluquería</option>
-            <option value="consultorio">Consultorio</option>
-            <option value="quirofano">Quirófano</option>
-            <option value="hospital">Hospitalización</option>
-            <option value="training">Entrenamiento</option>
-            <option value="reception">Recepción</option>
-            <option value="other">Otro</option>
+            {types.map((t) => (
+              <option key={t} value={t}>
+                {ROOM_TYPE_LABELS[t] ?? t}
+              </option>
+            ))}
           </select>
         </div>
 
