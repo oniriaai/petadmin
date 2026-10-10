@@ -3,6 +3,8 @@ import ExcelJS from "exceljs";
 import { handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { buildDaycareWhere, buildScopeWhere } from "../core/tenancy/scope";
+import { buildIncomeWhere } from "./incomes";
+import { buildPayableWhere } from "./payables";
 
 export const exportRouter = Router();
 
@@ -183,13 +185,8 @@ exportRouter.get("/reservations", async (req, res) => {
 
 exportRouter.get("/incomes", async (req, res) => {
   try {
-    const { from, to } = req.query as Record<string, string>;
-    const where: Record<string, unknown> = buildScopeWhere(req);
-    if (from || to) {
-      where.date = {};
-      if (from) (where.date as Record<string, unknown>).gte = new Date(from);
-      if (to) (where.date as Record<string, unknown>).lte = new Date(to);
-    }
+    // The same filters as the ledger, so the file holds what the screen shows.
+    const where = await buildIncomeWhere(req);
     await streamSheet(res, {
       filename: "ingresos.xlsx",
       sheet: "Ingresos",
@@ -231,11 +228,12 @@ exportRouter.get("/incomes", async (req, res) => {
 
 exportRouter.get("/expenses", async (req, res) => {
   try {
-    const where = buildScopeWhere(req);
+    const where = await buildPayableWhere(req);
     await streamSheet(res, {
       filename: "gastos-compras.xlsx",
       sheet: "Gastos y Compras",
       headers: [
+        "Fecha",
         "Tipo",
         "Categoría",
         "Descripción",
@@ -258,6 +256,7 @@ exportRouter.get("/expenses", async (req, res) => {
           ...batchArgs(cursor),
         }),
       toRow: (p) => [
+        (p.invoiceDate ?? p.createdAt).toLocaleDateString("es-EC"),
         p.type,
         p.category,
         p.description,

@@ -9,7 +9,6 @@ import {
   CircleAlert,
   CalendarPlus,
   UserPlus,
-  BarChart3,
   BriefcaseBusiness,
 } from "lucide-react";
 import { api } from "../lib/api";
@@ -148,11 +147,6 @@ export function Dashboard() {
         }
         actions={
           <>
-            {canOpen("/informes") && (
-              <Link to="/informes" className="btn-ghost no-underline">
-                <BarChart3 size={16} aria-hidden="true" /> Informes
-              </Link>
-            )}
             {canOpen("/transacciones") && (
               <Link to="/transacciones" className="btn-ghost no-underline">
                 <BriefcaseBusiness size={16} aria-hidden="true" /> Finanzas

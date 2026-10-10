@@ -302,24 +302,6 @@ async function main(): Promise<void> {
   );
   assert.equal((await runGate("clients", superadmin, undefined, del)).passed, true);
 
-  const money = { method: "GET", path: "/financial/summary" };
-  assert.equal(
-    (await runGate("dashboard", { ...daycareUser, permissions: [] }, undefined, money)).body?.code,
-    "PERMISSION_DENIED",
-    "the money figures in the core dashboard are not free",
-  );
-  assert.equal(
-    (
-      await runGate(
-        "dashboard",
-        { ...daycareUser, permissions: ["finanzas.read"] },
-        undefined,
-        money,
-      )
-    ).passed,
-    true,
-  );
-
   // On a sold module the entitlement is checked first: a tenant that never bought finanzas must
   // hear MODULE_DISABLED, not "ask your admin". Reaching the lookup proves the order.
   const unsold = await runGate("incomes", { ...daycareUser, permissions: [] });

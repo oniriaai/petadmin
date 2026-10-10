@@ -1,238 +1,303 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
-  BarChart,
   Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
+  BarChart,
+  CartesianGrid,
   Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { fmtCurrency } from "../../lib/utils";
-import { Stat, StatStrip } from "../../components/ui/Stat";
-import { CHART_COLORS, CHART_EXPENSE, CHART_GRID, CHART_INCOME } from "../../lib/chart-theme";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { api } from "../../lib/api";
+import { EXPENSE_CATEGORIES, fmt, fmtCurrency } from "../../lib/utils";
+import { CHART_COLORS, CHART_EXPENSE, CHART_GRID, CHART_INCOME } from "../../lib/chart-theme";
+import { Badge } from "../../components/ui/Badge";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { InlineError } from "../../components/ui/InlineError";
 import { PageLoader } from "../../components/ui/Spinner";
+import { Stat, StatStrip } from "../../components/ui/Stat";
+import { INCOME_PAYMENT_METHODS, INCOME_TYPES, labelOf, toQuery, type Period } from "./finance";
 
-interface SummaryData {
+interface Totals {
   income: number;
+  incomeVat: number;
+  incomeCount: number;
+  avgTicket: number;
   expenses: number;
-  purchases: number;
-  totalCosts: number;
+  expenseVat: number;
   profit: number;
-  profitMargin: number;
+  margin: number;
 }
 
-interface TrendData {
-  month: string;
-  income: number;
-  expenses: number;
+interface FinanceReport {
+  period: Totals;
+  previous: Totals;
+  monthly: Array<{ month: string; income: number; expenses: number }>;
+  byService: Array<{ type: string; total: number }>;
+  byMethod: Array<{ paymentMethod: string; total: number }>;
+  expensesByCategory: Array<{ category: string; total: number }>;
+  payables: {
+    overdue: { total: number; count: number };
+    upcoming: { total: number; count: number };
+    items: Array<{
+      id: string;
+      description: string;
+      provider: string | null;
+      dueDate: string;
+      balance: number;
+      overdue: boolean;
+    }>;
+  };
 }
 
-interface CategoryData {
-  category: string;
-  amount: number;
+/** How a figure moved against the previous period. Nothing to say when that one was empty. */
+function Change({ now, before, good }: { now: number; before: number; good?: "up" }) {
+  if (before <= 0) return <>Sin datos del periodo anterior</>;
+  const pct = ((now - before) / before) * 100;
+  const Icon = pct >= 0 ? TrendingUp : TrendingDown;
+  const tone = good ? (pct >= 0 ? "text-success" : "text-danger") : "";
+  return (
+    <span className={`flex items-center gap-1 ${tone}`}>
+      <Icon size={11} aria-hidden="true" />
+      {Math.abs(pct).toFixed(1)}% {pct >= 0 ? "más" : "menos"} que el periodo anterior
+    </span>
+  );
 }
 
-interface OccupancyData {
-  totalRooms: number;
-  totalCapacity: number;
-  activeReservations: number;
-  occupancyPercent: number;
+function Panel({
+  title,
+  className,
+  children,
+}: {
+  title: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={`card p-5 ${className ?? ""}`}>
+      <h2 className="section-title mb-4">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
-export function FinancialDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [summary, setSummary] = useState<SummaryData | null>(null);
-  const [trends, setTrends] = useState<TrendData[]>([]);
-  const [categories, setCategories] = useState<CategoryData[]>([]);
-  const [occupancy, setOccupancy] = useState<OccupancyData | null>(null);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+/** Amounts as labelled bars, largest first. The rows arrive sorted from the server. */
+function BarList({ rows, empty }: { rows: Array<{ name: string; value: number }>; empty: string }) {
+  if (rows.length === 0) return <EmptyState compact title={empty} />;
+  const max = rows[0].value;
+  return (
+    <div className="space-y-2">
+      {rows.map((row, i) => (
+        <div key={row.name}>
+          <div className="mb-0.5 flex justify-between text-sm">
+            <span className="text-muted">{row.name}</span>
+            <span className="font-medium tabular-nums text-ink">{fmtCurrency(row.value)}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-sunken">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${max > 0 ? (row.value / max) * 100 : 0}%`,
+                backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (startDate) params.append("startDate", startDate);
-      if (endDate) params.append("endDate", endDate);
+function Line({ label, value, tone }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className="flex items-center justify-between border-b border-line-subtle py-2 last:border-0">
+      <span className="text-sm text-muted">{label}</span>
+      <span className={`text-sm font-semibold tabular-nums ${tone ?? "text-ink"}`}>
+        {fmtCurrency(value)}
+      </span>
+    </div>
+  );
+}
 
-      const [summaryData, trendData, categoryData, occupancyData] = await Promise.all([
-        api.get<SummaryData>(`/dashboard/financial/summary?${params}`),
-        api.get<TrendData[]>("/dashboard/financial/trends"),
-        api.get<CategoryData[]>(`/dashboard/financial/expense-categories?${params}`),
-        api.get<OccupancyData>("/dashboard/analytics/occupancy"),
-      ]);
-
-      setSummary(summaryData);
-      setTrends(trendData);
-      setCategories(categoryData);
-      setOccupancy(occupancyData);
-    } catch (e) {
-      console.error("Error loading dashboard data:", e);
-    } finally {
-      setLoading(false);
-    }
-  }, [startDate, endDate]);
+export function FinancialDashboard({ period }: { period: Period }) {
+  const [report, setReport] = useState<FinanceReport | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let stale = false;
+    api
+      .get<FinanceReport>(`/reports/finance?${toQuery({ ...period })}`)
+      .then((data) => {
+        if (stale) return;
+        setReport(data);
+        setFailed(false);
+      })
+      .catch(() => {
+        if (!stale) setFailed(true);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [period, attempt]);
 
-  if (loading) return <PageLoader />;
+  if (failed) return <InlineError onRetry={() => setAttempt((n) => n + 1)} />;
+  if (!report) return <PageLoader />;
+
+  const { period: now, previous, payables } = report;
+  const monthly = report.monthly.map((m) => ({
+    name: fmt(`${m.month}-01`, "MMM yy"),
+    Ingresos: m.income,
+    Gastos: m.expenses,
+  }));
+  const services = report.byService.map((s) => ({
+    name: labelOf(INCOME_TYPES, s.type),
+    value: s.total,
+  }));
+  const vatBalance = now.incomeVat - now.expenseVat;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h2 className="section-title">Resumen general</h2>
+      <StatStrip>
+        <Stat
+          label="Ingresos"
+          value={fmtCurrency(now.income)}
+          tone="success"
+          hint={<Change now={now.income} before={previous.income} good="up" />}
+        />
+        <Stat
+          label="Gastos"
+          value={fmtCurrency(now.expenses)}
+          hint={<Change now={now.expenses} before={previous.expenses} />}
+        />
+        <Stat
+          label="Utilidad"
+          value={fmtCurrency(now.profit)}
+          tone={now.profit < 0 ? "danger" : undefined}
+          hint={`Margen: ${now.margin.toFixed(1)}%`}
+        />
+        <Stat
+          label="Ticket promedio"
+          value={fmtCurrency(now.avgTicket)}
+          hint={`${now.incomeCount} ingresos`}
+        />
+      </StatStrip>
 
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="label text-xs" htmlFor="fin-desde">
-              Desde
-            </label>
-            <input
-              id="fin-desde"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="input w-auto"
-            />
-          </div>
-          <div>
-            <label className="label text-xs" htmlFor="fin-hasta">
-              Hasta
-            </label>
-            <input
-              id="fin-hasta"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="input w-auto"
-            />
-          </div>
-          <button onClick={loadData} className="btn-secondary">
-            Actualizar
-          </button>
-        </div>
-      </div>
-
-      {summary && (
-        <StatStrip>
-          <Stat label="Ingresos" value={fmtCurrency(summary.income ?? 0)} tone="success" />
-          <Stat label="Gastos" value={fmtCurrency(summary.expenses ?? 0)} />
-          <Stat
-            label="Ganancias"
-            value={fmtCurrency(summary.profit ?? 0)}
-            tone={summary.profit < 0 ? "danger" : undefined}
-            hint={`Margen: ${(summary.profitMargin ?? 0).toFixed(1)}%`}
-          />
-          {occupancy && (
-            <Stat
-              label="Ocupación"
-              value={`${occupancy.occupancyPercent}%`}
-              hint={`${occupancy.activeReservations} de ${occupancy.totalCapacity} espacios`}
-            />
-          )}
-        </StatStrip>
-      )}
-
-      {/* Charts */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Trend Chart */}
-        {trends.length > 0 && (
-          <div className="card p-5">
-            <h2 className="section-title mb-4">Tendencia Últimos 6 Meses</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={trends}>
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="income"
-                  stroke={CHART_INCOME}
-                  strokeWidth={2}
-                  name="Ingresos"
-                  dot={{ fill: "#10B981" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="expenses"
-                  stroke={CHART_EXPENSE}
-                  strokeWidth={2}
-                  name="Gastos"
-                  dot={{ fill: "#EF4444" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Category Breakdown */}
-        {categories.length > 0 && (
-          <div className="card p-5">
-            <h2 className="section-title mb-4">Gastos por Categoría</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={categories}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ category, amount }) => `${category}: $${(amount / 1000).toFixed(0)}K`}
-                  outerRadius={80}
-                  fill={CHART_COLORS[0]}
-                  dataKey="amount"
-                >
-                  {categories.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-
-      {/* Monthly Comparison */}
-      {trends.length > 0 && (
-        <div className="card p-5">
-          <h2 className="section-title mb-4">Comparación Mensual</h2>
-          <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={trends}>
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Panel title="Ingresos y gastos por mes" className="lg:col-span-2">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={monthly} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-              <Legend />
-              <Bar dataKey="income" fill={CHART_INCOME} name="Ingresos" />
-              <Bar dataKey="expenses" fill={CHART_EXPENSE} name="Gastos" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+              <Tooltip formatter={(v: number) => fmtCurrency(v)} />
+              <Legend iconSize={8} iconType="circle" />
+              <Bar dataKey="Ingresos" fill={CHART_INCOME} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Gastos" fill={CHART_EXPENSE} radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        </Panel>
 
-      {occupancy && (
-        <section className="space-y-3" aria-label="Ocupación">
-          <h2 className="section-title">Ocupación</h2>
-          <StatStrip>
-            <Stat label="Salas" value={occupancy.totalRooms} />
-            <Stat label="Capacidad total" value={occupancy.totalCapacity} />
-            <Stat label="Reservas activas" value={occupancy.activeReservations} />
-            <Stat label="Ocupación" value={`${occupancy.occupancyPercent}%`} />
-          </StatStrip>
-        </section>
-      )}
+        <Panel title="Ingresos por servicio">
+          {services.length === 0 ? (
+            <EmptyState compact title="No hay ingresos en este periodo." />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={services}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={80}
+                  paddingAngle={3}
+                  dataKey="value"
+                >
+                  {services.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v: number) => fmtCurrency(v)} />
+                <Legend iconSize={8} iconType="circle" />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </Panel>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panel title="Ingresos por método de pago">
+          <BarList
+            empty="No hay ingresos en este periodo."
+            rows={report.byMethod.map((m) => ({
+              name: labelOf(INCOME_PAYMENT_METHODS, m.paymentMethod),
+              value: m.total,
+            }))}
+          />
+        </Panel>
+        <Panel title="Gastos por categoría">
+          <BarList
+            empty="No hay gastos en este periodo."
+            rows={report.expensesByCategory.map((c) => ({
+              name: labelOf(EXPENSE_CATEGORIES, c.category),
+              value: c.total,
+            }))}
+          />
+        </Panel>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Panel title="IVA del periodo">
+          <Line label="IVA cobrado en ingresos" value={now.incomeVat} />
+          <Line label="IVA pagado en gastos y compras" value={now.expenseVat} />
+          <Line
+            label={vatBalance >= 0 ? "IVA por pagar" : "IVA a favor"}
+            value={Math.abs(vatBalance)}
+            tone={vatBalance > 0 ? "text-warning-ink" : "text-success"}
+          />
+          <p className="mt-3 text-xs text-muted">
+            Es una referencia calculada con lo registrado aquí. Confírmala con tu contador antes de
+            declarar.
+          </p>
+        </Panel>
+
+        <Panel title="Cuentas por pagar">
+          <Line
+            label={`Vencido (${payables.overdue.count})`}
+            value={payables.overdue.total}
+            tone={payables.overdue.total > 0 ? "text-danger" : undefined}
+          />
+          <Line
+            label={`Vence en los próximos 30 días (${payables.upcoming.count})`}
+            value={payables.upcoming.total}
+          />
+          {payables.items.length === 0 ? (
+            <EmptyState compact title="No hay documentos por vencer." />
+          ) : (
+            <ul className="mt-3 divide-y divide-line-subtle">
+              {payables.items.map((item) => (
+                <li key={item.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-ink">{item.description}</span>
+                    <span className="text-xs text-muted">
+                      {item.provider ?? "Sin proveedor"} · vence {fmt(item.dueDate)}
+                    </span>
+                  </span>
+                  <span className="flex shrink-0 items-center gap-2">
+                    {item.overdue && <Badge tone="danger">Vencido</Badge>}
+                    <span className="font-semibold tabular-nums">{fmtCurrency(item.balance)}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
     </div>
   );
 }

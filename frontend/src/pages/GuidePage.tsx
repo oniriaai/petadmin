@@ -56,11 +56,12 @@ const sections = [
     id: "informes",
     title: "Informes y Exportación",
     steps: [
-      "Ve a **Informes** para ver tu análisis financiero",
-      "Los KPIs muestran ingresos del mes, utilidad y tendencias",
-      "Los gráficos de barras muestran ingresos históricos por mes",
-      "El gráfico circular muestra distribución por tipo de servicio",
-      "Usa los botones **Excel** para descargar los datos y cargarlos en Power BI",
+      "Ve a **Finanzas** y abre la pestaña **Resumen** para ver tu análisis financiero",
+      "Elige el **Periodo** arriba a la derecha: se aplica al resumen, a los ingresos y a los egresos",
+      "Las cifras comparan ingresos, gastos y utilidad con el periodo anterior",
+      "Los gráficos muestran ingresos y gastos por mes, por servicio y por método de pago",
+      "**IVA del periodo** y **Cuentas por pagar** resumen lo que debes declarar y pagar",
+      "En **Ingresos** y **Egresos**, el botón **Excel** descarga lo que tengas filtrado",
     ],
   },
   {

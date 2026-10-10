@@ -96,7 +96,7 @@ concedió (`users.permissions`).
 
 | Permiso | Abre |
 |---|---|
-| `finanzas.read` | `GET` de `incomes`, `payables` y `providers`; `/reports/{incomes,expenses,kpis}`; `/dashboard/financial/*`; los ingresos de `/dashboard/summary` |
+| `finanzas.read` | `GET` de `incomes`, `payables` y `providers`; `/reports/finance`; los ingresos de `/dashboard/summary` |
 | `finanzas.write` | Crear, editar y eliminar cobros, cuentas por pagar, pagos y proveedores. Implica `finanzas.read` |
 | `inventario.read` | `GET` de artículos y movimientos |
 | `inventario.write` | Crear, editar y dar de baja artículos y registrar movimientos. Implica `inventario.read` |

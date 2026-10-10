@@ -1,9 +1,10 @@
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { z } from "zod";
 import { AuthzError, getRequiredBusinessUnit, handleAuthzError } from "../middleware/auth";
 import { prisma } from "../db";
 import { assertRecordAccess, buildScopeWhere, getRequiredDaycareId } from "../core/tenancy/scope";
 import { readPage, sendPage } from "../utils/pagination";
+import { parseFormDate, rangeWhere, readRange, requestTimezone } from "../utils/period";
 
 export const incomesRouter = Router();
 
@@ -32,17 +33,41 @@ const schema = z.object({
   notes: z.string().optional(),
 });
 
+/** The filters of the income ledger, shared by the list, its totals and the Excel export. */
+export async function buildIncomeWhere(req: Request): Promise<Record<string, unknown>> {
+  const { type, status, paymentMethod, q } = req.query as Record<string, string>;
+  const where: Record<string, unknown> = buildScopeWhere(req);
+  if (type) where.type = type;
+  if (status) where.invoiceStatus = status;
+  if (paymentMethod) where.paymentMethod = paymentMethod;
+  if (q?.trim()) where.concept = { contains: q.trim(), mode: "insensitive" };
+  const date = rangeWhere(readRange(req, await requestTimezone(req)));
+  if (date) where.date = date;
+  return where;
+}
+
+incomesRouter.get("/summary", async (req, res) => {
+  try {
+    const totals = await prisma.income.aggregate({
+      where: await buildIncomeWhere(req),
+      _sum: { total: true, vatAmount: true },
+      _count: true,
+    });
+    res.json({
+      total: totals._sum.total ?? 0,
+      vat: totals._sum.vatAmount ?? 0,
+      count: totals._count,
+    });
+  } catch (error) {
+    if (handleAuthzError(res, error)) return;
+    console.error(error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
 incomesRouter.get("/", async (req, res) => {
   try {
-    const { type, status, from, to } = req.query as Record<string, string>;
-    const where: Record<string, unknown> = buildScopeWhere(req);
-    if (type) where.type = type;
-    if (status) where.invoiceStatus = status;
-    if (from || to) {
-      where.date = {};
-      if (from) (where.date as Record<string, unknown>).gte = new Date(from);
-      if (to) (where.date as Record<string, unknown>).lte = new Date(to);
-    }
+    const where = await buildIncomeWhere(req);
     // The ledger grows forever, so this is the clearest case for a bounded read. `id` breaks
     // ties on `date` so a page boundary cannot show or skip the same row twice.
     const page = readPage(req);
@@ -94,7 +119,7 @@ incomesRouter.post("/", async (req, res) => {
         vatPercent,
         vatAmount,
         total,
-        date: date ? new Date(date) : new Date(),
+        date: date ? parseFormDate(date, await requestTimezone(req)) : new Date(),
       },
     });
     res.status(201).json(income);
@@ -132,7 +157,7 @@ incomesRouter.put("/:id", async (req, res) => {
         vatPercent: vp,
         vatAmount,
         total,
-        date: date ? new Date(date) : undefined,
+        date: date ? parseFormDate(date, await requestTimezone(req)) : undefined,
       },
     });
     res.json(income);

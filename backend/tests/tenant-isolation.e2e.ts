@@ -112,7 +112,7 @@ async function run() {
       "/payables",
       "/providers",
       "/inventory/items",
-      "/reports/kpis",
+      "/reports/finance",
       "/alerts",
     ]) {
       expectStatus((await a.get(path)).status, 200, `GET ${path} (tenant con el módulo)`);

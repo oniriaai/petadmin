@@ -132,8 +132,106 @@ async function testPayablePaymentFlow(): Promise<void> {
   if (removePayment.status !== 200) throw new Error(`Expected 200, got ${removePayment.status}`);
 }
 
+// A month nothing else writes to, so the totals of the period are exactly these two rows.
+const PERIOD = "from=2001-03-01&to=2001-03-31";
+let filteredIncomeId: string;
+let filteredPayableId: string;
+
+function expectEqual(actual: unknown, expected: unknown, what: string): void {
+  if (actual !== expected) throw new Error(`${what}: expected ${expected}, got ${actual}`);
+}
+
+async function testLedgerFilters(): Promise<void> {
+  const client = createClient();
+  const concept = `Filtro E2E ${Date.now()}`;
+  const income = await client.post("/incomes", {
+    type: "OTRO",
+    concept,
+    amount: 100,
+    vatPercent: 15,
+    paymentMethod: "TRANSFERENCIA",
+    date: "2001-03-10T17:00:00Z",
+  });
+  filteredIncomeId = income.data.id;
+  const payable = await client.post("/payables", {
+    type: "GASTO",
+    category: "servicios",
+    description: concept,
+    subtotal: 200,
+    invoiceDate: "2001-03-12T17:00:00Z",
+    dueDate: "2001-03-20T17:00:00Z",
+  });
+  filteredPayableId = payable.data.id;
+
+  const page = await client.get(`/incomes?${PERIOD}&page=1`);
+  expectEqual(page.data.total, 1, "incomes in the period");
+  expectEqual(page.data.items[0].id, filteredIncomeId, "the income in the period");
+  const totals = await client.get(`/incomes/summary?${PERIOD}&q=${encodeURIComponent(concept)}`);
+  expectEqual(totals.data.total, 115, "income summary total");
+  expectEqual(totals.data.vat, 15, "income summary vat");
+  expectEqual(
+    (await client.get(`/incomes/summary?${PERIOD}&paymentMethod=EFECTIVO`)).data.count,
+    0,
+    "incomes paid in cash",
+  );
+  // The last day of the range is inclusive, and the day after it is not.
+  expectEqual(
+    (await client.get("/incomes/summary?from=2001-03-10&to=2001-03-10")).data.count,
+    1,
+    "incomes on the day itself",
+  );
+  expectEqual(
+    (await client.get("/incomes/summary?from=2001-03-11&to=2001-03-31")).data.count,
+    0,
+    "incomes after the day",
+  );
+
+  const overdue = await client.get(`/payables?${PERIOD}&status=VENCIDO&page=1`);
+  expectEqual(overdue.data.total, 1, "overdue payables in the period");
+  expectEqual(overdue.data.items[0].id, filteredPayableId, "the overdue payable");
+  const owed = await client.get(`/payables/summary?${PERIOD}&q=${encodeURIComponent(concept)}`);
+  expectEqual(owed.data.balance, 200, "payable summary balance");
+  expectEqual(
+    (await client.get(`/payables/summary?${PERIOD}&status=PAGADO`)).data.count,
+    0,
+    "paid payables",
+  );
+
+  const bad = await client.get("/incomes?from=2001-02-30", { validateStatus: () => true });
+  expectEqual(bad.status, 400, "an impossible date");
+}
+
+async function testFinanceReport(): Promise<void> {
+  const client = createClient();
+  const report = (await client.get(`/reports/finance?${PERIOD}`)).data;
+  expectEqual(report.period.income, 115, "income of the period");
+  expectEqual(report.period.incomeVat, 15, "vat collected");
+  expectEqual(report.period.expenses, 200, "expenses of the period");
+  expectEqual(report.period.profit, -85, "profit of the period");
+  expectEqual(report.previous.income, 0, "income of the previous period");
+  expectEqual(report.monthly.length, 12, "months in the series");
+  expectEqual(report.monthly[11].month, "2001-03", "last month of the series");
+  expectEqual(report.monthly[11].income, 115, "income of the last month");
+  expectEqual(report.monthly[11].expenses, 200, "expenses of the last month");
+  expectEqual(report.byMethod[0].paymentMethod, "TRANSFERENCIA", "payment method");
+  expectEqual(report.expensesByCategory[0].total, 200, "expenses by category");
+  if (!report.payables.items.some((p: any) => p.id === filteredPayableId && p.overdue)) {
+    throw new Error("the overdue payable is missing from the documents due");
+  }
+  // With no period it answers for the current month, where those rows do not count.
+  const current = await client.get("/reports/finance");
+  expectEqual(current.status, 200, "report with no period");
+}
+
 async function cleanup(): Promise<void> {
   const client = createClient();
+
+  for (const id of [filteredIncomeId].filter(Boolean)) {
+    await client.delete(`/incomes/${id}`).catch(() => undefined);
+  }
+  for (const id of [filteredPayableId].filter(Boolean)) {
+    await client.delete(`/payables/${id}`).catch(() => undefined);
+  }
 
   if (incomeId) {
     await client.delete(`/incomes/${incomeId}`).catch(() => undefined);
@@ -153,6 +251,8 @@ async function runTests() {
     await test("Income List and Update", testIncomeListAndUpdate);
     await test("Payable Create", testPayableCreate);
     await test("Payable Payment Flow", testPayablePaymentFlow);
+    await test("Ledger filters and totals", testLedgerFilters);
+    await test("Finance report", testFinanceReport);
   } finally {
     await cleanup();
   }

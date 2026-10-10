@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { api } from "../../lib/api";
 import { Spinner } from "../../components/ui/Spinner";
+import { INCOME_PAYMENT_METHODS, INCOME_STATUSES } from "./finance";
 
 interface IncomeEntry {
   id?: string;
@@ -87,7 +88,9 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
       if (income?.id) {
         await api.put(`/incomes/${income.id}`, data);
       } else {
-        await api.post("/incomes", data);
+        // Typed in by hand, so it comes from no stay or appointment: without this the server
+        // filed it under "Reserva" and the summary counted it as one.
+        await api.post("/incomes", { ...data, type: "OTRO" });
       }
       onSaved();
       onClose();
@@ -183,10 +186,11 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
               onChange={(e) => setPaymentMethod(e.target.value)}
               className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
             >
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="TARJETA">Tarjeta de Crédito</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="CHEQUE">Cheque</option>
+              {INCOME_PAYMENT_METHODS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -197,9 +201,11 @@ export function IncomeEntryForm({ open, onClose, income, onSaved }: Props) {
               onChange={(e) => setInvoiceStatus(e.target.value)}
               className="w-full px-3 py-2 border border-line rounded-lg focus:outline-hidden focus:ring-2 focus:ring-action"
             >
-              <option value="PENDIENTE">Pendiente</option>
-              <option value="PAGADO">Pagado</option>
-              <option value="CANCELADO">Cancelado</option>
+              {INCOME_STATUSES.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>
