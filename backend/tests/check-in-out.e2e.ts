@@ -232,6 +232,77 @@ async function testReservationCheckInOut(): Promise<void> {
   console.log("   Verified linked CheckInOut check-out time");
 }
 
+async function testWalkInValidation(): Promise<void> {
+  const client = createClient();
+  const expectStatus = async (body: object, status: number) => {
+    const res = await client.post("/check-in-out", body, { validateStatus: () => true });
+    if (res.status !== status) {
+      throw new Error(`Expected ${status}, got ${res.status} ${JSON.stringify(res.data)}`);
+    }
+    return res;
+  };
+
+  const room = await client.post("/rooms", {
+    name: `Cupo uno ${Date.now()}`,
+    capacity: 1,
+    type: "GENERAL",
+  });
+  const otherPet = await client.post("/pets", {
+    clientId,
+    name: "Second Dog",
+    species: "dog",
+    sex: "F",
+  });
+  const smallRoomId = room.data.id;
+
+  try {
+    const first = await expectStatus({ clientId, petIds: [petId], roomId, checkInNow: true }, 201);
+    try {
+      // The same pet cannot be inside twice.
+      await expectStatus({ clientId, petIds: [petId], roomId, checkInNow: true }, 409);
+    } finally {
+      await client.post(`/check-in-out/${first.data[0].id}/check-out`, {});
+    }
+
+    const inside = await expectStatus(
+      { clientId, petIds: [otherPet.data.id], roomId: smallRoomId, checkInNow: true },
+      201,
+    );
+    try {
+      // The room holds one and it is taken.
+      await expectStatus({ clientId, petIds: [petId], roomId: smallRoomId, checkInNow: true }, 400);
+    } finally {
+      await client.post(`/check-in-out/${inside.data[0].id}/check-out`, {});
+    }
+  } finally {
+    // Deactivated rather than deleted: this account does not hold `registros.delete`.
+    await client.put(`/rooms/${smallRoomId}`, { isActive: false });
+  }
+}
+
+async function testRangeFilters(): Promise<void> {
+  const client = createClient();
+  const around = `from=${new Date(Date.now() - 3600000).toISOString()}&to=${new Date(
+    Date.now() + 7200000,
+  ).toISOString()}`;
+  const longAgo = "from=2000-01-01T00:00:00.000Z&to=2000-01-02T00:00:00.000Z";
+
+  // A walk-in nobody has checked in yet is placed by its creation time.
+  const pending = await client.post("/check-in-out", { clientId, petIds: [petId], roomId });
+  const history = await client.get(`/check-in-out/history?petId=${petId}&${around}`);
+  const ids = history.data.data.map((r: any) => r.id);
+  if (!ids.includes(checkInOutId)) throw new Error("Checked-in record missing from its range");
+  if (!ids.includes(pending.data[0].id)) throw new Error("Pending walk-in missing from its range");
+  const oldHistory = await client.get(`/check-in-out/history?${longAgo}`);
+  if (oldHistory.data.data.length !== 0) throw new Error("History ignored from/to");
+
+  const reservations = await client.get(`/reservations?${around}`);
+  if (!reservations.data.some((r: any) => r.id === reservationId))
+    throw new Error("Reservation missing from its range");
+  const oldReservations = await client.get(`/reservations?${longAgo}`);
+  if (oldReservations.data.length !== 0) throw new Error("Reservations ignored from/to");
+}
+
 // ==================== RUNNER ====================
 
 async function runTests() {
@@ -251,6 +322,8 @@ async function runTests() {
     await test("Get History", testGetHistory);
     await test("Get Base Route (Missing route check)", testGetBaseRoute);
     await test("Reservation Check-in/out Unification", testReservationCheckInOut);
+    await test("Walk-in respects open check-ins and room capacity", testWalkInValidation);
+    await test("History and reservations honour from/to", testRangeFilters);
 
     console.log("\n============================================================");
     console.log(`📊 Test Summary:`);

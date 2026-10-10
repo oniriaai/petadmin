@@ -29,6 +29,7 @@ const sections = [
       "Haz clic en **Registrar Entrada**: la reserva pasa a Activa",
       "Cuando el cliente retire su mascota, haz clic en **Registrar Salida**",
       "Puedes generar automáticamente el ingreso al hacer la salida",
+      "Si llega alguien sin reserva, usa **Sin reserva** (arriba a la derecha) para registrar su entrada",
     ],
   },
   {

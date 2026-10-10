@@ -225,9 +225,6 @@ export const checkInOutApi = {
   checkOut: (id: string, data: { checkOutTime: string; performedByUserId?: string }) =>
     api.post<CheckInOutRecord>(`/check-in-out/${id}/check-out`, data),
 
-  // Get currently active check-ins
-  getActive: () => api.get<CheckInOutRecord[]>("/check-in-out/active"),
-
   // Get check-in/check-out history with filters
   getHistory: (filters?: {
     clientId?: string;
@@ -235,6 +232,8 @@ export const checkInOutApi = {
     roomId?: string;
     startDate?: string;
     endDate?: string;
+    from?: string;
+    to?: string;
     limit?: number;
     offset?: number;
   }) => {
@@ -244,17 +243,12 @@ export const checkInOutApi = {
     if (filters?.roomId) params.append("roomId", filters.roomId);
     if (filters?.startDate) params.append("startDate", filters.startDate);
     if (filters?.endDate) params.append("endDate", filters.endDate);
+    if (filters?.from) params.append("from", filters.from);
+    if (filters?.to) params.append("to", filters.to);
     if (filters?.limit) params.append("limit", String(filters.limit));
     if (filters?.offset) params.append("offset", String(filters.offset));
     return api.get<CheckInOutHistoryResponse>(`/check-in-out/history?${params}`);
   },
-
-  // Update notes
-  updateNotes: (id: string, data: { notes: string }) =>
-    api.put<CheckInOutRecord>(`/check-in-out/${id}/notes`, data),
-
-  // Get single record
-  get: (id: string) => api.get<CheckInOutRecord>(`/check-in-out/${id}`),
 };
 
 export async function downloadFile(path: string, filename: string) {

@@ -12,23 +12,15 @@ interface CheckInOutRecord {
   status: "PENDING" | "CHECKED_IN" | "CHECKED_OUT";
 }
 
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
   record: CheckInOutRecord | null;
-  users?: User[];
-  onConfirm: (id: string, checkInTime: string, performedByUserId?: string) => Promise<void>;
+  onConfirm: (id: string, checkInTime: string) => Promise<void>;
 }
 
-export function CheckInModal({ open, onClose, record, users = [], onConfirm }: Props) {
+export function CheckInModal({ open, onClose, record, onConfirm }: Props) {
   const [checkInTime, setCheckInTime] = useState(fmtDateTimeLocalInput(new Date()));
-  const [performedByUserId, setPerformedByUserId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,8 +32,7 @@ export function CheckInModal({ open, onClose, record, users = [], onConfirm }: P
     try {
       // Convert local datetime to ISO string for backend
       const isoTime = new Date(checkInTime).toISOString();
-      await onConfirm(record.id, isoTime, performedByUserId || undefined);
-      setPerformedByUserId("");
+      await onConfirm(record.id, isoTime);
       onClose();
     } catch (err) {
       setError(
@@ -84,24 +75,6 @@ export function CheckInModal({ open, onClose, record, users = [], onConfirm }: P
             required
           />
         </div>
-
-        {users.length > 0 && (
-          <div>
-            <label className="label">Personal (Opcional)</label>
-            <select
-              className="input"
-              value={performedByUserId}
-              onChange={(e) => setPerformedByUserId(e.target.value)}
-            >
-              <option value="">Sin asignar</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         {error && <p className="text-sm text-danger">{error}</p>}
 

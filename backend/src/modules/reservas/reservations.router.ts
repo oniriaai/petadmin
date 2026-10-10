@@ -35,7 +35,7 @@ const reservationSchema = z.object({
 
 reservationsRouter.get("/", async (req, res) => {
   try {
-    const { status, date, search } = req.query as Record<string, string>;
+    const { status, date, search, from, to } = req.query as Record<string, string>;
 
     const where: Record<string, unknown> = buildScopeWhere(req);
     if (status) where.status = status;
@@ -45,6 +45,13 @@ reservationsRouter.get("/", async (req, res) => {
       d.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
       where.checkIn = { gte: d, lte: end };
+    }
+    // Instants the client computed from its own calendar, so no server-timezone maths here.
+    if (from || to) {
+      where.checkIn = {
+        ...(from ? { gte: new Date(from) } : {}),
+        ...(to ? { lte: new Date(to) } : {}),
+      };
     }
     if (search) {
       where.client = {

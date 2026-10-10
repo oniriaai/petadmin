@@ -49,6 +49,38 @@ function mapToFrontend(record: any) {
 }
 
 /**
+ * A pet can be inside once, and a room holds what it holds. `validateRoomCapacity` plans around
+ * reservations and does not see a check-in that is still open, so the walk-in path counts those
+ * itself, the same way the daycare's own check-in does.
+ */
+async function validateWalkInNow(
+  daycareId: string,
+  businessUnit: string,
+  roomId: string,
+  petIds: string[],
+): Promise<{ status: number; message: string } | null> {
+  const open = { daycareId, businessUnit, isActive: true, checkOutTime: null } as const;
+  const alreadyIn = await prisma.checkInOut.findFirst({
+    where: { ...open, petId: { in: petIds }, checkInTime: { not: null } },
+    include: { pet: { select: { name: true } } },
+  });
+  if (alreadyIn) {
+    return { status: 409, message: `${alreadyIn.pet.name} ya tiene una entrada abierta` };
+  }
+  const [room, occupied] = await Promise.all([
+    prisma.room.findFirst({ where: { id: roomId, daycareId } }),
+    prisma.checkInOut.count({ where: { ...open, roomId, checkInTime: { not: null } } }),
+  ]);
+  if (room && occupied + petIds.length > room.capacity) {
+    return {
+      status: 400,
+      message: `La sala ${room.name} no tiene cupo: ${occupied}/${room.capacity} ocupados`,
+    };
+  }
+  return null;
+}
+
+/**
  * GET /api/v1/check-in-out
  * List check-in/out records for the list view (mapped for frontend)
  */
@@ -132,6 +164,11 @@ checkInOutRouter.post("/", async (req, res) => {
 
     const checkInTime = checkInNow ? new Date() : null;
     const daycareId = getRequiredDaycareId(req);
+
+    if (checkInNow) {
+      const refusal = await validateWalkInNow(daycareId, bu, roomId, finalPetIds);
+      if (refusal) return res.status(refusal.status).json({ message: refusal.message });
+    }
 
     // Create CheckInOut records in batch
     const createdRecords = await Promise.all(
@@ -360,10 +397,8 @@ checkInOutRouter.get("/active", async (req, res) => {
 checkInOutRouter.get("/history", async (req, res) => {
   try {
     const buWhere = buildScopeWhere(req);
-    const { clientId, petId, roomId, reservationId, startDate, endDate } = req.query as Record<
-      string,
-      string
-    >;
+    const { clientId, petId, roomId, reservationId, startDate, endDate, from, to } =
+      req.query as Record<string, string>;
 
     // Bounded by the shared helper rather than trusting the query string: `?limit=999999`
     // used to read the whole table for the tenant.
@@ -391,6 +426,16 @@ checkInOutRouter.get("/history", async (req, res) => {
         endDateObj.setHours(23, 59, 59, 999);
         (where.checkInTime as Record<string, any>).lte = endDateObj;
       }
+    }
+
+    // `from`/`to` are instants the client computed from its own calendar. A record that has not
+    // been checked in yet has no `checkInTime`, so it is placed by when it was created.
+    if (from || to) {
+      const range = {
+        ...(from ? { gte: new Date(from) } : {}),
+        ...(to ? { lte: new Date(to) } : {}),
+      };
+      where.OR = [{ checkInTime: range }, { checkInTime: null, createdAt: range }];
     }
 
     const [checkInOuts, total] = await Promise.all([

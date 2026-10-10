@@ -12,37 +12,21 @@ interface CheckInOutRecord {
   status: "PENDING" | "CHECKED_IN" | "CHECKED_OUT";
 }
 
-interface User {
-  id: string;
-  firstName: string;
-  lastName: string;
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
   record: CheckInOutRecord | null;
-  users?: User[];
   isReservation?: boolean;
   onConfirm: (
     id: string,
     checkOutTime: string,
-    performedByUserId?: string,
     createIncome?: boolean,
     paymentMethod?: string,
   ) => Promise<void>;
 }
 
-export function CheckOutModal({
-  open,
-  onClose,
-  record,
-  users = [],
-  isReservation = false,
-  onConfirm,
-}: Props) {
+export function CheckOutModal({ open, onClose, record, isReservation = false, onConfirm }: Props) {
   const [checkOutTime, setCheckOutTime] = useState(fmtDateTimeLocalInput(new Date()));
-  const [performedByUserId, setPerformedByUserId] = useState("");
   const [createIncome, setCreateIncome] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
   const [loading, setLoading] = useState(false);
@@ -59,11 +43,9 @@ export function CheckOutModal({
       await onConfirm(
         record.id,
         isoTime,
-        performedByUserId || undefined,
         isReservation ? createIncome : undefined,
         isReservation ? paymentMethod : undefined,
       );
-      setPerformedByUserId("");
       onClose();
     } catch (err) {
       setError(
@@ -143,24 +125,6 @@ export function CheckOutModal({
                 </select>
               </div>
             )}
-          </div>
-        )}
-
-        {users.length > 0 && (
-          <div>
-            <label className="label">Personal (Opcional)</label>
-            <select
-              className="input"
-              value={performedByUserId}
-              onChange={(e) => setPerformedByUserId(e.target.value)}
-            >
-              <option value="">Sin asignar</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.firstName} {user.lastName}
-                </option>
-              ))}
-            </select>
           </div>
         )}
 

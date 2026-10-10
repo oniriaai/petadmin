@@ -30,6 +30,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     clientId: "",
@@ -82,6 +83,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
     }
 
     setSubmitting(true);
+    setError("");
     try {
       await checkInOutApi.create({
         clientId: formData.clientId,
@@ -92,6 +94,10 @@ export function CheckInOutForm({ onSuccess }: Props) {
       });
       setFormData({ clientId: "", petIds: [], roomId: "", notes: "", checkInNow: true });
       onSuccess?.();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "No pudimos registrar la entrada. Inténtalo de nuevo.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -108,8 +114,14 @@ export function CheckInOutForm({ onSuccess }: Props) {
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         <div className="space-y-1">
-          <label className="text-xs font-bold text-muted uppercase tracking-wider">Cliente</label>
+          <label
+            htmlFor="walk-in-client"
+            className="text-xs font-bold text-muted uppercase tracking-wider"
+          >
+            Cliente
+          </label>
           <select
+            id="walk-in-client"
             className="input focus:ring-2 focus:ring-action transition-all"
             value={formData.clientId}
             onChange={(e) => setFormData({ ...formData, clientId: e.target.value, petIds: [] })}
@@ -125,10 +137,14 @@ export function CheckInOutForm({ onSuccess }: Props) {
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-bold text-muted uppercase tracking-wider">
+          <label
+            htmlFor="walk-in-room"
+            className="text-xs font-bold text-muted uppercase tracking-wider"
+          >
             Sala / Ubicación
           </label>
           <select
+            id="walk-in-room"
             className="input focus:ring-2 focus:ring-action transition-all"
             value={formData.roomId}
             onChange={(e) => setFormData({ ...formData, roomId: e.target.value })}
@@ -145,9 +161,9 @@ export function CheckInOutForm({ onSuccess }: Props) {
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-bold text-muted uppercase tracking-wider">
+        <p className="text-xs font-bold text-muted uppercase tracking-wider">
           Mascotas del Cliente
-        </label>
+        </p>
         {pets.length === 0 ? (
           <div className="bg-sunken border-2 border-dashed border-line-subtle rounded-xl p-6 text-center">
             <p className="text-sm text-muted">
@@ -201,8 +217,14 @@ export function CheckInOutForm({ onSuccess }: Props) {
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs font-bold text-muted uppercase tracking-wider">Notas</label>
+        <label
+          htmlFor="walk-in-notes"
+          className="text-xs font-bold text-muted uppercase tracking-wider"
+        >
+          Notas
+        </label>
         <textarea
+          id="walk-in-notes"
           className="input min-h-[80px] resize-none"
           placeholder="Observaciones adicionales para el ingreso…"
           value={formData.notes}
@@ -224,6 +246,9 @@ export function CheckInOutForm({ onSuccess }: Props) {
         </div>
         <button
           type="button"
+          role="switch"
+          aria-checked={formData.checkInNow}
+          aria-label="Registrar entrada inmediata"
           onClick={() => setFormData((prev) => ({ ...prev, checkInNow: !prev.checkInNow }))}
           className={`
             relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden
@@ -239,6 +264,12 @@ export function CheckInOutForm({ onSuccess }: Props) {
         </button>
       </div>
 
+      {error && (
+        <div className="notice notice-danger" role="alert">
+          {error}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           type="submit"
@@ -247,7 +278,7 @@ export function CheckInOutForm({ onSuccess }: Props) {
             submitting || !formData.clientId || formData.petIds.length === 0 || !formData.roomId
           }
         >
-          {submitting ? "Procesando..." : "Crear Registro"}
+          {submitting ? "Registrando…" : "Registrar entrada"}
         </button>
       </div>
     </form>

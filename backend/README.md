@@ -457,6 +457,11 @@ todo.
 Se aceptan también `skip`/`take`/`offset`/`limit`, porque `check-in-out` ya se publicó con esos
 nombres.
 
+`GET /reservations` y `GET /check-in-out/history` aceptan además `from` y `to` (instantes ISO).
+La página de Operaciones pide solo el periodo que tiene en pantalla; los límites los calcula el
+cliente con su propio calendario. En el histórico, un registro sin `checkInTime` se ubica por su
+`createdAt`.
+
 Dos excepciones deliberadas:
 
 - **`/inventory/items` no pagina**, solo está acotado. Su filtro `lowStock` compara dos columnas
