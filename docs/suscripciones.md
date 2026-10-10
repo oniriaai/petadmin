@@ -39,7 +39,7 @@ El código vive en `backend/src/modules/suscripciones/` y el transporte hacia Pa
 | --- | --- | --- | --- | --- |
 | Inicial | 1: Guardería o Peluquería | — | $29 | $290 |
 | Inicial Veterinaria | Veterinaria | — | $39 | $390 |
-| Negocio | 1, cualquiera | Finanzas, Inventario, Informes, Contratos y Alertas | $49 ($59 con Veterinaria) | $490 ($590) |
+| Negocio | 1, cualquiera | Finanzas, Inventario, Informes, Alertas | $49 ($59 con Veterinaria) | $490 ($590) |
 | Integral | 2, cualesquiera | Los anteriores y Recordatorios | $89 | $890 |
 | Integral 3 | Las 3 | Los anteriores y Recordatorios | $109 | $1.090 |
 

@@ -1,24 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  Plus,
-  CheckCircle,
-  AlertTriangle,
-  Bell,
-  BarChart3,
-  FileText,
-  PawPrint,
-} from "lucide-react";
+import { Plus, CheckCircle, AlertTriangle, PawPrint } from "lucide-react";
 import { api } from "../../lib/api";
-import { useAuth } from "../../lib/auth-context";
-import { ContratosTab } from "./ContratosTab";
 import { SEVERITY_COLOR } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { PageHeader } from "../../components/layout/PageHeader";
-import { Tabs } from "../../components/ui/Tabs";
 
-type Tab = "alertas" | "contratos" | "estimador";
 interface Alert {
   id: string;
   type: string;
@@ -37,49 +25,12 @@ interface Pet {
 
 const ALERT_TYPES = ["COMPORTAMIENTO", "SALUD", "ENTRENAMIENTO", "SOCIAL", "ALIMENTACION", "OTRO"];
 
+// Alerts are the only surface of `cumplimiento`; the route is gated on it in the registry.
 export function HerramientasPage() {
-  // `cumplimiento` has no page of its own -- the alerts tab is its only daycare-facing surface,
-  // so entitlement is checked here rather than on the route. The estimator is a local
-  // calculator with no API behind it and is always available, which is why this page is not
-  // gated as a whole.
-  const { hasModule, fullAccess } = useAuth();
-  // `cumplimiento` grants both alerts and contracts; neither has a route of its own.
-  const canSeeCumplimiento = fullAccess || hasModule("cumplimiento");
-  const [tab, setTab] = useState<Tab>(canSeeCumplimiento ? "alertas" : "estimador");
-
-  // If the module is turned off mid-session the open tab has to give way, otherwise the page
-  // keeps rendering a tab whose requests now 403.
-  useEffect(() => {
-    if (!canSeeCumplimiento && (tab === "alertas" || tab === "contratos")) setTab("estimador");
-  }, [canSeeCumplimiento, tab]);
-
-  const tabs = [
-    ...(canSeeCumplimiento
-      ? ([
-          ["alertas", "Alertas y Avisos", Bell],
-          ["contratos", "Contratos", FileText],
-        ] as const)
-      : []),
-    ["estimador", "Estimaciones", BarChart3] as const,
-  ];
-
   return (
     <div className="p-4 sm:p-6 space-y-5">
-      <PageHeader
-        title="Herramientas"
-        subtitle={<>{canSeeCumplimiento ? "Alertas, contratos y estimaciones" : "Estimaciones"}</>}
-      />
-      {tabs.length > 1 && (
-        <Tabs
-          label="Herramientas"
-          value={tab}
-          onChange={setTab}
-          items={tabs.map(([id, label, icon]) => ({ id: id as Tab, label, icon }))}
-        />
-      )}
-      {tab === "alertas" && canSeeCumplimiento && <AlertasTab />}
-      {tab === "contratos" && canSeeCumplimiento && <ContratosTab />}
-      {tab === "estimador" && <EstimadorTab />}
+      <PageHeader title="Alertas" subtitle="Avisos operativos y sanitarios por mascota" />
+      <AlertasTab />
     </div>
   );
 }
@@ -296,99 +247,5 @@ function AlertasTab() {
         </div>
       </Modal>
     </>
-  );
-}
-
-function EstimadorTab() {
-  const [planes, setPlanes] = useState({
-    dias2: 10,
-    dias3: 15,
-    dias4: 15,
-    dias5: 6,
-    precioDia: 12,
-  });
-  const [ventas, setVentas] = useState({
-    reservasMes: 30,
-    ticketPromedio: 35,
-    serviciosExtra: 5,
-    precioExtra: 20,
-  });
-
-  const totalPlanesIngresos =
-    (planes.dias2 * 2 + planes.dias3 * 3 + planes.dias4 * 4 + planes.dias5 * 5) * planes.precioDia;
-  const totalVentasIngresos =
-    ventas.reservasMes * ventas.ticketPromedio + ventas.serviciosExtra * ventas.precioExtra;
-
-  return (
-    <div className="grid lg:grid-cols-2 gap-5">
-      <div className="card p-5 space-y-4">
-        <h2 className="section-title">Estimación Planes Mensuales</h2>
-        <div className="space-y-3">
-          {[
-            { key: "dias2" as const, label: "Clientes 2 días/semana" },
-            { key: "dias3" as const, label: "Clientes 3 días/semana" },
-            { key: "dias4" as const, label: "Clientes 4 días/semana" },
-            { key: "dias5" as const, label: "Clientes 5 días/semana" },
-            { key: "precioDia" as const, label: "Precio por día ($)" },
-          ].map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between gap-4">
-              <label className="text-sm text-muted">{label}</label>
-              <input
-                className="input w-24 text-right"
-                type="number"
-                min="0"
-                value={planes[key]}
-                onChange={(e) => setPlanes((p) => ({ ...p, [key]: +e.target.value }))}
-              />
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-line-subtle pt-4">
-          <div className="bg-info-soft rounded-xl p-4 text-center">
-            <p className="text-sm text-info-ink font-medium">Estimación de ingreso mensual</p>
-            <p className="text-3xl font-semibold tabular-nums text-ink mt-1">
-              ${totalPlanesIngresos.toLocaleString()}
-            </p>
-            <p className="text-xs text-info-ink mt-1">
-              {planes.dias2 + planes.dias3 + planes.dias4 + planes.dias5} clientes totales
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="card p-5 space-y-4">
-        <h2 className="section-title">Estimación de Ventas</h2>
-        <div className="space-y-3">
-          {[
-            { key: "reservasMes" as const, label: "Reservas por mes" },
-            { key: "ticketPromedio" as const, label: "Ticket promedio ($)" },
-            { key: "serviciosExtra" as const, label: "Servicios adicionales" },
-            { key: "precioExtra" as const, label: "Precio servicio adicional ($)" },
-          ].map(({ key, label }) => (
-            <div key={key} className="flex items-center justify-between gap-4">
-              <label className="text-sm text-muted">{label}</label>
-              <input
-                className="input w-24 text-right"
-                type="number"
-                min="0"
-                value={ventas[key]}
-                onChange={(e) => setVentas((p) => ({ ...p, [key]: +e.target.value }))}
-              />
-            </div>
-          ))}
-        </div>
-        <div className="border-t border-line-subtle pt-4">
-          <div className="bg-success-soft rounded-xl p-4 text-center">
-            <p className="text-sm text-success-ink font-medium">Estimación de ventas mensuales</p>
-            <p className="text-3xl font-semibold tabular-nums text-success-ink mt-1">
-              ${totalVentasIngresos.toLocaleString()}
-            </p>
-            <p className="text-xs text-success-ink mt-1">
-              {ventas.reservasMes} reservas + {ventas.serviciosExtra} extras
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

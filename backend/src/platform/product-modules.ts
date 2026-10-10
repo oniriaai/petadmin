@@ -104,10 +104,9 @@ export const PRODUCT_MODULES: readonly ProductModule[] = [
   },
   {
     id: "cumplimiento",
-    label: "Contratos y Alertas",
-    description:
-      "Contratos de estancia por tutor y mascota, y alertas operativas y sanitarias. Ambos viven en la pantalla de Herramientas.",
-    backendModuleIds: ["contracts", "alerts"],
+    label: "Alertas",
+    description: "Alertas operativas y sanitarias por mascota.",
+    backendModuleIds: ["alerts"],
   },
   {
     id: "recordatorios",

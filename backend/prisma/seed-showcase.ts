@@ -2209,7 +2209,7 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
     }),
   });
 
-  // ---- Alerts and contracts ---------------------------------------------------------------
+  // ---- Alerts -----------------------------------------------------------------------------
   await prisma.alert.createMany({
     data: [
       {
@@ -2255,33 +2255,6 @@ export async function seedShowcaseTenant(prisma: PrismaClient, options: Showcase
         resolvedAt: day(-3),
       },
     ].map((alert) => ({ daycareId, ...alert })),
-  });
-
-  const contract = (
-    unit: Unit,
-    petName: string,
-    name: string,
-    status: string,
-    start: number,
-    end?: number,
-  ) => ({
-    daycareId,
-    businessUnit: unit,
-    clientId: pet(petName).clientId,
-    petId: pet(petName).id,
-    name,
-    status,
-    startDate: day(start),
-    endDate: end === undefined ? undefined : day(end),
-  });
-  await prisma.contract.createMany({
-    data: [
-      contract(BU.DAYCARE, "Max", "Contrato anual de guardería - Max y Nina", "FIRMADO", -60, 305),
-      contract(BU.DAYCARE, "Buddy", "Contrato anual de guardería - Buddy", "FIRMADO", -120, 245),
-      contract(BU.DAYCARE, "Toby", "Contrato de guardería - Toby", "PENDIENTE_FIRMA", -2),
-      contract(BU.GROOMING, "Rocky", "Consentimiento de peluquería - Rocky", "PENDIENTE_FIRMA", -1),
-      contract(BU.DAYCARE, "Kiara", "Plan de sábados - Kiara", "VENCIDO", -150, -5),
-    ],
   });
 
   return {

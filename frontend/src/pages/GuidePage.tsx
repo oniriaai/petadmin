@@ -102,7 +102,7 @@ const sections = [
     id: "alertas",
     title: "Alertas y Avisos",
     steps: [
-      "Ve a **Herramientas** → pestaña Alertas",
+      "Ve a **Alertas**",
       "Crea alertas de comportamiento, salud, o progreso para mascotas específicas",
       "Las alertas activas aparecen en el Dashboard",
       "Márcalas como resueltas cuando se solucione la situación",

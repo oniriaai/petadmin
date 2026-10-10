@@ -17,7 +17,6 @@ import {
   CalendarCheck,
   ChartBar,
   ClipboardText,
-  FileText,
   Kanban,
   Notepad,
   Package,
@@ -27,6 +26,7 @@ import {
   SquaresFour,
   Van,
   Wallet,
+  WarningCircle,
 } from "../components/icons/PublicIcons";
 import type { Icon } from "../components/icons/PublicIcons";
 import { Lockup } from "../components/brand/Logo";
@@ -603,9 +603,9 @@ function Modules() {
           <Reveal delay={0.16} className={cell}>
             <div className={cls(tile, "justify-between gap-10 bg-sunken p-6 sm:p-8")}>
               <ModuleText
-                Icon={FileText}
-                name="Argos Contratos"
-                line="Contratos de estancia por tutor y mascota, junto a las alertas operativas y sanitarias."
+                Icon={WarningCircle}
+                name="Argos Alertas"
+                line="Alertas operativas y sanitarias por mascota, a la vista de todo el equipo."
               />
               <div className="text-action dark:text-oro">
                 <Meander />

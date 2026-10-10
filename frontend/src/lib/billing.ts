@@ -55,7 +55,7 @@ export const ADD_ON_NAMES: Record<string, string> = {
   finanzas: "Finanzas",
   inventario: "Inventario",
   informes: "Informes",
-  cumplimiento: "Contratos y alertas",
+  cumplimiento: "Alertas",
   recordatorios: "Recordatorios automáticos",
 };
 

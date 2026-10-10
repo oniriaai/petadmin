@@ -119,7 +119,7 @@ export const PERMISSIONS: readonly PermissionInfo[] = [
     id: "registros.delete",
     label: "Eliminar registros",
     description:
-      "Eliminar o dar de baja tutores, mascotas, reservas, planes, salas, contratos, citas y consultas.",
+      "Eliminar o dar de baja tutores, mascotas, reservas, planes, salas, citas y consultas.",
   },
 ];
 

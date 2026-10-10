@@ -4,6 +4,7 @@ import type { LucideIcon } from "lucide-react";
 import { isPermissionId, isProductModuleId } from "./shared/contracts";
 import type { BusinessUnit, PermissionId, ProductModuleId, TenantRole } from "./shared/contracts";
 import {
+  Bell,
   BarChart3,
   BedDouble,
   BellRing,
@@ -536,7 +537,12 @@ export const frontendModules: readonly FrontendModule[] = [
         component: AvisosPage,
         requires: ["recordatorios"],
       },
-      { path: "/herramientas", title: "Herramientas", component: HerramientasPage },
+      {
+        path: "/herramientas",
+        title: "Alertas",
+        component: HerramientasPage,
+        requires: ["cumplimiento"],
+      },
       {
         path: "/configuracion",
         title: "Configuración",
@@ -587,7 +593,7 @@ export const frontendModules: readonly FrontendModule[] = [
           permissions: ["finanzas.read"],
         },
         { to: "/avisos", label: "Avisos a tutores", icon: Send, requires: ["recordatorios"] },
-        { to: "/herramientas", label: "Herramientas", icon: Wrench },
+        { to: "/herramientas", label: "Alertas", icon: Bell, requires: ["cumplimiento"] },
         {
           to: "/configuracion",
           label: "Configuración",

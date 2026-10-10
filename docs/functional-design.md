@@ -109,7 +109,7 @@ núcleo y está siempre disponible.
     ├── Finanzas (/transacciones)           [finanzas]
     ├── Informes (/informes)                [informes]
     ├── Avisos a tutores (/avisos)          [recordatorios]
-    ├── Herramientas (/herramientas)        — pestaña Alertas: [cumplimiento]
+    ├── Alertas (/herramientas)             [cumplimiento]
     ├── Configuración (/configuracion)      [admin]
     └── Guía de uso (/guia)
 ```

@@ -156,7 +156,7 @@ The veterinary unit carries one message of its own: **one record for each pet ac
 | Product | Argos Suite | Login screen, browser title, user guide, website, contracts, invoices |
 | Descriptor | Argos Suite · Gestión de guarderías, peluquerías y veterinarias | Login screen, website header |
 | Business units | Argos Guardería, Argos Peluquería, Argos Veterinaria | Pricing pages, unit selector, unit badges |
-| Modules | Argos Finanzas, Argos Inventario, Argos Informes, Argos Contratos, Argos Recordatorios | Pricing pages, module badges |
+| Modules | Argos Finanzas, Argos Inventario, Argos Informes, Argos Alertas, Argos Recordatorios | Pricing pages, module badges |
 | Tenant brands | Each customer's own name | Inside the app shell, which shows the tenant's name |
 
 - Write "Argos Suite" with a normal A everywhere in text. The Greek lambda (Λ) belongs only to the drawn logo.

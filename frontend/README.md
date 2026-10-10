@@ -80,16 +80,14 @@ verdad:
 | `/transacciones` | `finanzas` | Sus cuatro pestañas pertenecen al mismo módulo |
 | `/inventario` | `inventario` | |
 | `/informes` | `informes` | |
-| `/`, `/clientes`, `/animales`, `/herramientas`, `/configuracion`, `/guia` | — | Núcleo |
+| `/herramientas` | `cumplimiento` | Alertas |
+| `/`, `/clientes`, `/animales`, `/configuracion`, `/guia` | — | Núcleo |
 
 `validateFrontendModules()` rechaza un `requires` que no esté en el catálogo de
 `src/modules/shared/contracts.ts`: los ids viven en dos bases de código y uno desconocido no
 coincidiría con nada, ocultando la ruta para todo el mundo en silencio.
 
-**Gating por pestaña**: `cumplimiento` no tiene ruta propia — sus dos pantallas son las pestañas
-de Alertas y Contratos en `HerramientasPage`, así que se comprueba ahí; el estimador es una
-calculadora local sin API y sigue disponible. Si el módulo se desactiva a mitad de sesión, la
-pestaña abierta cede.
+`cumplimiento` abre la pantalla de Alertas (`HerramientasPage`, en `/herramientas`).
 
 **Gating por unidad**: una ruta puede declarar `unit`. El backend rechaza un módulo que no sirve a
 la unidad acotada, así que `/guarderia`, `/transporte` y `/peluqueria` lo declaran y el guard
