@@ -1,11 +1,12 @@
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
-import { Search, Eye, Edit2, Dog, Cat, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, Eye, Edit2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { fmt } from "../../lib/utils";
 import { Badge } from "../../components/ui/Badge";
-import { Modal } from "../../components/ui/Modal";
 import { PageLoader, Spinner } from "../../components/ui/Spinner";
 import { PetForm } from "../clientes/PetForm";
+import { PetAvatar } from "./PetAvatar";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { EmptyState } from "../../components/ui/EmptyState";
 
@@ -33,33 +34,6 @@ interface Pet {
 
 const PAGE_SIZE = 20;
 
-function PetAvatar({ pet, size = "small" }: { pet: Pet; size?: "small" | "large" }) {
-  const [broken, setBroken] = useState(false);
-  const isSmall = size === "small";
-  const wrapperClass = isSmall ? "w-10 h-10 rounded-full" : "w-20 h-20 rounded-2xl";
-
-  if (pet.photoUrl && !broken) {
-    return (
-      <img
-        src={pet.photoUrl}
-        alt={pet.name}
-        loading="lazy"
-        decoding="async"
-        onError={() => setBroken(true)}
-        className={`${wrapperClass} object-cover ${isSmall ? "border border-line-subtle" : "border-2 border-white shadow-xs"}`}
-      />
-    );
-  }
-
-  return (
-    <span
-      className={`${isSmall ? "text-2xl" : "text-5xl"} ${wrapperClass} flex items-center justify-center ${isSmall ? "bg-sunken" : "bg-surface shadow-xs"}`}
-    >
-      {pet.species === "dog" ? <Dog size={isSmall ? 22 : 40} /> : <Cat size={isSmall ? 22 : 40} />}
-    </span>
-  );
-}
-
 export function AnimalesPage() {
   const [pets, setPets] = useState<Pet[]>([]);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -67,7 +41,6 @@ export function AnimalesPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [species, setSpecies] = useState("");
-  const [selected, setSelected] = useState<Pet | null>(null);
   const [editPet, setEditPet] = useState<Pet | null>(null);
   const [showPetForm, setShowPetForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +156,12 @@ export function AnimalesPage() {
                         <div className="flex items-center gap-2">
                           <PetAvatar pet={p} size="small" />
                           <div>
-                            <p className="font-semibold text-ink">{p.name}</p>
+                            <Link
+                              to={`/animales/${p.id}`}
+                              className="font-semibold text-ink hover:text-action hover:underline"
+                            >
+                              {p.name}
+                            </Link>
                             <p className="text-xs text-muted">
                               {p.sex === "M" ? "Macho" : "Hembra"}
                               {p.isNeutered ? " · Esterilizado" : ""}
@@ -192,9 +170,12 @@ export function AnimalesPage() {
                         </div>
                       </td>
                       <td className="table-td">
-                        <p className="text-sm font-medium">
+                        <Link
+                          to={`/clientes/${p.client.id}`}
+                          className="text-sm font-medium hover:text-action hover:underline"
+                        >
                           {p.client.firstName} {p.client.lastName}
-                        </p>
+                        </Link>
                         <p className="text-xs text-muted">{p.client.phone ?? ""}</p>
                       </td>
                       <td className="table-td text-xs">
@@ -222,13 +203,13 @@ export function AnimalesPage() {
                       </td>
                       <td className="table-td">
                         <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setSelected(p)}
+                          <Link
+                            to={`/animales/${p.id}`}
                             className="btn-ghost btn-sm p-1.5"
                             title="Ver ficha"
                           >
                             <Eye size={14} />
-                          </button>
+                          </Link>
                           <button
                             onClick={() => {
                               setEditPet(p);
@@ -295,90 +276,6 @@ export function AnimalesPage() {
         client={editPet ? editPet.client : null}
         pet={editPet}
       />
-
-      <Modal
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        title={`Ficha de ${selected?.name}`}
-        size="lg"
-      >
-        {selected && (
-          <div className="space-y-5">
-            <div className="flex items-center gap-4 p-4 bg-sunken rounded-xl">
-              <PetAvatar pet={selected} size="large" />
-              <div>
-                <h2 className="font-display text-2xl leading-tight text-ink">{selected.name}</h2>
-                <p className="text-muted text-sm">
-                  {selected.breed} · {selected.sex === "M" ? "Macho" : "Hembra"}
-                  {selected.isNeutered ? " · Esterilizado" : ""}
-                </p>
-                <p className="text-sm mt-1">
-                  Dueño:{" "}
-                  <strong>
-                    {selected.client.firstName} {selected.client.lastName}
-                  </strong>{" "}
-                  · {selected.client.phone}
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-              {[
-                ["Color", selected.color],
-                ["Variedad", selected.variety],
-                ["Microchip", selected.microchip],
-                ["Peso", selected.weight ? `${selected.weight} kg` : null],
-                ["Talla", selected.height ? `${selected.height} cm` : null],
-                ["Nacimiento", fmt(selected.birthdate)],
-                ["ID Banner", selected.bannerId],
-              ].map(([l, v]) =>
-                v ? (
-                  <div key={l as string}>
-                    <p className="label">{l}</p>
-                    <p>{v}</p>
-                  </div>
-                ) : null,
-              )}
-            </div>
-            {selected.allergies && (
-              <div className="p-3 bg-danger-soft rounded-lg">
-                <p className="label text-danger-ink flex items-center gap-1">
-                  <AlertCircle size={15} /> Alergias / Observaciones
-                </p>
-                <p className="text-sm text-danger-ink">{selected.allergies}</p>
-              </div>
-            )}
-            {selected.notes && (
-              <div>
-                <p className="label">Notas</p>
-                <p className="text-sm text-muted">{selected.notes}</p>
-              </div>
-            )}
-            {selected.vaccinations.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-ink mb-2">Vacunas</h3>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr>
-                      <th className="table-th">Vacuna</th>
-                      <th className="table-th">Fecha</th>
-                      <th className="table-th">Próxima</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.vaccinations.map((v) => (
-                      <tr key={v.id} className="table-tr">
-                        <td className="table-td">{v.name}</td>
-                        <td className="table-td">{fmt(v.date)}</td>
-                        <td className="table-td">{v.nextDue ? fmt(v.nextDue) : "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 }

@@ -261,6 +261,13 @@ async function run() {
     );
     const pet = await vet.get(`/pets/${petId}`);
     expectEqual(pet.data.weight, 12.4, "peso reflejado en la ficha");
+    // The pet's history is a summary every unit may read: the visit shows, its content does not.
+    const inHistory = pet.data.reservationPets
+      .map((row: { reservation: Record<string, unknown> }) => row.reservation)
+      .find((r: Record<string, unknown>) => r.businessUnit === "VETERINARY" && r.vetVisit);
+    expectEqual(Boolean(inHistory), true, "la consulta aparece en el historial del animal");
+    expectEqual("totalAmount" in inHistory, false, "el historial no lleva importes");
+    expectEqual("anamnesis" in inHistory.vetVisit, false, "el historial no lleva texto clínico");
 
     expectStatus(
       (
