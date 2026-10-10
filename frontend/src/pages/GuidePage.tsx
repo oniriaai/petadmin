@@ -95,9 +95,9 @@ const sections = [
     content: `La pantalla de **Transporte** muestra las recogidas y entregas del día. Para que una reserva aparezca aquí, debe tener activada la opción **Requiere transporte** al crearla. Las recogidas se muestran en la columna izquierda (clientes que van al establecimiento) y las entregas en la derecha (clientes que regresan a casa).`,
   },
   {
-    id: "disponibilidad",
-    title: "Disponibilidad",
-    content: `La pantalla de **Disponibilidad** muestra la ocupación de cada sala para el día seleccionado. La barra de color indica el porcentaje de ocupación: verde (< 60%), amarillo (60-90%), rojo (> 90%). Usa las flechas para navegar entre días.`,
+    id: "salas",
+    title: "Salas y cupos",
+    content: `La pantalla de **Salas y cupos** muestra la ocupación de cada sala para el día seleccionado y permite crear, editar o dar de baja salas. La barra de color indica el porcentaje de ocupación: verde (< 60%), amarillo (60-90%), rojo (> 90%); una sala por encima de su capacidad se marca como **Sobrecupo**. Usa las flechas para navegar entre días.`,
   },
   {
     id: "alertas",
