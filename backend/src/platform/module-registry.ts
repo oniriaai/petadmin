@@ -16,7 +16,6 @@ import { incomesRouter } from "../routes/incomes";
 import { inventoryRouter } from "../routes/inventory";
 import { reportsRouter } from "../routes/reports";
 import { alertsRouter } from "../routes/alerts";
-import { contractsRouter } from "../routes/contracts";
 import { exportRouter } from "../routes/export";
 import { storageRouter } from "../routes/storage";
 import { peluqueriaRouter } from "../modules/peluqueria";
@@ -210,13 +209,6 @@ export const backendModules: readonly BackendModule[] = [
     basePath: "/alerts",
     router: alertsRouter,
     description: "Alerts and notifications",
-  },
-  {
-    id: "contracts",
-    basePath: "/contracts",
-    router: contractsRouter,
-    description: "Client and pet contracts",
-    permissions: DELETE_RECORD_RULES,
   },
   {
     id: "export",

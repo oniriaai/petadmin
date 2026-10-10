@@ -14,7 +14,7 @@ const MODULE_LABELS: Record<ProductModuleId, string> = {
   finanzas: "Gestión Financiera",
   inventario: "Inventario",
   informes: "Informes y Exportación",
-  cumplimiento: "Contratos y Alertas",
+  cumplimiento: "Alertas",
   recordatorios: "Recordatorios automáticos",
 };
 

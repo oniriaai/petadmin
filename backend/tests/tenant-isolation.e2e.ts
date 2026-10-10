@@ -113,7 +113,6 @@ async function run() {
       "/providers",
       "/inventory/items",
       "/reports/kpis",
-      "/contracts",
       "/alerts",
     ]) {
       expectStatus((await a.get(path)).status, 200, `GET ${path} (tenant con el módulo)`);
@@ -355,7 +354,7 @@ async function run() {
     // Every one of these handlers took a foreign key from the body and stored it without
     // resolving it against the caller's daycare. The row landed in the attacker's tenant
     // pointing at the victim's record, and the response (or the next read) carried the
-    // victim's data back: a tutor's name on a contract, the whole provider on a payable, the
+    // victim's data back: the whole provider on a payable, the
     // full client and pet rows on a daycare check-in.
     const { prisma } = await import("../src/db");
     const attacker = clientFor(await loginAs("admin_global", "admin123"), undefined, "DAYCARE");
@@ -412,12 +411,6 @@ async function run() {
         daysOfWeek: "1",
       };
       const attempts: Array<[string, string, Record<string, unknown>]> = [
-        ["Contrato con tutor ajeno", "/contracts", { clientId: ids.client, name: "Aislamiento" }],
-        [
-          "Contrato con mascota ajena",
-          "/contracts",
-          { clientId: ownPet.clientId, petId: ids.pet, name: "Aislamiento" },
-        ],
         [
           "Alerta sobre mascota ajena",
           "/alerts",
@@ -497,7 +490,6 @@ async function run() {
       await prisma.checkInOut.deleteMany({
         where: { OR: [{ petId: pet }, { clientId: client }, { reservationId: reservation }] },
       });
-      await prisma.contract.deleteMany({ where: { OR: [{ clientId: client }, { petId: pet }] } });
       await prisma.alert.deleteMany({ where: { petId: pet } });
       await prisma.payable.deleteMany({ where: { providerId: ids.provider || "none" } });
       await prisma.income.deleteMany({ where: { reservationId: reservation } });

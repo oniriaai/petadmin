@@ -82,12 +82,11 @@ function ServiceIcon({ servicio }: { servicio: string }) {
 }
 
 export function Dashboard() {
-  const { user, activeBusinessUnit, hasModule, fullAccess } = useAuth();
+  const { user, activeBusinessUnit, hasModule } = useAuth();
   // A link the route guard would refuse is a dead end, so each one is offered only when it opens.
   const canOpen = useCanOpen();
   const canBook = canOpen("/operaciones");
-  // Without `cumplimiento` Herramientas opens on the estimator, not on the alerts.
-  const canSeeAlerts = canOpen("/herramientas") && (fullAccess || hasModule("cumplimiento"));
+  const canSeeAlerts = canOpen("/herramientas");
   // The clinic's module is gated in place: it has no dashboard of its own.
   const showClinic =
     hasModule("veterinaria") &&

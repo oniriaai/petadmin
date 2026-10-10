@@ -316,7 +316,6 @@ async function cleanup(): Promise<void> {
       await prisma.checkInOut.deleteMany({ where: { daycareId: id } });
       await prisma.income.deleteMany({ where: { daycareId: id } });
       await prisma.alert.deleteMany({ where: { daycareId: id } });
-      await prisma.contract.deleteMany({ where: { daycareId: id } });
       await prisma.reservation.deleteMany({ where: { daycareId: id } });
       await prisma.recurringPlan.deleteMany({ where: { daycareId: id } });
       await prisma.payable.deleteMany({ where: { daycareId: id } });

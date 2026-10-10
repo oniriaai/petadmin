@@ -101,7 +101,7 @@ concedió (`users.permissions`).
 | `inventario.read` | `GET` de artículos y movimientos |
 | `inventario.write` | Crear, editar y dar de baja artículos y registrar movimientos. Implica `inventario.read` |
 | `datos.export` | `/export/*`. Las hojas de ingresos y gastos piden además `finanzas.read` |
-| `registros.delete` | `DELETE` de un tutor, mascota, reserva, plan, sala, contrato, cita de peluquería o consulta |
+| `registros.delete` | `DELETE` de un tutor, mascota, reserva, plan, sala, cita de peluquería o consulta |
 
 - `admin` y `superadmin` tienen todos, diga lo que diga su fila. Un usuario nuevo nace con
   `inventario.read` y nada más.
@@ -302,7 +302,7 @@ Es la única acción irreversible de la consola, así que tiene dos salvaguardas
    así como dos decisiones tomadas en dos momentos distintos.
 
 `GET /platform/daycares/:id/export` entrega antes un libro con la guardería, sus usuarios, tutores,
-mascotas, salas, reservas, cobros, cuentas por pagar, inventario y contratos. Sin hashes de
+mascotas, salas, reservas, cobros, cuentas por pagar e inventario. Sin hashes de
 contraseña: no son datos que el cliente necesite y entregarlos es entregar algo que se puede romper
 sin prisa.
 

@@ -80,7 +80,6 @@ clientsRouter.get("/:id", async (req, res) => {
             room: { select: { name: true } },
           },
         },
-        contracts: { orderBy: { createdAt: "desc" } },
       },
     });
     if (!client) {

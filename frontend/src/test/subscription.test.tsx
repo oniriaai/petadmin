@@ -39,7 +39,7 @@ const CATALOG: Catalog = {
     {
       id: "negocio",
       label: "Negocio",
-      summary: "Una unidad con finanzas, inventario, informes, contratos y alertas.",
+      summary: "Una unidad con finanzas, inventario, informes y alertas.",
       monthlyCents: 4900,
       annualCents: 49000,
       unitCount: 1,

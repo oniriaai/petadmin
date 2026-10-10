@@ -284,6 +284,16 @@ describe("navigation gating", () => {
     expect(screen.getByText("Informes")).toBeInTheDocument();
   });
 
+  it("hides alerts when cumplimiento is not enabled", () => {
+    renderSidebar({ modules: ["reservas"] });
+    expect(screen.queryByText("Alertas")).not.toBeInTheDocument();
+  });
+
+  it("shows alerts once cumplimiento is enabled", () => {
+    renderSidebar({ modules: ["reservas", "cumplimiento"] });
+    expect(screen.getByText("Alertas")).toBeInTheDocument();
+  });
+
   it("hides reminders to tutors when recordatorios is not enabled", () => {
     renderSidebar({ modules: ["reservas", "peluqueria"] });
     expect(screen.queryByText("Avisos a tutores")).not.toBeInTheDocument();
@@ -515,7 +525,6 @@ describe("registry", () => {
       "/clientes",
       "/configuracion",
       "/guia",
-      "/herramientas",
       "/suscripcion",
     ]);
   });

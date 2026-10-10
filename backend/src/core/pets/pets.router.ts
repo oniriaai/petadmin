@@ -60,7 +60,7 @@ petsRouter.get("/", async (req, res) => {
         { microchip: { contains: search } },
       ];
     }
-    // Bare array by default, as for clients: HerramientasPage loads this whole list.
+    // Bare array by default, as for clients: the alerts page loads this whole list.
     const page = readPage(req);
     const [pets, total] = await Promise.all([
       prisma.pet.findMany({

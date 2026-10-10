@@ -24,7 +24,6 @@ model Daycare {
   alerts               Alert[]
   checkInOuts          CheckInOut[]
   clients              Client[]
-  contracts            Contract[]
   incomes              Income[]
   inventoryItems       InventoryItem[]
   modules              DaycareModule[]
@@ -141,7 +140,6 @@ model Client {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   checkInOuts      CheckInOut[]
-  contracts        Contract[]
   pets             Pet[]
   recurringPlans   RecurringPlan[]
   reminderMessages ReminderMessage[]
@@ -192,7 +190,6 @@ model Pet {
   vetConsents         VetConsent[]
   alerts              Alert[]
   checkInOuts         CheckInOut[]
-  contracts           Contract[]
   reminderMessages    ReminderMessage[]
   documents           PetDocument[]
   vaccinations        PetVaccination[]
@@ -734,27 +731,6 @@ model Alert {
 
   @@index([daycareId, isResolved])
   @@map("alerts")
-}
-
-model Contract {
-  id           String    @id @default(cuid())
-  daycareId    String
-  businessUnit String
-  clientId     String
-  petId        String?
-  name         String
-  status       String    @default("PENDIENTE_FIRMA")
-  startDate    DateTime?
-  endDate      DateTime?
-  notes        String?
-  createdAt    DateTime  @default(now())
-  client       Client    @relation(fields: [clientId], references: [id])
-  pet          Pet?      @relation(fields: [petId], references: [id])
-
-  daycare Daycare @relation(fields: [daycareId], references: [id])
-
-  @@index([daycareId])
-  @@map("contracts")
 }
 
 /// Deworming and other antiparasitic or preventive treatments, with their next due date.

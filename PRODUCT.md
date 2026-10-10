@@ -40,7 +40,7 @@ Shared client and pet records connect the units within a tenant while preserving
 
 The product combines daycare, grooming and veterinary operations in one pet-care-specific system rather than treating them as generic booking or CRM workflows. Its meaningfully different mechanism is a shared client/pet core with contextual modules, physical daycare capacity validation, grooming workflow states, role-based access, and strictly segregated financial records for each business unit.
 
-It is sold as coarse **product modules** rather than per-feature flags: Reservas y Agenda, Guardería, Peluquería, Veterinaria, Gestión Financiera, Inventario, Informes y Exportación, Contratos y Alertas, and Recordatorios automáticos, over a Núcleo every tenant gets. A daycare that only grooms buys Reservas and Peluquería and never sees the rest.
+It is sold as coarse **product modules** rather than per-feature flags: Reservas y Agenda, Guardería, Peluquería, Veterinaria, Gestión Financiera, Inventario, Informes y Exportación, Alertas, and Recordatorios automáticos, over a Núcleo every tenant gets. A daycare that only grooms buys Reservas and Peluquería and never sees the rest.
 
 ## Operating Context
 

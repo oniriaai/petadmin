@@ -104,7 +104,7 @@ del backend (definidos en `backend/src/platform/product-modules.ts`):
 | `finanzas` | `incomes`, `payables`, `providers` | |
 | `inventario` | `inventory` | Stock con aviso de mínimo y movimientos |
 | `informes` | `reports`, `export` | |
-| `cumplimiento` | `contracts`, `alerts` | Pestañas de Alertas y Contratos en Herramientas |
+| `cumplimiento` | `alerts` | Pantalla de Alertas |
 | `recordatorios` | `reminders` | Recordatorios a tutores por WhatsApp y correo, automáticos o a mano. No se habilita por defecto. Ver `docs/recordatorios.md` |
 | `plataforma` | `platform` | Solo del proveedor; nunca se asigna a una guardería |
 
@@ -419,7 +419,7 @@ incorrecta: no confirma qué guarderías existen.
 
 - `GET /platform/daycares/:id/export` entrega un libro de Excel con todo lo que posee el
   inquilino (guardería, usuarios, tutores, mascotas, salas, reservas, cobros, cuentas por
-  pagar, inventario y contratos). Sin hashes de contraseña: no son datos que el cliente
+  pagar e inventario). Sin hashes de contraseña: no son datos que el cliente
   necesite y entregarlos es entregar algo que se puede romper sin prisa.
 - `DELETE /platform/daycares/:id` la elimina de forma permanente. Dos salvaguardas, porque es la
   única acción irreversible de la consola: hay que **repetir el identificador** de la guardería

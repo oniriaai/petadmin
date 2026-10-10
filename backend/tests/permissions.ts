@@ -105,14 +105,7 @@ assert.deepEqual(needs("dashboard", "GET", "/analytics/occupancy"), []);
 // A prefix matches on a segment boundary, not on a string that merely starts the same way.
 assert.deepEqual(needs("dashboard", "GET", "/financials"), []);
 
-for (const moduleId of [
-  "clients",
-  "pets",
-  "reservations",
-  "recurring-plans",
-  "rooms",
-  "contracts",
-]) {
+for (const moduleId of ["clients", "pets", "reservations", "recurring-plans", "rooms"]) {
   assert.deepEqual(needs(moduleId, "DELETE", "/abc"), ["registros.delete"], moduleId);
   assert.deepEqual(needs(moduleId, "GET", "/abc"), [], `${moduleId} reads stay open`);
   assert.deepEqual(needs(moduleId, "PUT", "/abc"), [], `${moduleId} edits stay open`);

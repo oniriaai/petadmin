@@ -22,7 +22,7 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
   const daycare = await prisma.daycare.findUnique({ where: { id: daycareId } });
   if (!daycare) throw new AuthzError(404, "Guardería no encontrada");
 
-  const [users, clients, pets, rooms, reservations, incomes, payables, inventory, contracts] =
+  const [users, clients, pets, rooms, reservations, incomes, payables, inventory] =
     await Promise.all([
       prisma.user.findMany({
         where: { daycareId },
@@ -62,11 +62,6 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
         orderBy: { createdAt: "asc" },
       }),
       prisma.inventoryItem.findMany({ where: { daycareId }, orderBy: { name: "asc" } }),
-      prisma.contract.findMany({
-        where: { daycareId },
-        include: { client: { select: { firstName: true, lastName: true } } },
-        orderBy: { createdAt: "asc" },
-      }),
     ]);
 
   const wb = new ExcelJS.Workbook();
@@ -285,17 +280,6 @@ export async function buildDaycareExport(daycareId: string): Promise<ExcelJS.Wor
       i.currentStock,
       i.minStock,
       i.unitCost,
-    ]),
-  );
-
-  const cts = sheet("Contratos", ["Nombre", "Tutor", "Estado", "Inicio", "Fin"]);
-  contracts.forEach((c) =>
-    cts.addRow([
-      c.name,
-      `${c.client.firstName} ${c.client.lastName}`,
-      c.status,
-      c.startDate,
-      c.endDate,
     ]),
   );
 
@@ -683,7 +667,6 @@ export async function deleteDaycare(
     count("checkInOuts", await tx.checkInOut.deleteMany({ where: { daycareId } }));
     count("incomes", await tx.income.deleteMany({ where: { daycareId } }));
     count("alerts", await tx.alert.deleteMany({ where: { daycareId } }));
-    count("contracts", await tx.contract.deleteMany({ where: { daycareId } }));
 
     // Reservations before the plans they belong to, which they reference.
     count("reservations", await tx.reservation.deleteMany({ where: { daycareId } }));

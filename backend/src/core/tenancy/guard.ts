@@ -88,7 +88,6 @@ const TENANT_OWNED = new Set([
   "Payable",
   "InventoryItem",
   "Alert",
-  "Contract",
   "VetService",
   "VetVisit",
   "VetVitals",
