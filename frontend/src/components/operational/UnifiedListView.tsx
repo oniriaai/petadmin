@@ -1,14 +1,14 @@
 import { useState, useMemo } from "react";
-import { ChevronUp, ChevronDown, Search, CheckCircle, LogOut, Calendar, Plus } from "lucide-react";
+import { ChevronUp, ChevronDown, CheckCircle, LogOut, Calendar, Plus } from "lucide-react";
 import { fmt, fmtTime } from "../../lib/utils";
 import { Badge } from "../ui/Badge";
-import type { OperationalEvent, OperationalEventStatus } from "./useOperacionesData";
+import { OPERATIONAL_STATUS, WALK_IN_LABEL } from "./useOperacionesData";
+import type { OperationalEvent } from "./useOperacionesData";
 import { EmptyState } from "../ui/EmptyState";
-import { ListSkeleton } from "../ui/Spinner";
+import { Pager } from "../ui/Pager";
 
 interface UnifiedListViewProps {
   events: OperationalEvent[];
-  loading?: boolean;
   onCheckin?: (eventId: string) => void;
   onCheckout?: (eventId: string) => void;
   onViewDetail?: (event: OperationalEvent) => void;
@@ -17,60 +17,21 @@ interface UnifiedListViewProps {
 type SortField = "scheduledCheckIn" | "client" | "pets" | "room" | "status" | "type";
 type SortOrder = "asc" | "desc";
 
-function getStatusColor(status: OperationalEventStatus) {
-  const colors = {
-    PENDING: "bg-sunken text-muted",
-    CHECKED_IN: "bg-success-soft text-success-ink",
-    CHECKED_OUT: "bg-info-soft text-info-ink",
-  };
-  return colors[status];
-}
-
-function getStatusLabel(status: OperationalEventStatus) {
-  const labels = {
-    PENDING: "Pendiente",
-    CHECKED_IN: "Ingresado",
-    CHECKED_OUT: "Egresado",
-  };
-  return labels[status];
-}
+const PAGE_SIZE = 25;
 
 export function UnifiedListView({
   events,
-  loading = false,
   onCheckin,
   onCheckout,
   onViewDetail,
 }: UnifiedListViewProps) {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<OperationalEventStatus | "all">("all");
   const [sortField, setSortField] = useState<SortField>("scheduledCheckIn");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-
-  // Filter and search
-  const filteredEvents = useMemo(() => {
-    return events.filter((e) => {
-      // Search filter
-      const searchLower = search.toLowerCase();
-      const matchesSearch =
-        e.clientName.toLowerCase().includes(searchLower) ||
-        e.petNames.toLowerCase().includes(searchLower) ||
-        e.roomName.toLowerCase().includes(searchLower);
-
-      if (!matchesSearch) return false;
-
-      // Status filter
-      if (statusFilter !== "all" && e.status !== statusFilter) return false;
-
-      return true;
-    });
-  }, [events, search, statusFilter]);
 
   // Sort
   const sortedEvents = useMemo(() => {
-    const sorted = [...filteredEvents].sort((a, b) => {
+    const sorted = [...events].sort((a, b) => {
       let aVal: any;
       let bVal: any;
 
@@ -109,14 +70,12 @@ export function UnifiedListView({
     });
 
     return sorted;
-  }, [filteredEvents, sortField, sortOrder]);
+  }, [events, sortField, sortOrder]);
 
-  // Pagination
-  const totalPages = Math.ceil(sortedEvents.length / pageSize);
-  const paginatedEvents = useMemo(() => {
-    const startIdx = (currentPage - 1) * pageSize;
-    return sortedEvents.slice(startIdx, startIdx + pageSize);
-  }, [sortedEvents, currentPage, pageSize]);
+  // The page's filters and month change what is listed, so the page number is clamped, not kept.
+  const pageCount = Math.max(1, Math.ceil(sortedEvents.length / PAGE_SIZE));
+  const page = Math.min(currentPage, pageCount);
+  const paginatedEvents = sortedEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -138,45 +97,12 @@ export function UnifiedListView({
     </button>
   );
 
-  if (loading) {
-    return <ListSkeleton />;
-  }
-
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="card p-4 flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
-          <input
-            className="input pl-9"
-            placeholder="Buscar por cliente, mascota o sala…"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value as any);
-            setCurrentPage(1);
-          }}
-          className="input"
-        >
-          <option value="all">Todos los estados</option>
-          <option value="PENDING">Pendiente</option>
-          <option value="CHECKED_IN">Ingresado</option>
-          <option value="CHECKED_OUT">Egresado</option>
-        </select>
-      </div>
-
       {/* Table */}
       <div className="card overflow-hidden">
-        {filteredEvents.length === 0 ? (
-          <EmptyState title="Aquí todavía no hay operaciones. ¿Agendamos la primera?" />
+        {events.length === 0 ? (
+          <EmptyState title="No hay operaciones en este periodo. ¿Agendamos la primera?" />
         ) : (
           <>
             <div className="overflow-x-auto">
@@ -208,7 +134,7 @@ export function UnifiedListView({
                 </thead>
                 <tbody>
                   {paginatedEvents.map((event) => {
-                    const statusColor = getStatusColor(event.status);
+                    const status = OPERATIONAL_STATUS[event.status];
 
                     return (
                       <tr
@@ -217,20 +143,17 @@ export function UnifiedListView({
                       >
                         <td className="table-td" onClick={() => onViewDetail?.(event)}>
                           {event.type === "RESERVATION" ? (
-                            <div className="flex items-center gap-1.5 text-action" title="Reserva">
+                            <div className="flex items-center gap-1.5 text-action">
                               <Calendar size={16} />
                               <span className="text-[10px] font-bold uppercase tracking-wider">
-                                Res
+                                Reserva
                               </span>
                             </div>
                           ) : (
-                            <div
-                              className="flex items-center gap-1.5 text-grooming-600"
-                              title="Ad-hoc"
-                            >
+                            <div className="flex items-center gap-1.5 text-grooming-600">
                               <Plus size={16} />
                               <span className="text-[10px] font-bold uppercase tracking-wider">
-                                AdH
+                                {WALK_IN_LABEL}
                               </span>
                             </div>
                           )}
@@ -254,7 +177,7 @@ export function UnifiedListView({
                           {event.roomName}
                         </td>
                         <td className="table-td" onClick={() => onViewDetail?.(event)}>
-                          <Badge color={statusColor}>{getStatusLabel(event.status)}</Badge>
+                          <Badge color={status.color}>{status.label}</Badge>
                         </td>
                         <td className="table-td text-sm">
                           {event.actualCheckIn ? (
@@ -289,8 +212,8 @@ export function UnifiedListView({
                                   onCheckin(event.id);
                                 }}
                                 className="btn-success btn-sm"
-                                disabled={loading}
-                                title="Check In"
+                                aria-label="Registrar entrada"
+                                title="Registrar entrada"
                               >
                                 <CheckCircle size={14} />
                               </button>
@@ -302,8 +225,8 @@ export function UnifiedListView({
                                   onCheckout(event.id);
                                 }}
                                 className="btn-warning btn-sm"
-                                disabled={loading}
-                                title="Check Out"
+                                aria-label="Registrar salida"
+                                title="Registrar salida"
                               >
                                 <LogOut size={14} />
                               </button>
@@ -317,77 +240,12 @@ export function UnifiedListView({
               </table>
             </div>
 
-            {/* Pagination */}
-            <div className="border-t border-line-subtle p-4 flex items-center justify-between text-sm">
-              <div className="flex items-center gap-3">
-                <span className="text-muted">
-                  Mostrando {paginatedEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} a{" "}
-                  {Math.min(currentPage * pageSize, sortedEvents.length)} de {sortedEvents.length}{" "}
-                  operaciones
-                </span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="input text-sm"
-                >
-                  <option value={10}>10 por página</option>
-                  <option value={25}>25 por página</option>
-                  <option value={50}>50 por página</option>
-                  <option value={100}>100 por página</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="btn-ghost"
-                >
-                  Anterior
-                </button>
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }).map((_, i) => {
-                    const page = i + 1;
-                    if (
-                      page === 1 ||
-                      page === totalPages ||
-                      (page >= currentPage - 1 && page <= currentPage + 1)
-                    ) {
-                      return (
-                        <button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          className={`px-3 py-1 rounded-sm text-sm font-medium transition ${
-                            page === currentPage
-                              ? "bg-action text-white"
-                              : "bg-sunken text-muted hover:bg-line-subtle"
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      );
-                    } else if (page === currentPage - 2 || page === currentPage + 2) {
-                      return (
-                        <span key={page} className="px-2 text-muted">
-                          …
-                        </span>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="btn-ghost"
-                >
-                  Siguiente
-                </button>
-              </div>
-            </div>
+            <Pager
+              page={page}
+              pageCount={pageCount}
+              total={sortedEvents.length}
+              onChange={setCurrentPage}
+            />
           </>
         )}
       </div>
